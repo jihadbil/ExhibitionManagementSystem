@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="ExhibitionManagementSystem.DataAccess/ExhibitionManagementSystem.DataAccess.csproj" />
+  <Project Path="ExhibitionManagementSystem.Models.DTOs/ExhibitionManagementSystem.Models.DTOs.csproj" />
+  <Project Path="ExhibitionManagementSystem.Models/ExhibitionManagementSystem.Models.csproj" />
+  <Project Path="ExhibitionManagementSystem.Services/ExhibitionManagementSystem.Services.csproj" />
+  <Project Path="ExhibitionManagementSystem/ExhibitionManagementSystem.csproj" />
+</Solution>

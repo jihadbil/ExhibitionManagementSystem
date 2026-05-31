@@ -1,0 +1,6 @@
+@ExhibitionManagementSystem_HostAddress = http://localhost:5159
+
+GET {{ExhibitionManagementSystem_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
