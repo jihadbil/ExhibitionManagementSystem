@@ -9,7 +9,7 @@ public class TenantSubscriptionDto
     public string TenantName { get; set; } = string.Empty;
     public string PlanName { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
+    public DateTime EndDate { get; set; }
     public string Status { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public string CurrencyCode { get; set; } = string.Empty;

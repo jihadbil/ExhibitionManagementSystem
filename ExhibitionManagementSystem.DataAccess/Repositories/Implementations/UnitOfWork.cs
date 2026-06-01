@@ -45,6 +45,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         private ICurrencyRepository? _currencies;
         private IExchangeRateRepository? _exchangeRates;
         private IAuditLogRepository? _auditLogs;
+        private IExpenseRepository? _expenses;
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -79,6 +80,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         public ICurrencyRepository Currencies => _currencies ??= new CurrencyRepository(_context);
         public IExchangeRateRepository ExchangeRates => _exchangeRates ??= new ExchangeRateRepository(_context);
         public IAuditLogRepository AuditLogs => _auditLogs ??= new AuditLogRepository(_context);
+        public IExpenseRepository Expenses => _expenses ??= new ExpenseRepository(_context);
 
         public async Task<int> SaveChangesAsync()
         {

@@ -30,7 +30,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<decimal> ConvertAsync(string from, string to, decimal amount, DateTime? date = null)
+        public async Task<decimal?> ConvertAsync(string from, string to, decimal amount, DateTime? date = null)
         {
             if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
                 return amount;
@@ -51,7 +51,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                     return amount / inverseRate.Rate;
                 }
 
-                throw new InvalidOperationException($"Exchange rate from {from} to {to} was not found.");
+                return null;
             }
 
             return amount * rate.Rate;

@@ -93,9 +93,9 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var sub = new TenantSubscription
             {
                 TenantID = tenantId,
-                Plan = string.IsNullOrWhiteSpace(dto.PlanName) ? tenant.Plan : dto.PlanName,
+                Plan = string.IsNullOrWhiteSpace(dto.PlanName) ? tenant.CurrentPlan ?? "Free" : dto.PlanName,
                 StartDate = dto.StartDate == default ? DateTime.UtcNow.Date : dto.StartDate.Date,
-                EndDate = dto.EndDate ?? DateTime.UtcNow.AddMonths(1).Date,
+                EndDate = dto.EndDate == default ? DateTime.UtcNow.AddMonths(1).Date : dto.EndDate.Date,
                 MonthlyFee = dto.Price,
                 CurrencyCode = string.IsNullOrWhiteSpace(dto.CurrencyCode) ? "USD" : dto.CurrencyCode,
                 Status = status,
@@ -103,11 +103,6 @@ namespace ExhibitionManagementSystem.Services.Implementations
             };
 
             await _unitOfWork.TenantSubscriptions.AddAsync(sub);
-            
-            // Sync current plan on the Tenant profile
-            tenant.Plan = sub.Plan;
-            _unitOfWork.Tenants.Update(tenant);
-            
             await _unitOfWork.SaveChangesAsync();
 
             var fullSub = await _unitOfWork.TenantSubscriptions.AsQueryable()

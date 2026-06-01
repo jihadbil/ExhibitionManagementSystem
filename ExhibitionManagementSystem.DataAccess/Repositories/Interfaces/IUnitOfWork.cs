@@ -32,6 +32,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Interfaces
         ICurrencyRepository Currencies { get; }
         IExchangeRateRepository ExchangeRates { get; }
         IAuditLogRepository AuditLogs { get; }
+        IExpenseRepository Expenses { get; }
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

@@ -8,7 +8,7 @@ using ExhibitionManagementSystem.Models.Interfaces;
 
 namespace ExhibitionManagementSystem.Models;
 
-public class Invoice : IAuditableEntity
+public class Invoice : IAuditableEntity, ISoftDeletable
 {
     [Key] public int InvoiceID { get; set; }
     public int TenantID { get; set; }
@@ -25,6 +25,9 @@ public class Invoice : IAuditableEntity
     [StringLength(500)] public string Notes { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
+    public string? DeletedByUserId { get; set; }
 
     [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
     [ForeignKey(nameof(ReservationID))] public virtual BoothReservation Reservation { get; set; }

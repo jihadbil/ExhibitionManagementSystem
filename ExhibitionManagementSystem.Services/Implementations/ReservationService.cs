@@ -179,14 +179,12 @@ namespace ExhibitionManagementSystem.Services.Implementations
             decimal exchangeRateUsed = 1.0m;
             if (!string.Equals(dto.CurrencyCode, tenant.BaseCurrency, StringComparison.OrdinalIgnoreCase))
             {
-                try
+                var converted = await _unitOfWork.ExchangeRates.ConvertAsync(dto.CurrencyCode, tenant.BaseCurrency, 1.0m);
+                if (converted == null)
                 {
-                    exchangeRateUsed = await _unitOfWork.ExchangeRates.ConvertAsync(dto.CurrencyCode, tenant.BaseCurrency, 1.0m);
+                    return ServiceResult<BoothReservationDto>.Failure($"لا يمكن حساب سعر الصرف من {dto.CurrencyCode} إلى {tenant.BaseCurrency}", "EXCHANGE_RATE_NOT_FOUND");
                 }
-                catch (Exception ex)
-                {
-                    return ServiceResult<BoothReservationDto>.Failure($"لا يمكن حساب سعر الصرف: {ex.Message}", "EXCHANGE_RATE_NOT_FOUND");
-                }
+                exchangeRateUsed = converted.Value;
             }
 
             decimal amountInBaseCurrency = boothAmount * exchangeRateUsed;

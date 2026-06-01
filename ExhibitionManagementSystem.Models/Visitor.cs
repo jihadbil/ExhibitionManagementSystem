@@ -18,8 +18,7 @@ public class Visitor : IAuditableEntity, ISoftDeletable
     [StringLength(50)] public string VisitorType { get; set; }
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 
-    [NotMapped]
-    public DateTime CreatedAt { get => RegisteredAt; set => RegisteredAt = value; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }

@@ -61,13 +61,16 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
             decimal occupancyRate = totalBooths > 0 ? (decimal)reservedBoothsCount / totalBooths * 100 : 0m;
 
+            decimal totalExpenses = await _unitOfWork.Expenses.GetTotalExpensesAsync(exhibitionId);
+            decimal netProfit = totalRevenue - totalExpenses;
+
             var report = new FinancialReport
             {
                 TenantID = tenantId,
                 ExhibitionID = exhibitionId,
                 TotalRevenue = totalRevenue,
-                TotalExpenses = 0,
-                NetProfit = totalRevenue,
+                TotalExpenses = totalExpenses,
+                NetProfit = netProfit,
                 TotalVisitors = totalVisitors,
                 TotalExhibitors = totalExhibitors,
                 TotalBooths = totalBooths,

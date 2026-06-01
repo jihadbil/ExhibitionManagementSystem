@@ -8,6 +8,6 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Interfaces
     {
         Task<ExchangeRate?> GetRateAsync(string from, string to, DateTime date);
         Task<ExchangeRate?> GetLatestRateAsync(string from, string to);
-        Task<decimal> ConvertAsync(string from, string to, decimal amount, DateTime? date = null);
+        Task<decimal?> ConvertAsync(string from, string to, decimal amount, DateTime? date = null);
     }
 }

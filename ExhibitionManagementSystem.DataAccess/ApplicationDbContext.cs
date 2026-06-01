@@ -50,6 +50,7 @@ namespace ExhibitionManagementSystem.DataAccess
         public DbSet<Ticket> Tickets { get; set; }
         public DbSet<TicketScan> TicketScans { get; set; }
         public DbSet<VisitorRating> VisitorRatings { get; set; }
+        public DbSet<Expense> Expenses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -261,6 +262,20 @@ namespace ExhibitionManagementSystem.DataAccess
             builder.Entity<Payment>().HasIndex(p => p.InvoiceID);
             builder.Entity<Exhibitor>().HasIndex(e => new { e.TenantID, e.IsDeleted });
             builder.Entity<Visitor>().HasIndex(v => new { v.TenantID, v.IsDeleted });
+
+            builder.Entity<Expense>()
+                .HasOne(e => e.Exhibition)
+                .WithMany()
+                .HasForeignKey(e => e.ExhibitionID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Expense>()
+                .HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Expense>().HasIndex(e => new { e.ExhibitionID, e.IsDeleted });
 
             // Global Cascade Delete Disable for Custom Models to prevent SQL Server multiple cascade path errors
             var cascadeFKs = builder.Model.GetEntityTypes()

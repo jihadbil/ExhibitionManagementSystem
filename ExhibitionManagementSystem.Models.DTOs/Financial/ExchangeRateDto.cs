@@ -10,7 +10,4 @@ public class ExchangeRateDto
     public decimal Rate { get; set; }
     public DateTime RateDate { get; set; }
     public string Source { get; set; } = string.Empty;
-    public DateTime ValidFrom { get; set; }
-    public DateTime? ValidTo { get; set; }
-    public bool IsActive { get; set; }
 }

@@ -14,7 +14,7 @@ namespace ExhibitionManagementSystem.Services.Interfaces
         Task<ServiceResult<IList<InvoiceDto>>> GetOverdueInvoicesAsync(int tenantId);
         Task<ServiceResult<InvoiceDto>> GenerateInvoiceForReservationAsync(int tenantId, int reservationId);
         Task<ServiceResult<InvoiceDto>> CreateInvoiceAsync(int tenantId, InvoiceCreateDto dto);
-        Task<ServiceResult<PaymentDto>> RecordPaymentAsync(int tenantId, PaymentCreateDto dto);
+        Task<ServiceResult<PaymentDto>> RecordPaymentAsync(int tenantId, string userId, PaymentCreateDto dto);
         Task<ServiceResult<IList<PaymentDto>>> GetPaymentsByInvoiceAsync(int tenantId, int invoiceId);
     }
 }

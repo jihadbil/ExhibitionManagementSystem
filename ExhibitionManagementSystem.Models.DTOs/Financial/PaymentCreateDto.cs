@@ -19,8 +19,4 @@ public class PaymentCreateDto
 
     [StringLength(500)]
     public string Notes { get; set; } = string.Empty;
-
-    [Required]
-    [StringLength(450)]
-    public string ReceivedByUserId { get; set; } = string.Empty;
 }

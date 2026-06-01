@@ -125,17 +125,9 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
             if (newStatus == ExhibitionStatus.Open)
             {
-                if (exhibition.StartDate.Date < DateTime.UtcNow.Date)
+                if (exhibition.StartDate.Date > DateTime.UtcNow.Date)
                 {
-                    return ServiceResult<ExhibitionDto>.Failure("لا يمكن فتح المعرض لأن تاريخ البدء في الماضي", "INVALID_START_DATE");
-                }
-            }
-            else if (newStatus == ExhibitionStatus.Closed)
-            {
-                var reservations = await _unitOfWork.BoothReservations.FindAsync(r => r.ExhibitionID == id && r.Status == ReservationStatus.Confirmed);
-                if (reservations == null || reservations.Count == 0)
-                {
-                    return ServiceResult<ExhibitionDto>.Failure("لا يمكن إغلاق المعرض لعدم وجود حجوزات مؤكدة", "NO_CONFIRMED_RESERVATIONS");
+                    return ServiceResult<ExhibitionDto>.Failure("لا يمكن فتح المعرض قبل تاريخ بدئه", "EXHIBITION_NOT_STARTED_YET");
                 }
             }
 

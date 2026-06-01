@@ -52,16 +52,15 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
 
             var booths = await _unitOfWork.Booths.FindAsync(b => b.HallID == hallId && b.Status == BoothStatus.Available);
-            var availableBooths = new List<Booth>();
 
-            foreach (var booth in booths)
-            {
-                var isReserved = await _unitOfWork.BoothReservations.IsBoothReservedAsync(booth.BoothID, exhibitionId);
-                if (!isReserved)
-                {
-                    availableBooths.Add(booth);
-                }
-            }
+            var reservedBoothIds = await _unitOfWork.BoothReservations.AsQueryable()
+                .Where(r => r.ExhibitionID == exhibitionId
+                            && r.BoothID.HasValue
+                            && r.Status != ReservationStatus.Cancelled)
+                .Select(r => r.BoothID!.Value)
+                .ToHashSetAsync();
+
+            var availableBooths = booths.Where(b => !reservedBoothIds.Contains(b.BoothID)).ToList();
 
             var dtos = _mapper.Map<IList<BoothSummaryDto>>(availableBooths);
             return ServiceResult<IList<BoothSummaryDto>>.Success(dtos);
@@ -114,7 +113,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
             return ServiceResult<BoothDto>.Success(resultDto);
         }
 
-        public async Task<ServiceResult<BoothMergeDto>> MergeBoothsAsync(int tenantId, BoothMergeCreateDto dto)
+        public async Task<ServiceResult<BoothMergeDto>> MergeBoothsAsync(int tenantId, string userId, BoothMergeCreateDto dto)
         {
             if (dto.BoothIDs == null || dto.BoothIDs.Count < 2)
             {
@@ -162,7 +161,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     MergedBoothLabel = dto.MergedBoothLabel,
                     TotalAreaSqM = totalArea,
                     MergedAt = DateTime.UtcNow,
-                    MergedByUserId = "System",
+                    MergedByUserId = userId,
                     Notes = dto.Notes
                 };
 

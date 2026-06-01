@@ -262,8 +262,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var user = await _userManager.FindByEmailAsync(dto.Email);
             if (user == null)
             {
-                // للسلامة الأمنية لا نخبر المخترقين بعدم وجود الحساب، ولكن هنا للـ API نريد دعمه بشكل كامل
-                return ServiceResult.Failure("المستخدم غير موجود", "USER_NOT_FOUND");
+                return ServiceResult.Success(); // صامت للأمان — لا نكشف وجود/غياب الحساب
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);

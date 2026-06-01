@@ -12,7 +12,7 @@ namespace ExhibitionManagementSystem.Services.Interfaces
         Task<ServiceResult<BoothDto>> GetByIdAsync(int tenantId, int boothId);
         Task<ServiceResult<BoothDto>> CreateAsync(int tenantId, BoothCreateDto dto);
         Task<ServiceResult<BoothDto>> UpdateAsync(int tenantId, int boothId, BoothUpdateDto dto);
-        Task<ServiceResult<BoothMergeDto>> MergeBoothsAsync(int tenantId, BoothMergeCreateDto dto);
+        Task<ServiceResult<BoothMergeDto>> MergeBoothsAsync(int tenantId, string userId, BoothMergeCreateDto dto);
         Task<ServiceResult> UnmergeBoothsAsync(int tenantId, int mergeId);
     }
 }

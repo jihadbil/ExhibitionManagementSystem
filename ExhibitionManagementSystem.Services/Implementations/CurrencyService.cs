@@ -62,18 +62,13 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<decimal>> ConvertAmountAsync(decimal amount, string from, string to)
         {
-            try
-            {
-                var converted = await _unitOfWork.ExchangeRates.ConvertAsync(from, to, amount);
-                return ServiceResult<decimal>.Success(converted);
-            }
-            catch (Exception ex)
-            {
-                return ServiceResult<decimal>.Failure($"فشل تحويل العملة: {ex.Message}", "EXCHANGE_RATE_NOT_FOUND");
-            }
+            var converted = await _unitOfWork.ExchangeRates.ConvertAsync(from, to, amount);
+            if (converted == null)
+                return ServiceResult<decimal>.Failure($"سعر الصرف من {from} إلى {to} غير متوفر", "EXCHANGE_RATE_NOT_FOUND");
+            return ServiceResult<decimal>.Success(converted.Value);
         }
 
-        public async Task<ServiceResult<ExchangeRateDto>> UpsertExchangeRateAsync(ExchangeRateDto dto)
+        public async Task<ServiceResult<ExchangeRateDto>> UpsertExchangeRateAsync(string userId, ExchangeRateDto dto)
         {
             var targetDate = dto.RateDate == default ? DateTime.UtcNow.Date : dto.RateDate.Date;
             
@@ -101,7 +96,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     Rate = dto.Rate,
                     RateDate = targetDate,
                     Source = string.IsNullOrWhiteSpace(dto.Source) ? "System Insert" : dto.Source,
-                    CreatedByUserId = "System", // Default system
+                    CreatedByUserId = userId,
                     CreatedAt = DateTime.UtcNow
                 };
 

@@ -9,7 +9,8 @@ public class TenantMappingProfile : Profile
     public TenantMappingProfile()
     {
         CreateMap<Models.Tenant, TenantDto>()
-            .ForMember(dest => dest.CurrencySymbol, opt => opt.MapFrom(src => src.Currency != null ? src.Currency.Symbol : string.Empty));
+            .ForMember(dest => dest.CurrencySymbol, opt => opt.MapFrom(src => src.Currency != null ? src.Currency.Symbol : string.Empty))
+            .ForMember(dest => dest.CurrentPlan, opt => opt.MapFrom(src => src.CurrentPlan));
 
         CreateMap<TenantCreateDto, Models.Tenant>()
             .ForMember(dest => dest.TenantID, opt => opt.Ignore())

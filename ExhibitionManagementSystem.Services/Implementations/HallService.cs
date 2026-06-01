@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using ExhibitionManagementSystem.DataAccess.Repositories.Interfaces;
@@ -88,6 +89,12 @@ namespace ExhibitionManagementSystem.Services.Implementations
             if (hall == null || hall.Venue == null || hall.Venue.TenantID != tenantId)
             {
                 return ServiceResult.Failure("القاعة غير موجودة", "HALL_NOT_FOUND");
+            }
+
+            var activeBooths = await _unitOfWork.Booths.FindAsync(b => b.HallID == hallId && !b.IsDeleted);
+            if (activeBooths.Any())
+            {
+                return ServiceResult.Failure("لا يمكن حذف القاعة لوجود أكشاك نشطة بها. احذف الأكشاك أولاً.", "HALL_HAS_ACTIVE_BOOTHS");
             }
 
             await _unitOfWork.Halls.SoftDeleteAsync(hallId, "System");

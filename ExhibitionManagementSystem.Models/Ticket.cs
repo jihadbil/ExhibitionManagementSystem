@@ -21,8 +21,7 @@ public class Ticket : IAuditableEntity, ISoftDeletable
     public TicketStatus Status { get; set; }
     public DateTime IssuedAt { get; set; } = DateTime.UtcNow;
 
-    [NotMapped]
-    public DateTime CreatedAt { get => IssuedAt; set => IssuedAt = value; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }

@@ -13,9 +13,6 @@ public class CurrencyMappingProfile : Profile
         CreateMap<Models.Currency, CurrencyDto>();
 
         CreateMap<ExchangeRate, ExchangeRateDto>()
-            .ForMember(dest => dest.ExchangeRateID, opt => opt.MapFrom(src => src.RateID))
-            .ForMember(dest => dest.ValidFrom, opt => opt.MapFrom(src => src.RateDate))
-            .ForMember(dest => dest.ValidTo, opt => opt.MapFrom(src => (DateTime?)null))
-            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
+            .ForMember(dest => dest.ExchangeRateID, opt => opt.MapFrom(src => src.RateID));
     }
 }

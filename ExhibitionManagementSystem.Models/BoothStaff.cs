@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
+using ExhibitionManagementSystem.Models.Interfaces;
 
 namespace ExhibitionManagementSystem.Models;
 
-public class BoothStaff
+public class BoothStaff : IAuditableEntity, ISoftDeletable
 {
     [Key] public int StaffID { get; set; }
     public int ReservationID { get; set; }
@@ -17,6 +18,11 @@ public class BoothStaff
     public bool BadgeIssued { get; set; } = false;
     [StringLength(50)] public string BadgeNumber { get; set; }
 
-    [ForeignKey(nameof(ReservationID))] public virtual BoothReservation Reservation { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
+    public string? DeletedByUserId { get; set; }
 
+    [ForeignKey(nameof(ReservationID))] public virtual BoothReservation Reservation { get; set; }
 }

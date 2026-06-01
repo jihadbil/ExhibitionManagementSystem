@@ -12,6 +12,6 @@ namespace ExhibitionManagementSystem.Services.Interfaces
         Task<ServiceResult<IList<ExchangeRateDto>>> GetExchangeRatesAsync(string fromCurrency);
         Task<ServiceResult<decimal>> GetCurrentRateAsync(string from, string to);
         Task<ServiceResult<decimal>> ConvertAmountAsync(decimal amount, string from, string to);
-        Task<ServiceResult<ExchangeRateDto>> UpsertExchangeRateAsync(ExchangeRateDto dto);
+        Task<ServiceResult<ExchangeRateDto>> UpsertExchangeRateAsync(string userId, ExchangeRateDto dto);
     }
 }

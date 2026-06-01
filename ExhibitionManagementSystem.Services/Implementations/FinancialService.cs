@@ -11,6 +11,7 @@ using ExhibitionManagementSystem.Models.DTOs.Financial;
 using ExhibitionManagementSystem.Services.Common;
 using ExhibitionManagementSystem.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace ExhibitionManagementSystem.Services.Implementations
 {
@@ -18,11 +19,13 @@ namespace ExhibitionManagementSystem.Services.Implementations
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IConfiguration _configuration;
 
-        public FinancialService(IUnitOfWork unitOfWork, IMapper mapper)
+        public FinancialService(IUnitOfWork unitOfWork, IMapper mapper, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _configuration = configuration;
         }
 
         public async Task<ServiceResult<PagedResultDto<InvoiceDto>>> GetInvoicesByTenantAsync(int tenantId, int page, int pageSize)
@@ -130,7 +133,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
 
             string invoiceNumber = await _unitOfWork.Invoices.GenerateNextInvoiceNumberAsync(tenantId);
-            decimal taxRate = 15.0m; // Default VAT tax rate
+            decimal taxRate = decimal.TryParse(_configuration["Financial:DefaultTaxRate"], out var cfgRate)
+                ? cfgRate : 15.0m;
             decimal subTotal = reservation.TotalAmount;
             decimal taxAmount = subTotal * (taxRate / 100);
             decimal totalAmount = subTotal + taxAmount;
@@ -202,7 +206,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
             return ServiceResult<InvoiceDto>.Success(resultDto);
         }
 
-        public async Task<ServiceResult<PaymentDto>> RecordPaymentAsync(int tenantId, PaymentCreateDto dto)
+        public async Task<ServiceResult<PaymentDto>> RecordPaymentAsync(int tenantId, string userId, PaymentCreateDto dto)
         {
             var invoice = await _unitOfWork.Invoices.AsQueryable()
                 .Include(i => i.Payments)
@@ -252,7 +256,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     ReferenceNo = dto.ReferenceNo,
                     Status = PaymentStatus.Completed,
                     Notes = dto.Notes,
-                    ReceivedByUserId = dto.ReceivedByUserId,
+                    ReceivedByUserId = userId,
                     CreatedAt = DateTime.UtcNow
                 };
 
