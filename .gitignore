@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/PlansAndTasks/Controls
+/ExhibitionManagementSystem.Desktop/PlansAndTasks
+/ExhibitionManagementSystem.Desktop/DOCS
