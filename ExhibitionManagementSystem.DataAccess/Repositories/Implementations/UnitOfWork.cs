@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -15,6 +17,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
     public class UnitOfWork : IUnitOfWork
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private IDbContextTransaction? _transaction;
 
         // Lazy repository backing fields
@@ -47,9 +50,10 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         private IAuditLogRepository? _auditLogs;
         private IExpenseRepository? _expenses;
 
-        public UnitOfWork(ApplicationDbContext context)
+        public UnitOfWork(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         }
 
         // Lazy properties exposing repositories
@@ -102,6 +106,23 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 }
             }
 
+            // Resolve context values from HTTP Request
+            var httpContext = _httpContextAccessor.HttpContext;
+            var userId = httpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                userId = _context.Users.OrderBy(u => u.Id).Select(u => u.Id).FirstOrDefault();
+            }
+
+            var tenantIdClaim = httpContext?.User?.FindFirst("TenantId")?.Value;
+            int.TryParse(tenantIdClaim, out var tenantId);
+
+            var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            if (ipAddress.Length > 50)
+            {
+                ipAddress = ipAddress.Substring(0, 50);
+            }
+
             // 2. Build audit log entries pre-save (to capture modified states/values)
             var auditWrappers = new List<AuditEntryWrapper>();
             foreach (var entry in _context.ChangeTracker.Entries())
@@ -112,12 +133,25 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 if (entry.State == EntityState.Detached || entry.State == EntityState.Unchanged) 
                     continue;
 
+                // Determine TenantID for this entity's audit log
+                var tenantIdProp = entry.Entity.GetType().GetProperty("TenantID");
+                var entityTenantId = tenantIdProp != null ? (int?)tenantIdProp.GetValue(entry.Entity) : null;
+                var logTenantId = entityTenantId ?? tenantId;
+                if (logTenantId == 0)
+                {
+                    logTenantId = _context.Tenants.OrderBy(t => t.TenantID).Select(t => t.TenantID).FirstOrDefault();
+                    if (logTenantId == 0) logTenantId = 1;
+                }
+
                 var auditLog = new AuditLog
                 {
+                    TenantID = logTenantId,
+                    UserId = userId ?? string.Empty,
                     TableName = entry.Metadata.GetTableName() ?? entry.Entity.GetType().Name,
                     Action = entry.State.ToString(),
                     ActionAt = now,
                     RecordID = "0", // Temp value to satisfy compiler nullable check before post-save population
+                    IPAddress = ipAddress,
                     OldValues = entry.State != EntityState.Added
                         ? JsonSerializer.Serialize(entry.Properties
                             .Where(p => entry.State == EntityState.Deleted || p.IsModified)
