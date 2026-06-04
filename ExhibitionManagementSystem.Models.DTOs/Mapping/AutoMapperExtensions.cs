@@ -6,7 +6,10 @@ public static class AutoMapperExtensions
 {
     public static IServiceCollection AddDtoMapping(this IServiceCollection services)
     {
-        services.AddAutoMapper(typeof(MappingProfile).Assembly);
+        services.AddAutoMapper(cfg =>
+        {
+            cfg.AddMaps(typeof(MappingProfile).Assembly);
+        });
         return services;
     }
 }
