@@ -1,0 +1,163 @@
+<UserControl x:Class="ExhibitionManagementSystem.Desktop.Controls.Cards.ExhibitionCardControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:badges="clr-namespace:ExhibitionManagementSystem.Desktop.Controls.Badges"
+             xmlns:helpers="clr-namespace:ExhibitionManagementSystem.Desktop.Helpers"
+             mc:Ignorable="d" 
+             d:DesignHeight="350" d:DesignWidth="300">
+    <Border Background="White"
+            BorderBrush="{StaticResource BrushBorder}"
+            BorderThickness="1"
+            CornerRadius="16"
+            ClipToBounds="True"
+            helpers:AnimationHelper.HoverShadow="True"
+            Width="300"
+            Height="350">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" BlurRadius="8" ShadowDepth="2" Opacity="0.1"/>
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="128"/> <!-- Gradient Header -->
+                <RowDefinition Height="Auto"/> <!-- Date & Location -->
+                <RowDefinition Height="*"/>    <!-- Stats (3 mini cards) -->
+                <RowDefinition Height="Auto"/> <!-- Status + Action buttons -->
+            </Grid.RowDefinitions>
+
+            <!-- Gradient Header -->
+            <Border Grid.Row="0"
+                    Background="{Binding ExhibitionType, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource StringToGradientConverter}}"
+                    Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Exhibition Icon/Type indicator -->
+                    <materialDesign:PackIcon Kind="{Binding ExhibitionTypeIcon, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                             Foreground="White"
+                                             Width="24" Height="24"
+                                             HorizontalAlignment="Left"
+                                             VerticalAlignment="Top"/>
+                    
+                    <!-- Exhibition Name -->
+                    <TextBlock Grid.Row="1"
+                               Text="{Binding ExhibitionName, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                               Foreground="White"
+                               FontFamily="{StaticResource WorkSansFont}"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Bottom"/>
+                </Grid>
+            </Border>
+
+            <!-- Date & Location -->
+            <Border Grid.Row="1" Padding="20,16,20,8">
+                <StackPanel>
+                    <!-- Date -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <materialDesign:PackIcon Kind="CalendarOutline"
+                                                 Foreground="{StaticResource BrushTextSecondary}"
+                                                 Width="16" Height="16"
+                                                 VerticalAlignment="Center"
+                                                 Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding DateRange, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                   Foreground="{StaticResource BrushTextSecondary}"
+                                   FontFamily="{StaticResource WorkSansFont}"
+                                   FontSize="13"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <!-- Location -->
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="MapMarkerOutline"
+                                                 Foreground="{StaticResource BrushTextSecondary}"
+                                                 Width="16" Height="16"
+                                                 VerticalAlignment="Center"
+                                                 Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding Location, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                   Foreground="{StaticResource BrushTextSecondary}"
+                                   FontFamily="{StaticResource WorkSansFont}"
+                                   FontSize="13"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Stats (3 mini cards side-by-side) -->
+            <Grid Grid.Row="2" Margin="20,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Visitors Count -->
+                <Border Grid.Column="0" Background="{StaticResource BrushBgSecondary}" CornerRadius="8" Padding="6,8">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="👥 الزوار" Foreground="{StaticResource BrushTextMuted}" FontSize="11" FontFamily="{StaticResource WorkSansFont}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding VisitorsCount, RelativeSource={RelativeSource AncestorType=UserControl}}" Foreground="{StaticResource BrushTextPrimary}" FontSize="13" FontWeight="SemiBold" FontFamily="{StaticResource WorkSansFont}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Booths Count -->
+                <Border Grid.Column="2" Background="{StaticResource BrushBgSecondary}" CornerRadius="8" Padding="6,8">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="🏪 الأجنحة" Foreground="{StaticResource BrushTextMuted}" FontSize="11" FontFamily="{StaticResource WorkSansFont}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding BoothsCount, RelativeSource={RelativeSource AncestorType=UserControl}}" Foreground="{StaticResource BrushTextPrimary}" FontSize="13" FontWeight="SemiBold" FontFamily="{StaticResource WorkSansFont}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Occupancy Percentage -->
+                <Border Grid.Column="4" Background="{StaticResource BrushBgSecondary}" CornerRadius="8" Padding="6,8">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="📊 الإشغال" Foreground="{StaticResource BrushTextMuted}" FontSize="11" FontFamily="{StaticResource WorkSansFont}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="{Binding OccupancyPercent, RelativeSource={RelativeSource AncestorType=UserControl}}" Foreground="{StaticResource BrushTextPrimary}" FontSize="13" FontWeight="SemiBold" FontFamily="{StaticResource WorkSansFont}"/>
+                            <TextBlock Text="%" Foreground="{StaticResource BrushTextPrimary}" FontSize="13" FontWeight="SemiBold" FontFamily="{StaticResource WorkSansFont}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Bottom Actions and Badge -->
+            <Border Grid.Row="3" BorderBrush="{StaticResource BrushBorder}" BorderThickness="0,1,0,0" Padding="20,12" Background="#FAFBFD">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <badges:StatusBadge Grid.Column="0"
+                                         Status="{Binding Status, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                         VerticalAlignment="Center"/>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button Style="{StaticResource IconButtonStyle}"
+                                Command="{Binding EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                Margin="0,0,4,0"
+                                ToolTip="تعديل">
+                            <materialDesign:PackIcon Kind="PencilOutline" Foreground="{StaticResource BrushTextSecondary}" Width="18" Height="18"/>
+                        </Button>
+                        
+                        <Button Style="{StaticResource IconButtonStyle}"
+                                Command="{Binding DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                ToolTip="حذف">
+                            <materialDesign:PackIcon Kind="TrashCanOutline" Foreground="{StaticResource BrushDangerText}" Width="18" Height="18"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

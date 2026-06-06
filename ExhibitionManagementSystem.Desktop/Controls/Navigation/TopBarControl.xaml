@@ -1,0 +1,88 @@
+<UserControl x:Class="ExhibitionManagementSystem.Desktop.Controls.Navigation.TopBarControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DesignHeight="64" d:DesignWidth="800">
+    
+    <!-- Glassmorphism Container: 85% opacity white background -->
+    <Border Height="64" 
+            Background="#D9FFFFFF" 
+            BorderBrush="{StaticResource BrushBorder}" 
+            BorderThickness="0,0,0,1">
+        <Grid Margin="24,0">
+            <Grid.ColumnDefinitions>
+                <!-- اليسار (معلومات المستخدم) -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- الوسط (حقل البحث) -->
+                <ColumnDefinition Width="*"/>
+                <!-- اليمين (أيقونات التحكم والإشعارات) -->
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- اليسار: معلومات المستخدم -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Width="36" Height="36" CornerRadius="18" Background="{StaticResource PrimaryGradientBrush}" Margin="0,0,12,0">
+                    <TextBlock Text="م" 
+                               Foreground="White" 
+                               FontWeight="Bold" 
+                               FontSize="14"
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="مسعود" 
+                           VerticalAlignment="Center" 
+                           FontSize="14" 
+                           FontWeight="Medium" 
+                           Foreground="{StaticResource BrushTextPrimary}"/>
+            </StackPanel>
+
+            <!-- الوسط: حقل البحث السريع -->
+            <Grid Grid.Column="1" HorizontalAlignment="Center" Width="400" VerticalAlignment="Center">
+                <TextBox Style="{StaticResource ExpoTextBoxStyle}"
+                         Padding="16,0,40,0"
+                         VerticalContentAlignment="Center"
+                         Tag="بحث سريع في النظام..."
+                         x:Name="SearchBox"/>
+                <!-- Placeholder Text (Shown when search is empty and not focused) -->
+                <TextBlock IsHitTestVisible="False"
+                           Text="بحث سريع في النظام..."
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Left"
+                           Margin="18,0,0,0"
+                           Foreground="{StaticResource BrushTextMuted}"
+                           FontSize="14">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <materialDesign:PackIcon Kind="Magnify" 
+                                         Width="20" 
+                                         Height="20" 
+                                         Foreground="{StaticResource BrushTextSecondary}" 
+                                         HorizontalAlignment="Right" 
+                                         VerticalAlignment="Center" 
+                                         Margin="0,0,16,0"/>
+            </Grid>
+
+            <!-- اليمين: أيقونات الإشعارات والإعدادات -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource IconButtonStyle}" Margin="8,0,0,0">
+                    <materialDesign:PackIcon Kind="BellOutline" Width="22" Height="22" Foreground="{StaticResource BrushTextSecondary}"/>
+                </Button>
+                <Button Style="{StaticResource IconButtonStyle}" Margin="8,0,0,0">
+                    <materialDesign:PackIcon Kind="CogOutline" Width="22" Height="22" Foreground="{StaticResource BrushTextSecondary}"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

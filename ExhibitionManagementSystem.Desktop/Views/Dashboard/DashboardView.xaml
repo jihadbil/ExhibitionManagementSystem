@@ -1,0 +1,239 @@
+<UserControl x:Class="ExhibitionManagementSystem.Desktop.Views.Dashboard.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:cards="clr-namespace:ExhibitionManagementSystem.Desktop.Controls.Cards"
+             xmlns:charts="clr-namespace:ExhibitionManagementSystem.Desktop.Controls.Charts"
+             xmlns:badges="clr-namespace:ExhibitionManagementSystem.Desktop.Controls.Badges"
+             mc:Ignorable="d" 
+             d:DesignHeight="900" d:DesignWidth="1000">
+    
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False" Padding="0,0,16,0">
+        <StackPanel Margin="32">
+            
+            <!-- Header Section -->
+            <Grid Margin="0,0,0,32">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Welcome Text (Right in RTL) -->
+                <StackPanel Grid.Column="0" HorizontalAlignment="Right">
+                    <TextBlock Text="مرحباً، مسعود 👋" 
+                               FontSize="28" 
+                               FontWeight="Bold" 
+                               Foreground="{StaticResource BrushTextPrimary}"
+                               FontFamily="{StaticResource WorkSansFont}"/>
+                    <TextBlock Text="السبت، 25 يناير 2026" 
+                               FontSize="14" 
+                               Foreground="{StaticResource BrushTextSecondary}"
+                               FontFamily="{StaticResource WorkSansFont}"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <!-- Refresh Button (Left in RTL) -->
+                <Button Grid.Column="1" 
+                        Style="{StaticResource SecondaryButtonStyle}" 
+                        Command="{Binding RefreshDataCommand}"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" FlowDirection="RightToLeft">
+                        <materialDesign:PackIcon Kind="Refresh" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="تحديث البيانات" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- Stat Cards Section -->
+            <UniformGrid Columns="4" Margin="0,0,0,32">
+                <cards:StatCardControl Label="المعارض النشطة" 
+                                       Value="{Binding ActiveExhibitions}" 
+                                       IconKind="OfficeBuildingOutline" 
+                                       IconBackground="#EEF2FF" 
+                                       IconForeground="#6366F1"
+                                       TrendDirection="Up"
+                                       TrendValue="+3 هذا الشهر"
+                                       Margin="0,0,16,0"/>
+
+                <cards:StatCardControl Label="الأجنحة المحجوزة" 
+                                       Value="{Binding ReservedBooths}" 
+                                       IconKind="StoreOutline" 
+                                       IconBackground="#ECFDF5" 
+                                       IconForeground="#10B981"
+                                       TrendDirection="Up"
+                                       TrendValue="+12 اليوم"
+                                       Margin="0,0,8,0"/>
+
+                <cards:StatCardControl Label="الشركات المشاركة" 
+                                       Value="{Binding CompaniesCount}" 
+                                       IconKind="AccountGroupOutline" 
+                                       IconBackground="#FFFBEB" 
+                                       IconForeground="#F59E0B"
+                                       TrendDirection="Up"
+                                       TrendValue="+5 هذا الأسبوع"
+                                       Margin="8,0,0,0"/>
+
+                <cards:StatCardControl Label="الزوار المسجلين" 
+                                       Value="{Binding RegisteredVisitors}" 
+                                       IconKind="Account" 
+                                       IconBackground="#FEF2F2" 
+                                       IconForeground="#EF4444"
+                                       TrendDirection="Up"
+                                       TrendValue="+240 اليوم"
+                                       Margin="16,0,0,0"/>
+            </UniformGrid>
+
+            <!-- Charts Section (2/3 and 1/3) -->
+            <Grid Margin="0,0,0,32">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="24"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Bar Chart: Visitor Statistics -->
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="إحصائيات الزوار" 
+                                   FontSize="16" 
+                                   FontWeight="Bold" 
+                                   Foreground="{StaticResource BrushTextPrimary}"
+                                   FontFamily="{StaticResource WorkSansFont}"
+                                   Margin="0,0,0,16"/>
+                        <charts:BarChartControl Height="280"
+                                                Series="{Binding MonthlyVisitorsSeries}"
+                                                XAxes="{Binding XAxes}"
+                                                YAxes="{Binding YAxes}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Donut Chart: Exhibition Distribution -->
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="توزيع المعارض" 
+                                   FontSize="16" 
+                                   FontWeight="Bold" 
+                                   Foreground="{StaticResource BrushTextPrimary}"
+                                   FontFamily="{StaticResource WorkSansFont}"
+                                   Margin="0,0,0,16"/>
+                        <charts:DonutChartControl Height="280"
+                                                  Series="{Binding ExhibitionTypeSeries}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Upcoming Exhibitions DataGrid -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <!-- Header inside Card -->
+                    <Grid Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" 
+                                   Text="المعارض القادمة" 
+                                   FontSize="16" 
+                                   FontWeight="Bold" 
+                                   Foreground="{StaticResource BrushTextPrimary}"
+                                   FontFamily="{StaticResource WorkSansFont}"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" 
+                                Content="عرض الكل" 
+                                Style="{StaticResource SecondaryButtonStyle}" 
+                                Height="36"
+                                Padding="16,0"
+                                Command="{Binding NavigateToExhibitionsCommand}"/>
+                    </Grid>
+
+                    <!-- DataGrid -->
+                    <DataGrid Style="{StaticResource ExpoDataGridStyle}"
+                              ItemsSource="{Binding UpcomingExhibitions}">
+                        <DataGrid.Columns>
+                            <!-- Name -->
+                            <DataGridTextColumn Header="الاسم" 
+                                                Binding="{Binding Name}" 
+                                                Width="2*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <!-- Location -->
+                            <DataGridTextColumn Header="الموقع" 
+                                                Binding="{Binding Location}" 
+                                                Width="2*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <!-- Occupancy Progress Bar -->
+                            <DataGridTemplateColumn Header="نسبة الإشغال" Width="1.5*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,16,0" VerticalAlignment="Center">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <!-- Progress Bar -->
+                                            <ProgressBar Grid.Column="0" 
+                                                         Value="{Binding OccupancyPercent}" 
+                                                         Maximum="100" 
+                                                         Height="8" 
+                                                         Background="#F1F5F9"
+                                                         Foreground="{StaticResource BrushPrimary}"
+                                                         VerticalAlignment="Center">
+                                                <ProgressBar.Template>
+                                                    <ControlTemplate TargetType="ProgressBar">
+                                                        <Grid>
+                                                            <Border Background="{TemplateBinding Background}" CornerRadius="4"/>
+                                                            <Border Name="PART_Indicator" 
+                                                                    Background="{TemplateBinding Foreground}" 
+                                                                    CornerRadius="4" 
+                                                                    HorizontalAlignment="Left"/>
+                                                        </Grid>
+                                                    </ControlTemplate>
+                                                </ProgressBar.Template>
+                                            </ProgressBar>
+
+                                            <!-- Percentage text -->
+                                            <TextBlock Grid.Column="1" 
+                                                       Text="{Binding OccupancyPercent, StringFormat={}{0:N1}%}" 
+                                                       Foreground="{StaticResource BrushTextSecondary}"
+                                                       FontSize="12"
+                                                       FontWeight="Medium"
+                                                       VerticalAlignment="Center"
+                                                       Margin="8,0,0,0"
+                                                       Width="45"
+                                                       TextAlignment="Right"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Status Badge -->
+                            <DataGridTemplateColumn Header="الحالة" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <badges:StatusBadge Status="{Binding Status}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,212 @@
+<UserControl x:Class="ExhibitionManagementSystem.Desktop.Views.Booths.BoothsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:forms="clr-namespace:ExhibitionManagementSystem.Desktop.Controls.Forms"
+             xmlns:badges="clr-namespace:ExhibitionManagementSystem.Desktop.Controls.Badges"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1000">
+    
+    <Grid Margin="32">
+        <Grid.RowDefinitions>
+            <!-- Header Row -->
+            <RowDefinition Height="Auto"/>
+            <!-- Filters Row -->
+            <RowDefinition Height="Auto"/>
+            <!-- Stats Row -->
+            <RowDefinition Height="Auto"/>
+            <!-- Content Row -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" 
+                       Text="إدارة الأجنحة" 
+                       FontSize="28" 
+                       FontWeight="Bold" 
+                       Foreground="{StaticResource BrushTextPrimary}"
+                       FontFamily="{StaticResource WorkSansFont}"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center"/>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Designer Navigation -->
+                <Button Style="{StaticResource SecondaryButtonStyle}" 
+                        Command="{Binding GoToDesignerCommand}"
+                        Height="44"
+                        Margin="0,0,12,0"
+                        Padding="16,0">
+                    <StackPanel Orientation="Horizontal" FlowDirection="RightToLeft">
+                        <materialDesign:PackIcon Kind="VectorSquare" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="المصمم البصري" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- New Booth -->
+                <Button Style="{StaticResource PrimaryButtonStyle}" 
+                        Command="{Binding AddBoothCommand}"
+                        Height="44"
+                        Padding="20,0">
+                    <StackPanel Orientation="Horizontal" FlowDirection="RightToLeft">
+                        <materialDesign:PackIcon Kind="Plus" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="إضافة جناح" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Filters Grid -->
+        <Grid Grid.Row="1" Margin="0,0,0,24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/> <!-- Status -->
+                <ColumnDefinition Width="*"/>    <!-- Spacer -->
+                <ColumnDefinition Width="Auto"/> <!-- Search -->
+            </Grid.ColumnDefinitions>
+
+            <!-- Status Dropdown -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="حالة الجناح:" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="13" FontWeight="Medium"/>
+                <ComboBox Style="{StaticResource ExpoComboBoxStyle}" 
+                          ItemsSource="{Binding Statuses}" 
+                          SelectedItem="{Binding SelectedStatus}" 
+                          Width="180" Height="40" Padding="12,0"/>
+            </StackPanel>
+
+            <!-- Search Box -->
+            <forms:ExpoSearchBox Grid.Column="2" 
+                                 Text="{Binding SearchText}" 
+                                 Placeholder="البحث برقم الجناح أو الموقع..."
+                                 Height="40"
+                                 Width="350"/>
+        </Grid>
+
+        <!-- Stats UniformGrid -->
+        <UniformGrid Grid.Row="2" Columns="4" Margin="0,0,0,24">
+            <!-- Total Booths -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,16,0">
+                <StackPanel Margin="16">
+                    <TextBlock Text="إجمالي الأجنحة" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Binding TotalCount}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Available Booths -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,8,0">
+                <StackPanel Margin="16">
+                    <TextBlock Text="الأجنحة المتاحة" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Binding AvailableCount}" FontSize="28" FontWeight="Bold" Foreground="#16A34A"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Reserved Booths -->
+            <Border Style="{StaticResource CardStyle}" Margin="8,0,0,0">
+                <StackPanel Margin="16">
+                    <TextBlock Text="الأجنحة المحجوزة" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Binding ReservedCount}" FontSize="28" FontWeight="Bold" Foreground="#D97706"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Under Review Booths -->
+            <Border Style="{StaticResource CardStyle}" Margin="16,0,0,0">
+                <StackPanel Margin="16">
+                    <TextBlock Text="قيد المراجعة" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Binding UnderReviewCount}" FontSize="28" FontWeight="Bold" Foreground="#2563EB"/>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <!-- Booths DataGrid -->
+        <!-- Booths DataGrid -->
+        <Border Grid.Row="3" Style="{StaticResource CardStyle}">
+            <Grid>
+                <DataGrid Style="{StaticResource ExpoDataGridStyle}"
+                          ItemsSource="{Binding FilteredBooths}">
+                    <DataGrid.Columns>
+                        <!-- رقم الجناح مع دائرة الحالة -->
+                        <DataGridTemplateColumn Header="رقم الجناح" Width="1.5*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Width="12" Height="12" CornerRadius="6"
+                                                Background="{Binding Status, Converter={StaticResource BoothStatusToColorConverter}}"
+                                                Margin="8,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding BoothNumber}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- القاعة -->
+                        <DataGridTextColumn Header="القاعة" Binding="{Binding HallName}" Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="Medium"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- المساحة -->
+                        <DataGridTextColumn Header="المساحة (م²)" Binding="{Binding CurrentAreaSqM, StringFormat={}{0:N0}}" Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="Medium"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- الحالة -->
+                        <DataGridTemplateColumn Header="الحالة" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <badges:StatusBadge Status="{Binding Status}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Actions -->
+                        <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Style="{StaticResource IconButtonStyle}"
+                                                Command="{Binding DataContext.EditBoothCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Margin="0,0,4,0"
+                                                ToolTip="تعديل">
+                                            <materialDesign:PackIcon Kind="PencilOutline" Foreground="{StaticResource BrushTextSecondary}" Width="16" Height="16"/>
+                                        </Button>
+
+                                        <Button Style="{StaticResource IconButtonStyle}"
+                                                Command="{Binding DataContext.DeleteBoothCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip="حذف">
+                                            <materialDesign:PackIcon Kind="TrashCanOutline" Foreground="{StaticResource BrushDangerText}" Width="16" Height="16"/>
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <forms:EmptyStateControl 
+                    IconKind="BoxOpen"
+                    Title="لا توجد أجنحة مطابقة"
+                    Description="لم نعثر على أي جناح يطابق معايير البحث أو التصفية الحالية. جرب تغيير نص البحث أو اختيار حالة أخرى."
+                    ActionText="إضافة جناح جديد"
+                    ActionCommand="{Binding AddBoothCommand}"
+                    Visibility="{Binding FilteredBooths.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

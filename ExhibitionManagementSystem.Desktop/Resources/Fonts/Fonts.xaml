@@ -1,0 +1,7 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- تعريف عائلة الخط Work Sans للاستخدام العام في التطبيق -->
+    <FontFamily x:Key="WorkSansFont">pack://application:,,,/Resources/Fonts/#Work Sans</FontFamily>
+    
+</ResourceDictionary>

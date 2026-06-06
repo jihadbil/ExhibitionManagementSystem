@@ -1,0 +1,57 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===== Success (أخضر) ===== -->
+    <Color x:Key="SuccessColor">#10B981</Color>
+    <Color x:Key="SuccessTextColor">#059669</Color>
+    <Color x:Key="SuccessBgColor">#D1FAE5</Color>
+    <SolidColorBrush x:Key="BrushSuccess" Color="{StaticResource SuccessColor}"/>
+    <SolidColorBrush x:Key="BrushSuccessText" Color="{StaticResource SuccessTextColor}"/>
+    <SolidColorBrush x:Key="BrushSuccessBg" Color="{StaticResource SuccessBgColor}"/>
+
+    <!-- ===== Warning (برتقالي) ===== -->
+    <Color x:Key="WarningColor">#F59E0B</Color>
+    <Color x:Key="WarningTextColor">#D97706</Color>
+    <Color x:Key="WarningBgColor">#FEF3C7</Color>
+    <SolidColorBrush x:Key="BrushWarning" Color="{StaticResource WarningColor}"/>
+    <SolidColorBrush x:Key="BrushWarningText" Color="{StaticResource WarningTextColor}"/>
+    <SolidColorBrush x:Key="BrushWarningBg" Color="{StaticResource WarningBgColor}"/>
+
+    <!-- ===== Danger (أحمر) ===== -->
+    <Color x:Key="DangerColor">#EF4444</Color>
+    <Color x:Key="DangerTextColor">#DC2626</Color>
+    <Color x:Key="DangerBgColor">#FEE2E2</Color>
+    <SolidColorBrush x:Key="BrushDanger" Color="{StaticResource DangerColor}"/>
+    <SolidColorBrush x:Key="BrushDangerText" Color="{StaticResource DangerTextColor}"/>
+    <SolidColorBrush x:Key="BrushDangerBg" Color="{StaticResource DangerBgColor}"/>
+
+    <!-- ===== Info (أزرق) ===== -->
+    <Color x:Key="InfoColor">#3B82F6</Color>
+    <Color x:Key="InfoTextColor">#2563EB</Color>
+    <Color x:Key="InfoBgColor">#DBEAFE</Color>
+    <SolidColorBrush x:Key="BrushInfo" Color="{StaticResource InfoColor}"/>
+    <SolidColorBrush x:Key="BrushInfoText" Color="{StaticResource InfoTextColor}"/>
+    <SolidColorBrush x:Key="BrushInfoBg" Color="{StaticResource InfoBgColor}"/>
+
+    <!-- ===== Badge Reserved (Indigo فاتح) ===== -->
+    <Color x:Key="ReservedTextColor">#4F46E5</Color>
+    <Color x:Key="ReservedBgColor">#E0E7FF</Color>
+    <SolidColorBrush x:Key="BrushReservedText" Color="{StaticResource ReservedTextColor}"/>
+    <SolidColorBrush x:Key="BrushReservedBg" Color="{StaticResource ReservedBgColor}"/>
+
+    <!-- ===== Badge Soon ===== -->
+    <Color x:Key="SoonBgColor">#DBEAFE</Color>
+    <SolidColorBrush x:Key="BrushSoonBg" Color="{StaticResource SoonBgColor}"/>
+
+    <!-- ===== Badge Ended ===== -->
+    <Color x:Key="EndedBgColor">#F3F4F6</Color>
+    <Color x:Key="EndedTextColor">#6B7280</Color>
+    <SolidColorBrush x:Key="BrushEndedBg" Color="{StaticResource EndedBgColor}"/>
+    <SolidColorBrush x:Key="BrushEndedText" Color="{StaticResource EndedTextColor}"/>
+
+    <!-- ===== Badge VIP ===== -->
+    <Color x:Key="VipBgColor">#F3E8FF</Color>
+    <Color x:Key="VipTextColor">#7C3AED</Color>
+    <SolidColorBrush x:Key="BrushVipBg" Color="{StaticResource VipBgColor}"/>
+    <SolidColorBrush x:Key="BrushVipText" Color="{StaticResource VipTextColor}"/>
+</ResourceDictionary>
