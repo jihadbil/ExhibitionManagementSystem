@@ -1,8 +1,17 @@
 using ExhibitionManagementSystem.Controllers.Base;
+using ExhibitionManagementSystem.DataAccess.Repositories.Interfaces;
 using ExhibitionManagementSystem.Models.DTOs.Booth;
+using ExhibitionManagementSystem.Models.DTOs.Common;
+using ExhibitionManagementSystem.Models.Enums;
 using ExhibitionManagementSystem.Services.Interfaces;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace ExhibitionManagementSystem.Controllers.Booth;
 
@@ -10,9 +19,74 @@ namespace ExhibitionManagementSystem.Controllers.Booth;
 public class BoothsController : BaseApiController
 {
     private readonly IBoothService _boothService;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IMapper _mapper;
 
-    public BoothsController(IBoothService boothService)
-        => _boothService = boothService;
+    public BoothsController(IBoothService boothService, IUnitOfWork unitOfWork, IMapper mapper)
+    {
+        _boothService = boothService;
+        _unitOfWork = unitOfWork;
+        _mapper = mapper;
+    }
+
+    // GET /api/booths
+    [HttpGet]
+    public async Task<ActionResult<PagedResultDto<BoothDto>>> GetAll(
+        [FromQuery] int? pageNumber,
+        [FromQuery] int? pageSize,
+        [FromQuery] int? hallId,
+        [FromQuery] int? exhibitionId,
+        [FromQuery] string? status)
+    {
+        var tenantId = TenantId;
+        var query = _unitOfWork.Booths.AsQueryable()
+            .Include(b => b.Hall)
+            .ThenInclude(h => h.Venue)
+            .Where(b => b.Hall.Venue.TenantID == tenantId);
+
+        if (hallId.HasValue)
+        {
+            query = query.Where(b => b.HallID == hallId.Value);
+        }
+
+        if (exhibitionId.HasValue)
+        {
+            var boothIds = await _unitOfWork.BoothReservations.AsQueryable()
+                .Where(r => r.ExhibitionID == exhibitionId.Value && r.BoothID.HasValue)
+                .Select(r => r.BoothID!.Value)
+                .ToListAsync();
+            query = query.Where(b => boothIds.Contains(b.BoothID));
+        }
+
+        if (!string.IsNullOrEmpty(status))
+        {
+            if (Enum.TryParse<BoothStatus>(status, true, out var boothStatus))
+            {
+                query = query.Where(b => b.Status == boothStatus);
+            }
+        }
+
+        var totalCount = await query.CountAsync();
+
+        var page = pageNumber ?? 1;
+        var size = pageSize ?? 10;
+
+        var items = await query
+            .OrderBy(b => b.BoothNumber)
+            .Skip((page - 1) * size)
+            .Take(size)
+            .ToListAsync();
+
+        var dtos = _mapper.Map<IList<BoothDto>>(items);
+
+        return Ok(new PagedResultDto<BoothDto>
+        {
+            Items = dtos.ToList(),
+            TotalCount = totalCount,
+            PageNumber = page,
+            PageSize = size
+        });
+    }
 
     // GET /api/booths/hall/{hallId}
     [HttpGet("hall/{hallId:int}")]

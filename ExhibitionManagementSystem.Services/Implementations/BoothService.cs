@@ -32,7 +32,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<IList<BoothDto>>.Failure("القاعة غير موجودة", "HALL_NOT_FOUND");
             }
 
-            var booths = await _unitOfWork.Booths.FindAsync(b => b.HallID == hallId);
+            var booths = await _unitOfWork.Booths.AsQueryable()
+                .Include(b => b.Hall)
+                .Where(b => b.HallID == hallId)
+                .ToListAsync();
             var dtos = _mapper.Map<IList<BoothDto>>(booths);
             return ServiceResult<IList<BoothDto>>.Success(dtos);
         }
@@ -109,7 +112,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
             _unitOfWork.Booths.Update(booth);
             await _unitOfWork.SaveChangesAsync();
 
-            var resultDto = _mapper.Map<BoothDto>(booth);
+            var updatedBooth = await _unitOfWork.Booths.GetByIdWithIncludesAsync(booth.BoothID, b => b.Hall, b => b.Hall.Venue);
+            var resultDto = _mapper.Map<BoothDto>(updatedBooth ?? booth);
             return ServiceResult<BoothDto>.Success(resultDto);
         }
 
@@ -242,6 +246,26 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 await _unitOfWork.RollbackTransactionAsync();
                 return ServiceResult.Failure($"فشل فك دمج الأكشاك: {ex.Message}", "UNMERGE_FAILED");
             }
+        }
+
+        public async Task<ServiceResult> DeleteAsync(int tenantId, int boothId)
+        {
+            var booth = await _unitOfWork.Booths.GetByIdWithIncludesAsync(boothId, b => b.Hall, b => b.Hall.Venue);
+            if (booth == null || booth.Hall == null || booth.Hall.Venue == null || booth.Hall.Venue.TenantID != tenantId)
+            {
+                return ServiceResult.Failure("الكشك غير موجود", "BOOTH_NOT_FOUND");
+            }
+
+            var hasReservations = await _unitOfWork.BoothReservations.ExistsAsync(r => r.BoothID == boothId && r.Status != ReservationStatus.Cancelled);
+            if (hasReservations)
+            {
+                return ServiceResult.Failure("لا يمكن حذف الكشك لوجود حجوزات نشطة عليه", "BOOTH_HAS_RESERVATIONS");
+            }
+
+            await _unitOfWork.Booths.SoftDeleteAsync(boothId, "System");
+            await _unitOfWork.SaveChangesAsync();
+
+            return ServiceResult.Success();
         }
     }
 }

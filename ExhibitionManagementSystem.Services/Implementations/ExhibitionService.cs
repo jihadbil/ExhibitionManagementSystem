@@ -85,6 +85,12 @@ namespace ExhibitionManagementSystem.Services.Implementations
             exhibition.TenantID = tenantId;
             exhibition.Status = ExhibitionStatus.Planning;
 
+            if (string.IsNullOrWhiteSpace(exhibition.EntryCurrency))
+            {
+                var tenant = await _unitOfWork.Tenants.GetByIdAsync(tenantId);
+                exhibition.EntryCurrency = tenant?.BaseCurrency ?? "USD";
+            }
+
             await _unitOfWork.Exhibitions.AddAsync(exhibition);
             await _unitOfWork.SaveChangesAsync();
 
@@ -102,6 +108,12 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
             _mapper.Map(dto, exhibition);
             exhibition.UpdatedAt = DateTime.UtcNow;
+
+            if (string.IsNullOrWhiteSpace(exhibition.EntryCurrency))
+            {
+                var tenant = await _unitOfWork.Tenants.GetByIdAsync(tenantId);
+                exhibition.EntryCurrency = tenant?.BaseCurrency ?? "USD";
+            }
 
             _unitOfWork.Exhibitions.Update(exhibition);
             await _unitOfWork.SaveChangesAsync();

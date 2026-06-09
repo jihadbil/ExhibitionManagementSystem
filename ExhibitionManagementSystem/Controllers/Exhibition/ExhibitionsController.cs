@@ -99,6 +99,7 @@ public class ExhibitionsController : BaseApiController
 
     // GET /api/exhibitions/{exhibitionId}/schedules
     [HttpGet("{exhibitionId:int}/schedules")]
+    [HttpGet("{exhibitionId:int}/schedule")]
     public async Task<ActionResult<IList<ExhibitionScheduleDto>>> GetSchedules(
         int exhibitionId)
     {
@@ -108,6 +109,7 @@ public class ExhibitionsController : BaseApiController
 
     // POST /api/exhibitions/{exhibitionId}/schedules
     [HttpPost("{exhibitionId:int}/schedules")]
+    [HttpPost("{exhibitionId:int}/schedule")]
     [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<ExhibitionScheduleDto>> AddSchedule(
         int exhibitionId,

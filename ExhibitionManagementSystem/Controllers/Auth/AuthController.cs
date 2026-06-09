@@ -64,6 +64,7 @@ public class AuthController : BaseApiController
 
     // POST /api/auth/forgot-password
     [HttpPost("forgot-password")]
+    [HttpPost("reset-password")]
     [AllowAnonymous]
     public async Task<IActionResult> ForgotPassword(
         [FromBody] ResetPasswordRequestDto dto)
@@ -73,8 +74,8 @@ public class AuthController : BaseApiController
         return Ok(new { message = "إذا كان البريد الإلكتروني مسجلاً، ستصلك رسالة لإعادة تعيين كلمة المرور." });
     }
 
-    // POST /api/auth/reset-password
-    [HttpPost("reset-password")]
+    // POST /api/auth/reset-password/confirm
+    [HttpPost("reset-password/confirm")]
     [AllowAnonymous]
     public async Task<IActionResult> ResetPassword(
         [FromBody] ResetPasswordConfirmDto dto)

@@ -201,5 +201,23 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var dtos = _mapper.Map<IList<TicketScanDto>>(scans);
             return ServiceResult<IList<TicketScanDto>>.Success(dtos);
         }
+
+        public async Task<ServiceResult> CancelTicketAsync(int tenantId, int ticketId)
+        {
+            var ticket = await _unitOfWork.Tickets.AsQueryable()
+                .Include(t => t.Visitor)
+                .FirstOrDefaultAsync(t => t.TicketID == ticketId);
+
+            if (ticket == null || ticket.Visitor.TenantID != tenantId)
+            {
+                return ServiceResult.Failure("التذكرة غير موجودة", "TICKET_NOT_FOUND");
+            }
+
+            ticket.Status = TicketStatus.Cancelled;
+            _unitOfWork.Tickets.Update(ticket);
+            await _unitOfWork.SaveChangesAsync();
+
+            return ServiceResult.Success();
+        }
     }
 }

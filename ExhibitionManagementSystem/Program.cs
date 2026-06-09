@@ -57,6 +57,17 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddControllers();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
+
 // OpenAPI مع دعم JWT
 builder.Services.AddOpenApi(options =>
 {
@@ -95,6 +106,8 @@ Console.WriteLine(db.Database.GetConnectionString());
 // Configure the HTTP request pipeline.
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
