@@ -1,10 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace ExhibitionManagementSystem.Models.Enums;
 
+/// <summary>
+/// يحدد شكل الجناح على مخطط القاعة.
+/// </summary>
 public enum BoothShapeType
 {
-    Rect, Rotated, Polygon
+    /// <summary>
+    /// جناح مستطيل عادي.
+    /// </summary>
+    Rect,
+
+    /// <summary>
+    /// جناح مستطيل مع دوران على المخطط.
+    /// </summary>
+    Rotated,
+
+    /// <summary>
+    /// جناح مرسوم كنقاط مضلعة.
+    /// </summary>
+    Polygon
 }

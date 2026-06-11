@@ -1,0 +1,70 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Controls.Navigation.TopBarControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="64" d:DesignWidth="800"
+             Background="White">
+    <Border BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="0,0,0,1" Height="64">
+        <Grid Margin="24,0">
+            <Grid.ColumnDefinitions>
+                <!-- Right column: Current Page Title -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- Middle column: Search -->
+                <ColumnDefinition Width="*"/>
+                <!-- Left column: Profile / Notifications -->
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Page Title -->
+            <TextBlock x:Name="PageTitleText"
+                       Grid.Column="0"
+                       FontFamily="{StaticResource WorkSansBold}"
+                       FontSize="18"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       VerticalAlignment="Center"
+                       Text="لوحة التحكم"/>
+
+            <!-- Search Bar (Stub placeholder) -->
+            <Grid Grid.Column="1" HorizontalAlignment="Center" Width="400" MaxWidth="400" Height="38">
+                <TextBox Style="{StaticResource StandardTextBoxStyle}"
+                         Padding="16,0"
+                         Height="38"
+                         Tag="ابحث عن أي شيء..."
+                         VerticalAlignment="Center"/>
+            </Grid>
+
+            <!-- Profile and Options -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Notifications Bell -->
+                <Button Style="{StaticResource IconButtonStyle}" Margin="0,0,8,0">
+                    <TextBlock Text="🔔" FontSize="16"/>
+                </Button>
+
+                <!-- Settings Gear -->
+                <Button Style="{StaticResource IconButtonStyle}" Margin="0,0,16,0" Click="Settings_Click">
+                    <TextBlock Text="⚙" FontSize="16"/>
+                </Button>
+
+                <!-- User Initial Badge -->
+                <Border Background="{StaticResource PrimaryGradientBrush}"
+                        Width="36"
+                        Height="36"
+                        CornerRadius="18"
+                        VerticalAlignment="Center"
+                        ToolTip="{Binding Path=FullName, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                    <TextBlock x:Name="UserInitialsText"
+                               Text="م"
+                               FontFamily="{StaticResource WorkSansBold}"
+                               FontSize="13"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

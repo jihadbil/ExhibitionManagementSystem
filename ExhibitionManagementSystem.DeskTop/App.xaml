@@ -1,0 +1,36 @@
+<Application x:Class="ExhibitionManagementSystem.DeskTop.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ExhibitionManagementSystem.DeskTop"
+             xmlns:conv="clr-namespace:ExhibitionManagementSystem.DeskTop.Converters">
+    <!-- لاحظ: لا StartupUri هنا — يُدار بـ App.xaml.cs -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- ترتيب التحميل مهم: Colors أولاً -->
+                <ResourceDictionary Source="Resources/Colors/AppColors.xaml"/>
+                <ResourceDictionary Source="Resources/Fonts/AppFonts.xaml"/>
+                <ResourceDictionary Source="Resources/Styles/ButtonStyles.xaml"/>
+                <ResourceDictionary Source="Resources/Styles/CardStyles.xaml"/>
+                <ResourceDictionary Source="Resources/Styles/InputStyles.xaml"/>
+                <ResourceDictionary Source="Resources/Styles/TableStyles.xaml"/>
+                <ResourceDictionary Source="Resources/Animations/AppAnimations.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Converters -->
+            <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
+            <conv:ExhibitionTypeToGradientConverter x:Key="TypeToGradient"/>
+            <conv:DateRangeConverter x:Key="DateRangeConverter"/>
+            <conv:StatusToColorConverter x:Key="StatusToColor"/>
+            <conv:StatusToTextConverter x:Key="StatusToText"/>
+            <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
+            <conv:NullToVisibilityConverter x:Key="InverseNullToVisibility" Inverse="True"/>
+
+            <!-- FlowDirection RTL عاماً لكل النوافذ -->
+            <Style TargetType="Window">
+                <Setter Property="FlowDirection" Value="RightToLeft"/>
+                <Setter Property="FontFamily" Value="{StaticResource WorkSansRegular}"/>
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

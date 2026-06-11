@@ -166,7 +166,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
         // JWT & Refresh Token Management
         public async Task<ServiceResult<RefreshTokenResponseDto>> RefreshTokenAsync(RefreshTokenRequestDto dto)
         {
-            var secretKey = _configuration["JwtSettings:SecretKey"] ?? "DefaultSecretKeyHere";
+            var secretKey = _configuration["JwtSettings:SecretKey"] ?? "SuperSecretKeyForExhibitionManagementSystemSecurity2026DefaultFallback";
             var tokenValidationParameters = new TokenValidationParameters
             {
                 ValidateAudience = false,
@@ -534,7 +534,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
         // Helpers
         private string GenerateJwtToken(ApplicationUser user, IList<string> roles)
         {
-            var secretKey = _configuration["JwtSettings:SecretKey"] ?? "DefaultSecretKeyHere";
+            var secretKey = _configuration["JwtSettings:SecretKey"] ?? "SuperSecretKeyForExhibitionManagementSystemSecurity2026DefaultFallback";
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(secretKey);
 

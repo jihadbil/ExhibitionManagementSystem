@@ -1,0 +1,162 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Views.Analytics.AnalyticsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1000"
+             FlowDirection="RightToLeft">
+    <Grid Margin="32">
+        <Grid.RowDefinitions>
+            <!-- Title + Export Button -->
+            <RowDefinition Height="Auto"/>
+            <!-- Filters -->
+            <RowDefinition Height="Auto"/>
+            <!-- 4 Glass StatCards -->
+            <RowDefinition Height="Auto"/>
+            <!-- Charts Row -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,24">
+            <TextBlock Text="تحليلات المعارض والمبيعات" Style="{StaticResource H1Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+            <Button Content="📥 تصدير تقرير PDF" 
+                    Style="{StaticResource PrimaryButtonStyle}" 
+                    Command="{Binding ExportReportCommand}"
+                    VerticalAlignment="Center" 
+                    HorizontalAlignment="Left"
+                    Width="180" Height="40"/>
+        </Grid>
+
+        <!-- Filters -->
+        <Border Grid.Row="1" Style="{StaticResource StandardCardStyle}" Padding="16" Margin="0,0,0,24">
+            <StackPanel>
+                <TextBlock Text="اختر المعرض لاستعراض التحليلات" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                          ItemsSource="{Binding Exhibitions}" 
+                          SelectedValuePath="ExhibitionID" 
+                          DisplayMemberPath="Name" 
+                          SelectedValue="{Binding SelectedExhibitionId}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 4 Glass Cards -->
+        <UniformGrid Grid.Row="2" Rows="1" Columns="4" Margin="0,0,0,24">
+            <!-- Visitors -->
+            <Border Style="{StaticResource GlassCardStyle}" Margin="0,0,12,0" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="إجمالي الزوار" Style="{StaticResource SmallStyle}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Text="{Binding TotalVisitors}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" Margin="0,6,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Exhibitors -->
+            <Border Style="{StaticResource GlassCardStyle}" Margin="6,0" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="الشركات العارضة" Style="{StaticResource SmallStyle}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Text="{Binding TotalExhibitors}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource SecondaryBrush}" Margin="0,6,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Occupancy Rate -->
+            <Border Style="{StaticResource GlassCardStyle}" Margin="6,0" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="معدل إشغال الصالة" Style="{StaticResource SmallStyle}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="{Binding OccupancyRate, StringFormat='{}{0:F1}'}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}"/>
+                        <TextBlock Text=" %" FontSize="20" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Bottom" Margin="0,0,2,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Revenue -->
+            <Border Style="{StaticResource GlassCardStyle}" Margin="12,0,0,0" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="صافي الأرباح" Style="{StaticResource SmallStyle}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="{Binding NetProfit, StringFormat='{}{0:N1}'}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource DangerBrush}"/>
+                        <TextBlock Text=" " FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock Text="{Binding CurrencyCode}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource DangerBrush}" VerticalAlignment="Bottom" Margin="0,0,4,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <!-- Main Splits -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <!-- Chart Area (2/3) -->
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="24"/>
+                <!-- Financials Card (1/3) -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Traffic Chart Card -->
+            <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="مخطط تدفق حركة الزوار على مدار اليوم (توزيع افتراضي)" Style="{StaticResource H3Style}" Margin="0,0,0,16" Grid.Row="0"/>
+                    
+                    <lvc:CartesianChart Grid.Row="1"
+                                        Series="{Binding ChartSeries}"
+                                        XAxes="{Binding XAxes}"
+                                        YAxes="{Binding YAxes}"
+                                        TooltipPosition="Top"
+                                        LegendPosition="Hidden"/>
+                </Grid>
+            </Border>
+
+            <!-- Detailed Financials Card -->
+            <Border Grid.Column="2" Style="{StaticResource StandardCardStyle}" Padding="20" Background="White">
+                <StackPanel>
+                    <TextBlock Text="الملخص المالي التفصيلي" Style="{StaticResource H3Style}" Margin="0,0,0,24"/>
+
+                    <!-- Total Revenue -->
+                    <Grid Margin="0,0,0,16">
+                        <TextBlock Text="إجمالي الإيرادات:" Style="{StaticResource LabelStyle}" HorizontalAlignment="Right"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding TotalRevenue, StringFormat='{}{0:N1}'}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
+                            <TextBlock Text=" " Style="{StaticResource BodyStyle}"/>
+                            <TextBlock Text="{Binding CurrencyCode}" Style="{StaticResource BodySecondaryStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                    <Border BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,16"/>
+
+                    <!-- Total Expenses -->
+                    <Grid Margin="0,0,0,16">
+                        <TextBlock Text="إجمالي المصاريف:" Style="{StaticResource LabelStyle}" HorizontalAlignment="Right"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding TotalExpenses, StringFormat='{}{0:N1}'}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
+                            <TextBlock Text=" " Style="{StaticResource BodyStyle}"/>
+                            <TextBlock Text="{Binding CurrencyCode}" Style="{StaticResource BodySecondaryStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                    <Border BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,16"/>
+
+                    <!-- Net Profit -->
+                    <Grid Margin="0,0,0,16">
+                        <TextBlock Text="صافي الأرباح:" Style="{StaticResource LabelStyle}" HorizontalAlignment="Right"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding NetProfit, StringFormat='{}{0:N1}'}" Style="{StaticResource BodyStyle}" FontWeight="Bold" Foreground="{StaticResource SuccessTextBrush}"/>
+                            <TextBlock Text=" " Style="{StaticResource BodyStyle}"/>
+                            <TextBlock Text="{Binding CurrencyCode}" Style="{StaticResource BodySecondaryStyle}" Foreground="{StaticResource SuccessTextBrush}"/>
+                        </StackPanel>
+                    </Grid>
+                    <Border BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,16"/>
+
+                    <!-- Stats summary list -->
+                    <Grid Margin="0,0,0,16">
+                        <TextBlock Text="إجمالي الأجنحة المدرجة:" Style="{StaticResource LabelStyle}" HorizontalAlignment="Right"/>
+                        <TextBlock Text="{Binding TotalBooths}" Style="{StaticResource BodyStyle}" FontWeight="Bold" HorizontalAlignment="Left"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

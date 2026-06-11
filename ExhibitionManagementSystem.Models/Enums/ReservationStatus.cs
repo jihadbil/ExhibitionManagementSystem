@@ -1,10 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace ExhibitionManagementSystem.Models.Enums;
 
+/// <summary>
+/// يحدد حالة حجز الجناح.
+/// </summary>
 public enum ReservationStatus
 {
-    Pending, Confirmed, Cancelled
+    /// <summary>
+    /// الحجز قيد المراجعة أو الانتظار.
+    /// </summary>
+    Pending,
+
+    /// <summary>
+    /// الحجز مؤكد.
+    /// </summary>
+    Confirmed,
+
+    /// <summary>
+    /// الحجز ملغى.
+    /// </summary>
+    Cancelled
 }

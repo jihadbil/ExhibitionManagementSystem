@@ -1,0 +1,119 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Controls.Navigation.SidebarControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="256"
+             Background="{StaticResource SidebarBgBrush}">
+    <Border BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="0,0,1,0">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Brand Section -->
+            <StackPanel Grid.Row="0" Margin="24,32,24,24" Orientation="Horizontal">
+                <TextBlock Text="🏛️" FontSize="28" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                <TextBlock Text="ExpoManager" 
+                           FontFamily="{StaticResource WorkSansBold}"
+                           FontSize="20"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource PrimaryBrush}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Navigation Items -->
+            <ItemsControl Grid.Row="1" x:Name="NavItemsList" Margin="12,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border x:Name="ItemBorder"
+                                Background="Transparent"
+                                CornerRadius="12"
+                                Margin="0,2"
+                                Padding="16,12"
+                                Cursor="Hand"
+                                MouseLeftButtonDown="NavItem_Click">
+                            <Grid x:Name="ItemGrid">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock x:Name="IconText"
+                                           Grid.Column="0"
+                                           Text="{Binding Icon}"
+                                           FontSize="16"
+                                           Foreground="{StaticResource SidebarTextBrush}"
+                                           Margin="0,0,12,0"
+                                           Width="20"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                                
+                                <TextBlock x:Name="LabelText"
+                                           Grid.Column="1"
+                                           Text="{Binding Label}"
+                                           FontFamily="{StaticResource WorkSansMedium}"
+                                           FontSize="14"
+                                           Foreground="{StaticResource SidebarTextBrush}"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <DataTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
+                                <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter TargetName="LabelText" Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter TargetName="LabelText" Property="FontWeight" Value="SemiBold"/>
+                            </DataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                                    <Condition Binding="{Binding IsActive}" Value="False"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource BgSecondaryBrush}"/>
+                                <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                <Setter TargetName="LabelText" Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                            </MultiDataTrigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Footer / Logout Section -->
+            <StackPanel Grid.Row="2" Margin="12,24" VerticalAlignment="Bottom">
+                <Border Background="{StaticResource BorderMainBrush}" Height="1" Margin="12,0,12,16"/>
+                <Border x:Name="LogoutBorder"
+                        Background="Transparent"
+                        CornerRadius="12"
+                        Padding="16,12"
+                        Cursor="Hand"
+                        MouseLeftButtonDown="Logout_Click">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource DangerLightBrush}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="🚪" FontSize="16" Foreground="{StaticResource DangerBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="تسجيل الخروج"
+                                   FontFamily="{StaticResource WorkSansMedium}"
+                                   FontSize="14"
+                                   Foreground="{StaticResource DangerBrush}"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

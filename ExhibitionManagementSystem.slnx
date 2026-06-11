@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="ExhibitionManagementSystem.DataAccess/ExhibitionManagementSystem.DataAccess.csproj" />
+  <Project Path="ExhibitionManagementSystem.Desktop/ExhibitionManagementSystem.Desktop.csproj" DisplayName="ExhibitionManagementSystem.DeskTop" Id="a97d5ed2-6eb5-451e-b675-c128cc541cf0" />
   <Project Path="ExhibitionManagementSystem.Models.DTOs/ExhibitionManagementSystem.Models.DTOs.csproj" />
   <Project Path="ExhibitionManagementSystem.Models/ExhibitionManagementSystem.Models.csproj" />
   <Project Path="ExhibitionManagementSystem.Services/ExhibitionManagementSystem.Services.csproj" />

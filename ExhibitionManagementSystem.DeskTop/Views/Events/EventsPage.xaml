@@ -1,0 +1,209 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Views.Events.EventsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1000"
+             FlowDirection="RightToLeft">
+    <Grid Margin="32">
+        <Grid.RowDefinitions>
+            <!-- Title -->
+            <RowDefinition Height="Auto"/>
+            <!-- Exhibition Selector Filter -->
+            <RowDefinition Height="Auto"/>
+            <!-- Main Content Split -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="جدول الفعاليات والمؤتمرات" Style="{StaticResource H1Style}" Margin="0,0,0,24"/>
+
+        <!-- Filters -->
+        <Border Grid.Row="1" Style="{StaticResource StandardCardStyle}" Padding="16" Margin="0,0,0,24">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+                    <TextBlock Text="تصفية حسب المعرض" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                    <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                              ItemsSource="{Binding Exhibitions}" 
+                              SelectedValuePath="ExhibitionID" 
+                              DisplayMemberPath="Name" 
+                              SelectedValue="{Binding SelectedExhibitionId}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Split Grid -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <!-- Events List (2/3) -->
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="24"/>
+                <!-- Form Panel (1/3) -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Events DataGrid Card -->
+            <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}" Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="الأنشطة والندوات المدرجة" Style="{StaticResource H3Style}" Margin="0,0,0,16" Grid.Row="0"/>
+
+                    <DataGrid ItemsSource="{Binding Events}"
+                              Style="{StaticResource AppDataGridStyle}"
+                              ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
+                              RowStyle="{StaticResource AppDataGridRowStyle}"
+                              CellStyle="{StaticResource AppDataGridCellStyle}"
+                              AutoGenerateColumns="False"
+                              Grid.Row="1">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="النشاط / الفعالية" Binding="{Binding EventName}" Width="1.5*"/>
+                            <DataGridTextColumn Header="المتحدث الرئيسي" Binding="{Binding SpeakerName}" Width="*"/>
+                            <DataGridTextColumn Header="النوع" Binding="{Binding EventType}" Width="*"/>
+                            <DataGridTextColumn Header="تاريخ ووقت البدء" Binding="{Binding StartDateTime, StringFormat='{}{0:dd MMM yyyy, HH:mm}'}" Width="1.5*"/>
+                            <DataGridTextColumn Header="الحضور الأقصى" Binding="{Binding MaxAttendees}" Width="*"/>
+                            
+                            <DataGridTemplateColumn Header="عام" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="نعم" Foreground="{StaticResource SuccessBrush}" FontWeight="SemiBold" Visibility="{Binding IsPublic, Converter={StaticResource BoolToVisibility}}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Actions -->
+                            <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="حذف" 
+                                                Style="{StaticResource DangerButtonStyle}"
+                                                Command="{Binding DataContext.DeleteScheduleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding ScheduleID}"
+                                                Padding="12,4" Height="28"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+
+            <!-- Add Event Form Panel -->
+            <Border Grid.Column="2" Style="{StaticResource StandardCardStyle}" Padding="20" Background="White">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="إضافة فعالية جديدة" Style="{StaticResource H3Style}" Margin="0,0,0,16"/>
+
+                        <!-- Event Name -->
+                        <TextBlock Text="اسم الفعالية / المحاضرة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                 Text="{Binding NewEventName, UpdateSourceTrigger=PropertyChanged}" 
+                                 Margin="0,0,0,16"/>
+
+                        <!-- Speaker Name -->
+                        <TextBlock Text="المتحدث / مقدم الندوة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                 Text="{Binding NewSpeakerName, UpdateSourceTrigger=PropertyChanged}" 
+                                 Margin="0,0,0,16"/>
+
+                        <!-- Dates & Times Grid -->
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Start Date -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="تاريخ البدء" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <DatePicker SelectedDate="{Binding NewStartDate}" Height="40" Margin="0,0,0,12"/>
+                            </StackPanel>
+
+                            <!-- Start Time -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="وقت البدء (hh:mm)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" Height="40"
+                                         Text="{Binding NewStartTime, StringFormat='{}{0:hh\\:mm}'}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- End Date -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="تاريخ الانتهاء" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <DatePicker SelectedDate="{Binding NewEndDate}" Height="40" Margin="0,0,0,12"/>
+                            </StackPanel>
+
+                            <!-- End Time -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="وقت الانتهاء (hh:mm)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" Height="40"
+                                         Text="{Binding NewEndTime, StringFormat='{}{0:hh\\:mm}'}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Max Attendees -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="الحد الأقصى للحضور" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" Height="40"
+                                         Text="{Binding NewMaxAttendees, TargetNullValue=''}" />
+                            </StackPanel>
+
+                            <!-- Event Type -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="نوع الفعالية" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <ComboBox Style="{StaticResource StandardComboBoxStyle}" Height="40" Padding="8,4"
+                                          ItemsSource="{Binding EventTypes}" 
+                                          SelectedItem="{Binding NewEventType}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Description -->
+                        <TextBlock Text="الوصف / محاور الفعالية" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                 Height="60" 
+                                 TextWrapping="Wrap" 
+                                 AcceptsReturn="True" 
+                                 Text="{Binding NewDescription, UpdateSourceTrigger=PropertyChanged}" 
+                                 Margin="0,0,0,16"/>
+
+                        <!-- Is Public -->
+                        <CheckBox Content="فعالية عامة للجمهور" 
+                                  IsChecked="{Binding NewIsPublic}"
+                                  FontFamily="{StaticResource WorkSansMedium}" 
+                                  Margin="0,0,0,20"/>
+
+                        <!-- Save Button -->
+                        <Button Content="إدراج الفعالية ✓" 
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Command="{Binding AddScheduleCommand}"
+                                Height="48"
+                                HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

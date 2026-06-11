@@ -1,10 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace ExhibitionManagementSystem.Models.Enums;
 
+/// <summary>
+/// يحدد فئة العارض المستخدمة في التصنيف والتسعير.
+/// </summary>
 public enum ExhibitorCategory
 {
-    Foreign, Local, Government
+    /// <summary>
+    /// عارض أجنبي.
+    /// </summary>
+    Foreign,
+
+    /// <summary>
+    /// عارض محلي.
+    /// </summary>
+    Local,
+
+    /// <summary>
+    /// جهة حكومية.
+    /// </summary>
+    Government
 }
