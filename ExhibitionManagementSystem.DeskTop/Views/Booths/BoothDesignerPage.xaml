@@ -68,7 +68,7 @@
                     <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
                               ItemsSource="{Binding AvailableHalls}" 
                               SelectedValuePath="HallID" 
-                              DisplayMemberPath="Name" 
+                              DisplayMemberPath="HallName" 
                               SelectedValue="{Binding SelectedHallId}"/>
                 </StackPanel>
 
@@ -118,13 +118,13 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock Text="العرض (px)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                    <TextBlock Text="العرض (م)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
                                     <TextBox Style="{StaticResource StandardTextBoxStyle}" 
                                              Text="{Binding SelectedBoothWidth, UpdateSourceTrigger=PropertyChanged}"/>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="2">
-                                    <TextBlock Text="الارتفاع (px)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                    <TextBlock Text="الارتفاع (م)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
                                     <TextBox Style="{StaticResource StandardTextBoxStyle}" 
                                              Text="{Binding SelectedBoothHeight, UpdateSourceTrigger=PropertyChanged}"/>
                                 </StackPanel>
@@ -148,17 +148,16 @@
         </Border>
 
         <!-- Left Side: Interactive Canvas Workspace -->
-        <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#FFEBF0F5">
+        <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#FFEBF0F5" FlowDirection="LeftToRight">
             <Border BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="1" Margin="40" Background="White" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <!-- Outer canvas wrapper to handle Zoom scaling -->
-                <ItemsControl ItemsSource="{Binding CanvasBooths}" Width="1000" Height="800">
+                <ItemsControl x:Name="DesignerCanvas" ItemsSource="{Binding CanvasBooths}" Width="1000" Height="800">
+                    <ItemsControl.LayoutTransform>
+                        <ScaleTransform ScaleX="{Binding ScaleFactor}" ScaleY="{Binding ScaleFactor}"/>
+                    </ItemsControl.LayoutTransform>
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <Canvas Background="White" Width="1000" Height="800">
-                                <Canvas.LayoutTransform>
-                                    <ScaleTransform ScaleX="{Binding ScaleFactor}" ScaleY="{Binding ScaleFactor}"/>
-                                </Canvas.LayoutTransform>
-                            </Canvas>
+                            <Canvas Background="White" Width="1000" Height="800"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemContainerStyle>

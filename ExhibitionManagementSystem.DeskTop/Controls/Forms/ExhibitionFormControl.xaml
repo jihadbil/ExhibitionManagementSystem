@@ -43,7 +43,7 @@
                         <TextBlock Text="الإصدار / الدورة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
                         <TextBox Style="{StaticResource StandardTextBoxStyle}" 
                                  Text="{Binding Edition, UpdateSourceTrigger=PropertyChanged}" 
-                                 Margin="0,0,0,16}"/>
+                                 Margin="0,0,0,16"/>
                     </StackPanel>
                 </Grid>
 
@@ -119,9 +119,12 @@
                     <!-- Entry Currency -->
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="العملة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                 Text="{Binding EntryCurrency, UpdateSourceTrigger=PropertyChanged}" 
-                                 Margin="0,0,0,16"/>
+                        <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                  ItemsSource="{Binding Currencies}" 
+                                  SelectedValuePath="CurrencyCode" 
+                                  DisplayMemberPath="CurrencyCode" 
+                                  SelectedValue="{Binding EntryCurrency}" 
+                                  Margin="0,0,0,16"/>
                     </StackPanel>
 
                     <!-- Status (Only editable or relevant in edit mode) -->

@@ -1,0 +1,111 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Controls.Forms.VenueFormControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignWidth="600" d:DesignHeight="550"
+             FlowDirection="RightToLeft">
+    <Grid Margin="4">
+        <Grid.RowDefinitions>
+            <!-- Form Fields Scroll Area -->
+            <RowDefinition Height="*"/>
+            <!-- Footer Actions -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,20">
+            <StackPanel Margin="0,0,4,0">
+                <!-- Name -->
+                <TextBlock Text="اسم الموقع" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                         Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
+                         Margin="0,0,0,16"/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- City -->
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="المدينة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                 Text="{Binding City, UpdateSourceTrigger=PropertyChanged}" 
+                                 Margin="0,0,0,16"/>
+                    </StackPanel>
+
+                    <!-- Country -->
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="الدولة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                 Text="{Binding Country, UpdateSourceTrigger=PropertyChanged}" 
+                                 Margin="0,0,0,16"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Address -->
+                <TextBlock Text="العنوان التفصيلي" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                         Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" 
+                         Margin="0,0,0,16"/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- TotalCapacity -->
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="الطاقة الاستيعابية الإجمالية" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                 Text="{Binding TotalCapacity, TargetNullValue='', UpdateSourceTrigger=PropertyChanged}" 
+                                 Margin="0,0,0,16"/>
+                    </StackPanel>
+
+                    <!-- MapImageURL -->
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="رابط صورة الخريطة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                 Text="{Binding MapImageURL, UpdateSourceTrigger=PropertyChanged}" 
+                                 Margin="0,0,0,16"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- IsActive (Only editable in edit mode) -->
+                <StackPanel Margin="0,8,0,16" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}">
+                    <CheckBox Content="الموقع نشط ومتاح للاستخدام" 
+                              IsChecked="{Binding IsActive}" 
+                              Foreground="{StaticResource TextPrimaryBrush}"
+                              FontSize="14"
+                              FontFamily="{StaticResource WorkSansMedium}"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Actions -->
+        <Grid Grid.Row="1" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Content="حفظ" 
+                    Command="{Binding SaveCommand}" 
+                    Style="{StaticResource PrimaryButtonStyle}" 
+                    Grid.Column="1" 
+                    Width="120" 
+                    Margin="0,0,12,0"/>
+            <Button Content="إلغاء" 
+                    Command="{Binding CancelCommand}" 
+                    Style="{StaticResource SecondaryButtonStyle}" 
+                    Grid.Column="2" 
+                    Width="120"/>
+        </Grid>
+    </Grid>
+</UserControl>

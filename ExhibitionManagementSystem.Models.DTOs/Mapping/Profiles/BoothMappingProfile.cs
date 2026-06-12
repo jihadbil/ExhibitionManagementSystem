@@ -25,7 +25,7 @@ public class BoothMappingProfile : Profile
             .ForMember(dest => dest.IsMerged, opt => opt.MapFrom(src => false))
             .ForMember(dest => dest.MergeID, opt => opt.Ignore())
             .ForMember(dest => dest.CurrentAreaSqM, opt => opt.MapFrom(src => src.OriginalAreaSqM))
-            .ForMember(dest => dest.ShapeType, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.ShapeType) ? Enum.Parse<BoothShapeType>(src.ShapeType, true) : BoothShapeType.Rect))
+            .ForMember(dest => dest.ShapeType, opt => opt.MapFrom(src => ParseShapeType(src.ShapeType)))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
@@ -42,7 +42,7 @@ public class BoothMappingProfile : Profile
             .ForMember(dest => dest.IsMerged, opt => opt.Ignore())
             .ForMember(dest => dest.MergeID, opt => opt.Ignore())
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => Enum.Parse<BoothStatus>(src.Status, true)))
-            .ForMember(dest => dest.ShapeType, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.ShapeType) ? (BoothShapeType?)Enum.Parse<BoothShapeType>(src.ShapeType, true) : null))
+            .ForMember(dest => dest.ShapeType, opt => opt.MapFrom(src => ParseNullableShapeType(src.ShapeType)))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
@@ -62,5 +62,17 @@ public class BoothMappingProfile : Profile
             .ForMember(dest => dest.MergeItemID, opt => opt.MapFrom(src => src.ItemID))
             .ForMember(dest => dest.AreaSqM, opt => opt.MapFrom(src => src.OriginalAreaSqM))
             .ForMember(dest => dest.BoothNumber, opt => opt.MapFrom(src => src.Booth != null ? src.Booth.BoothNumber : string.Empty));
+    }
+
+    private static BoothShapeType ParseShapeType(string? shapeType)
+    {
+        if (string.IsNullOrEmpty(shapeType)) return BoothShapeType.Rect;
+        return Enum.TryParse<BoothShapeType>(shapeType, true, out var st) ? st : BoothShapeType.Rect;
+    }
+
+    private static BoothShapeType? ParseNullableShapeType(string? shapeType)
+    {
+        if (string.IsNullOrEmpty(shapeType)) return null;
+        return Enum.TryParse<BoothShapeType>(shapeType, true, out var st) ? (BoothShapeType?)st : null;
     }
 }

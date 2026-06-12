@@ -33,7 +33,7 @@ public partial class BoothDesignerPage : UserControl
 
             element.CaptureMouse();
             _isDragging = true;
-            _clickPosition = e.GetPosition(this);
+            _clickPosition = e.GetPosition(DesignerCanvas);
             _originX = item.X;
             _originY = item.Y;
 
@@ -48,14 +48,10 @@ public partial class BoothDesignerPage : UserControl
             var element = (FrameworkElement)sender;
             if (element.DataContext is BoothCanvasItem item)
             {
-                var currentPosition = e.GetPosition(this);
+                var currentPosition = e.GetPosition(DesignerCanvas);
 
                 double deltaX = currentPosition.X - _clickPosition.X;
                 double deltaY = currentPosition.Y - _clickPosition.Y;
-
-                // Adjust delta for ScaleFactor zoom
-                deltaX /= ViewModel.ScaleFactor;
-                deltaY /= ViewModel.ScaleFactor;
 
                 item.X = _originX + deltaX;
                 item.Y = _originY + deltaY;

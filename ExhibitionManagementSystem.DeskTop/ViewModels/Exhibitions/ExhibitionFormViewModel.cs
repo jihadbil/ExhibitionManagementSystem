@@ -9,6 +9,7 @@ using ExhibitionManagementSystem.DeskTop.Services.Notifications;
 using ExhibitionManagementSystem.DeskTop.Services.Session;
 using ExhibitionManagementSystem.Models.DTOs.Exhibition;
 using ExhibitionManagementSystem.Models.DTOs.Venue;
+using ExhibitionManagementSystem.Models.DTOs.Currency;
 using ExhibitionManagementSystem.Services.Interfaces;
 
 namespace ExhibitionManagementSystem.DeskTop.ViewModels.Exhibitions;
@@ -17,6 +18,7 @@ public partial class ExhibitionFormViewModel : ViewModelBase
 {
     private readonly IExhibitionService _exhibitionService;
     private readonly IVenueService _venueService;
+    private readonly ICurrencyService _currencyService;
 
     // ━━━━━━━━━━━━━━ Properties ━━━━━━━━━━━━━━
 
@@ -48,7 +50,7 @@ public partial class ExhibitionFormViewModel : ViewModelBase
     private decimal? _entryFee;
 
     [ObservableProperty]
-    private string _entryCurrency = "SAR";
+    private string _entryCurrency = "LYD";
 
     [ObservableProperty]
     private string _status = "Upcoming";
@@ -60,6 +62,7 @@ public partial class ExhibitionFormViewModel : ViewModelBase
     private bool _isEditMode;
 
     public ObservableCollection<VenueSummaryDto> Venues { get; } = [];
+    public ObservableCollection<CurrencyDto> Currencies { get; } = [];
     public ObservableCollection<string> ExhibitionTypes { get; } = new()
     {
         "Tech", "Medical", "Industrial", "Commercial", "Educational", "Automotive"
@@ -77,12 +80,14 @@ public partial class ExhibitionFormViewModel : ViewModelBase
     public ExhibitionFormViewModel(
         IExhibitionService exhibitionService,
         IVenueService venueService,
+        ICurrencyService currencyService,
         INavigationService navigationService,
         INotificationService notificationService,
         SessionService session) : base(navigationService, notificationService, session)
     {
         _exhibitionService = exhibitionService;
         _venueService = venueService;
+        _currencyService = currencyService;
         Title = "إضافة معرض جديد";
     }
 
@@ -95,11 +100,33 @@ public partial class ExhibitionFormViewModel : ViewModelBase
         Title = IsEditMode ? "تعديل المعرض" : "إضافة معرض جديد";
 
         await LoadVenuesAsync();
+        await LoadCurrenciesAsync();
 
         if (IsEditMode)
         {
             await LoadExhibitionDetailsAsync();
         }
+    }
+
+    private async Task LoadCurrenciesAsync()
+    {
+        await ExecuteSafeAsync(async () =>
+        {
+            var result = await _currencyService.GetAllAsync();
+            if (result.IsSuccess && result.Data is not null)
+            {
+                Currencies.Clear();
+                foreach (var c in result.Data)
+                {
+                    Currencies.Add(c);
+                }
+
+                if (Currencies.Count > 0 && (string.IsNullOrEmpty(EntryCurrency) || EntryCurrency == "SAR"))
+                {
+                    EntryCurrency = Currencies[0].CurrencyCode;
+                }
+            }
+        }, "خطأ في تحميل العملات");
     }
 
     private async Task LoadVenuesAsync()

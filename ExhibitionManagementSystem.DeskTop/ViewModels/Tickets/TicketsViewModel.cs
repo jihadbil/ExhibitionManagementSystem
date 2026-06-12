@@ -50,7 +50,7 @@ public partial class TicketsViewModel : ViewModelBase
     [ObservableProperty] private int _selectedVisitorId;
     [ObservableProperty] private string _selectedTicketType = "Regular"; // Regular | VIP | Student | EarlyBird
     [ObservableProperty] private decimal _newTicketPrice = 0;
-    [ObservableProperty] private string _newTicketCurrencyCode = "SAR";
+    [ObservableProperty] private string _newTicketCurrencyCode = "LYD";
     [ObservableProperty] private DateTime _newTicketValidDate = DateTime.Today.AddDays(7);
 
     public ObservableCollection<string> TicketTypes { get; } = new()

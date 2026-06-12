@@ -27,6 +27,7 @@ using ExhibitionManagementSystem.DeskTop.ViewModels.Events;
 using ExhibitionManagementSystem.DeskTop.ViewModels.Tickets;
 using ExhibitionManagementSystem.DeskTop.ViewModels.Analytics;
 using ExhibitionManagementSystem.DeskTop.ViewModels.Settings;
+using ExhibitionManagementSystem.DeskTop.ViewModels.Venues;
 using ExhibitionManagementSystem.DeskTop.Views.Auth;
 using ExhibitionManagementSystem.DeskTop.Views.Shell;
 using ExhibitionManagementSystem.DeskTop.Views.Dashboard;
@@ -37,6 +38,7 @@ using ExhibitionManagementSystem.DeskTop.Views.Events;
 using ExhibitionManagementSystem.DeskTop.Views.Tickets;
 using ExhibitionManagementSystem.DeskTop.Views.Analytics;
 using ExhibitionManagementSystem.DeskTop.Views.Settings;
+using ExhibitionManagementSystem.DeskTop.Views.Venues;
 
 namespace ExhibitionManagementSystem.DeskTop;
 
@@ -142,6 +144,9 @@ public partial class App : Application
         services.AddTransient<TicketsViewModel>();
         services.AddTransient<AnalyticsViewModel>();
         services.AddTransient<SettingsViewModel>();
+        services.AddTransient<VenuesViewModel>();
+        services.AddTransient<VenueFormViewModel>();
+        services.AddTransient<HallFormViewModel>();
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // 6. Windows & Pages
@@ -157,6 +162,7 @@ public partial class App : Application
         services.AddTransient<TicketsPage>();
         services.AddTransient<AnalyticsPage>();
         services.AddTransient<SettingsPage>();
+        services.AddTransient<VenuesPage>();
     }
 
     protected override async void OnExit(ExitEventArgs e)

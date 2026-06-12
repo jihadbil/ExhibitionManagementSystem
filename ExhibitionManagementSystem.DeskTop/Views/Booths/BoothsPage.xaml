@@ -57,7 +57,7 @@
                     <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
                               ItemsSource="{Binding AvailableHalls}" 
                               SelectedValuePath="HallID" 
-                              DisplayMemberPath="Name" 
+                              DisplayMemberPath="HallName" 
                               SelectedValue="{Binding SelectedHallId}"/>
                 </StackPanel>
 

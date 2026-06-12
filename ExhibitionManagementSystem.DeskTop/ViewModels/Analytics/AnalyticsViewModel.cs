@@ -44,7 +44,7 @@ public partial class AnalyticsViewModel : ViewModelBase
     [ObservableProperty] private decimal _totalRevenue;
     [ObservableProperty] private decimal _totalExpenses;
     [ObservableProperty] private decimal _netProfit;
-    [ObservableProperty] private string _currencyCode = "SAR";
+    [ObservableProperty] private string _currencyCode = "LYD";
 
     // ━━━━━━━━━━━━━━ LiveCharts2 Properties ━━━━━━━━━━━━━━
     [ObservableProperty] private ISeries[] _chartSeries = [];
@@ -118,7 +118,7 @@ public partial class AnalyticsViewModel : ViewModelBase
                 TotalRevenue = report.TotalRevenue;
                 TotalExpenses = report.TotalExpenses;
                 NetProfit = report.NetProfit;
-                CurrencyCode = string.IsNullOrWhiteSpace(report.CurrencyCode) ? "SAR" : report.CurrencyCode;
+                CurrencyCode = string.IsNullOrWhiteSpace(report.CurrencyCode) ? "LYD" : report.CurrencyCode;
 
                 // Load Mock Traffic Data for charting based on total visitors
                 LoadMockTrafficData(TotalVisitors);

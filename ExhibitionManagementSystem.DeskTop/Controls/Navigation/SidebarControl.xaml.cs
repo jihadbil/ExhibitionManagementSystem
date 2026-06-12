@@ -18,6 +18,7 @@ using ExhibitionManagementSystem.DeskTop.Views.Tickets;
 using ExhibitionManagementSystem.DeskTop.Views.Analytics;
 using ExhibitionManagementSystem.DeskTop.Views.Settings;
 using ExhibitionManagementSystem.DeskTop.Views.Auth;
+using ExhibitionManagementSystem.DeskTop.Views.Venues;
 
 namespace ExhibitionManagementSystem.DeskTop.Controls.Navigation;
 
@@ -50,6 +51,7 @@ public partial class SidebarControl : UserControl
         {
             new() { Label = "لوحة التحكم",    Icon = "⊞", Route = "Dashboard" },
             new() { Label = "المعارض",         Icon = "🏛", Route = "Exhibitions" },
+            new() { Label = "المواقع والقاعات", Icon = "📍", Route = "Venues" },
             new() { Label = "الأجنحة",         Icon = "🏪", Route = "Booths" },
             new() { Label = "الشركات العارضة", Icon = "🏢", Route = "Companies" },
             new() { Label = "الفعاليات",       Icon = "📅", Route = "Events" },
@@ -100,6 +102,9 @@ public partial class SidebarControl : UserControl
                 break;
             case "Exhibitions":
                 _navigationService.NavigateTo<ExhibitionsPage>();
+                break;
+            case "Venues":
+                _navigationService.NavigateTo<VenuesPage>();
                 break;
             case "Booths":
                 _navigationService.NavigateTo<BoothsPage>();

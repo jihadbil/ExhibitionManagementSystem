@@ -140,6 +140,8 @@ public partial class BoothDesignerViewModel : ViewModelBase
         }
     }
 
+    private const double MeterToPixel = 20.0;
+
     [RelayCommand]
     private async Task LoadCanvasBoothsAsync()
     {
@@ -158,10 +160,10 @@ public partial class BoothDesignerViewModel : ViewModelBase
                         BoothID = b.BoothID,
                         BoothNumber = b.BoothNumber,
                         Status = b.Status,
-                        X = (double)(b.PosX ?? 20),
-                        Y = (double)(b.PosY ?? 20),
-                        Width = (double)(b.Width ?? 80),
-                        Height = (double)(b.Height ?? 60),
+                        X = (double)((b.PosX ?? 10) * (decimal)MeterToPixel),
+                        Y = (double)((b.PosY ?? 10) * (decimal)MeterToPixel),
+                        Width = (double)((b.Width ?? 4) * (decimal)MeterToPixel),
+                        Height = (double)((b.Height ?? 3) * (decimal)MeterToPixel),
                         IsSelected = false
                     });
                 }
@@ -181,8 +183,8 @@ public partial class BoothDesignerViewModel : ViewModelBase
         {
             value.IsSelected = true;
             SelectedBoothNumber = value.BoothNumber;
-            SelectedBoothWidth = value.Width;
-            SelectedBoothHeight = value.Height;
+            SelectedBoothWidth = value.Width / MeterToPixel;
+            SelectedBoothHeight = value.Height / MeterToPixel;
             SelectedBoothStatus = value.Status;
         }
         else
@@ -201,8 +203,8 @@ public partial class BoothDesignerViewModel : ViewModelBase
 
         // Apply temporary property panel values to the item
         SelectedBooth.BoothNumber = SelectedBoothNumber;
-        SelectedBooth.Width = SelectedBoothWidth;
-        SelectedBooth.Height = SelectedBoothHeight;
+        SelectedBooth.Width = SelectedBoothWidth * MeterToPixel;
+        SelectedBooth.Height = SelectedBoothHeight * MeterToPixel;
         SelectedBooth.Status = SelectedBoothStatus;
 
         await SaveBoothPositionAsync(SelectedBooth);
@@ -216,10 +218,10 @@ public partial class BoothDesignerViewModel : ViewModelBase
             {
                 BoothNumber = item.BoothNumber,
                 Status = item.Status,
-                PosX = (decimal)item.X,
-                PosY = (decimal)item.Y,
-                Width = (decimal)item.Width,
-                Height = (decimal)item.Height
+                PosX = (decimal)(item.X / MeterToPixel),
+                PosY = (decimal)(item.Y / MeterToPixel),
+                Width = (decimal)(item.Width / MeterToPixel),
+                Height = (decimal)(item.Height / MeterToPixel)
             };
 
             var result = await _boothService.UpdateAsync(Session.TenantId, item.BoothID, dto);
