@@ -22,7 +22,8 @@ namespace ExhibitionManagementSystem.DataAccess
             await context.Database.MigrateAsync();
 
             // 1. Seed Currency
-            if (!await context.Currencies.AnyAsync(c => c.CurrencyCode == "USD"))
+            bool hasUSD = await context.Currencies.AnyAsync(c => c.CurrencyCode == "USD");
+            if (!hasUSD)
             {
                 context.Currencies.Add(new Currency
                 {
@@ -30,8 +31,85 @@ namespace ExhibitionManagementSystem.DataAccess
                     CurrencyName = "US Dollar",
                     Symbol = "$"
                 });
+            }
+
+            bool hasLYD = await context.Currencies.AnyAsync(c => c.CurrencyCode == "LYD");
+            if (!hasLYD)
+            {
+                context.Currencies.Add(new Currency
+                {
+                    CurrencyCode = "LYD",
+                    CurrencyName = "Libyan Dinar",
+                    Symbol = "د.ل"
+                });
+            }
+
+            bool hasEUR = await context.Currencies.AnyAsync(c => c.CurrencyCode == "EUR");
+            if (!hasEUR)
+            {
+                context.Currencies.Add(new Currency
+                {
+                    CurrencyCode = "EUR",
+                    CurrencyName = "Euro",
+                    Symbol = "€"
+                });
+            }
+
+            if (!hasUSD || !hasLYD || !hasEUR)
+            {
                 await context.SaveChangesAsync();
             }
+
+            // Seed Exchange Rates
+            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "USD" && r.ToCurrency == "LYD"))
+            {
+                context.ExchangeRates.Add(new ExchangeRate
+                {
+                    FromCurrency = "USD",
+                    ToCurrency = "LYD",
+                    Rate = 4.80m,
+                    RateDate = DateTime.UtcNow.Date,
+                    Source = "System Init",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "LYD" && r.ToCurrency == "USD"))
+            {
+                context.ExchangeRates.Add(new ExchangeRate
+                {
+                    FromCurrency = "LYD",
+                    ToCurrency = "USD",
+                    Rate = 0.2083m,
+                    RateDate = DateTime.UtcNow.Date,
+                    Source = "System Init",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "USD" && r.ToCurrency == "EUR"))
+            {
+                context.ExchangeRates.Add(new ExchangeRate
+                {
+                    FromCurrency = "USD",
+                    ToCurrency = "EUR",
+                    Rate = 0.92m,
+                    RateDate = DateTime.UtcNow.Date,
+                    Source = "System Init",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "EUR" && r.ToCurrency == "USD"))
+            {
+                context.ExchangeRates.Add(new ExchangeRate
+                {
+                    FromCurrency = "EUR",
+                    ToCurrency = "USD",
+                    Rate = 1.087m,
+                    RateDate = DateTime.UtcNow.Date,
+                    Source = "System Init",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            await context.SaveChangesAsync();
 
             // 2. Seed Tenant
             var defaultTenant = await context.Tenants.FirstOrDefaultAsync(t => t.CompanyName == "System Admin");
