@@ -93,6 +93,7 @@ var app = builder.Build();
 try
 {
     await DataSeeder.SeedDataAsync(app.Services);
+    // await DataSeederTest.SeedDataAsync(app.Services);
 }
 catch (Exception ex)
 {

@@ -38,15 +38,16 @@
                     CornerRadius="24"
                     Background="{StaticResource BgSecondaryBrush}"
                     VerticalAlignment="Center">
-                <TextBlock x:Name="IconLabel"
-                           Text="📊"
-                           FontSize="20"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"/>
+                <Path x:Name="IconPath"
+                      Width="20" Height="20"
+                      Stretch="Uniform"
+                      Fill="{StaticResource PrimaryBrush}"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"/>
             </Border>
 
             <!-- Trend Section -->
-            <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
+            <StackPanel x:Name="TrendPanel" Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0" Visibility="Collapsed">
                 <TextBlock x:Name="TrendIcon"
                            Text="▲"
                            FontWeight="Bold"
@@ -54,7 +55,7 @@
                            VerticalAlignment="Center"
                            Margin="0,0,4,0"/>
                 <TextBlock x:Name="TrendTextLabel"
-                           Text="+0%"
+                           Text=""
                            FontFamily="{StaticResource WorkSansMedium}"
                            FontSize="12"
                            VerticalAlignment="Center"/>

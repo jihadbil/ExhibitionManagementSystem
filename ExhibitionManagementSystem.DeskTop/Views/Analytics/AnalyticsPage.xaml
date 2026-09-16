@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+             xmlns:cards="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Cards"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1000"
              FlowDirection="RightToLeft">
@@ -22,12 +23,16 @@
         <!-- Header -->
         <Grid Grid.Row="0" Margin="0,0,0,24">
             <TextBlock Text="تحليلات المعارض والمبيعات" Style="{StaticResource H1Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-            <Button Content="📥 تصدير تقرير PDF" 
-                    Style="{StaticResource PrimaryButtonStyle}" 
+            <Button Style="{StaticResource PrimaryButtonStyle}" 
                     Command="{Binding ExportReportCommand}"
                     VerticalAlignment="Center" 
                     HorizontalAlignment="Left"
-                    Width="180" Height="40"/>
+                    Width="180" Height="40">
+                <StackPanel Orientation="Horizontal">
+                    <Path Data="{StaticResource IconExport}" Width="14" Height="14" Stretch="Uniform" Fill="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="تصدير تقرير PDF" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
         </Grid>
 
         <!-- Filters -->
@@ -42,46 +47,40 @@
             </StackPanel>
         </Border>
 
-        <!-- 4 Glass Cards -->
+        <!-- 4 Stat Cards -->
         <UniformGrid Grid.Row="2" Rows="1" Columns="4" Margin="0,0,0,24">
             <!-- Visitors -->
-            <Border Style="{StaticResource GlassCardStyle}" Margin="0,0,12,0" Padding="20">
-                <StackPanel>
-                    <TextBlock Text="إجمالي الزوار" Style="{StaticResource SmallStyle}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <TextBlock Text="{Binding TotalVisitors}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" Margin="0,6,0,0"/>
-                </StackPanel>
-            </Border>
+            <cards:StatCardControl Margin="0,0,12,0"
+                                   Title="إجمالي الزوار"
+                                   Value="{Binding TotalVisitors}"
+                                   IconGeometry="{StaticResource IconUsers}"/>
 
             <!-- Exhibitors -->
-            <Border Style="{StaticResource GlassCardStyle}" Margin="6,0" Padding="20">
-                <StackPanel>
-                    <TextBlock Text="الشركات العارضة" Style="{StaticResource SmallStyle}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <TextBlock Text="{Binding TotalExhibitors}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource SecondaryBrush}" Margin="0,6,0,0"/>
-                </StackPanel>
-            </Border>
+            <cards:StatCardControl Margin="6,0"
+                                   Title="الشركات العارضة"
+                                   Value="{Binding TotalExhibitors}"
+                                   IconGeometry="{StaticResource IconCompany}"
+                                   IconBackground="{StaticResource SecondaryLightBrush}"/>
 
             <!-- Occupancy Rate -->
-            <Border Style="{StaticResource GlassCardStyle}" Margin="6,0" Padding="20">
-                <StackPanel>
-                    <TextBlock Text="معدل إشغال الصالة" Style="{StaticResource SmallStyle}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <TextBlock Text="{Binding OccupancyRate, StringFormat='{}{0:F1}'}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}"/>
-                        <TextBlock Text=" %" FontSize="20" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Bottom" Margin="0,0,2,0"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
+            <cards:StatCardControl Margin="6,0"
+                                   Title="معدل إشغال الصالة"
+                                   Value="{Binding OccupancyRate, StringFormat='{}{0:F1} %'}"
+                                   IconGeometry="{StaticResource IconBooth}"
+                                   IconBackground="{StaticResource SuccessLightBrush}"/>
 
             <!-- Revenue -->
-            <Border Style="{StaticResource GlassCardStyle}" Margin="12,0,0,0" Padding="20">
-                <StackPanel>
-                    <TextBlock Text="صافي الأرباح" Style="{StaticResource SmallStyle}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <TextBlock Text="{Binding NetProfit, StringFormat='{}{0:N1}'}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource DangerBrush}"/>
-                        <TextBlock Text=" " FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding CurrencyCode}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource DangerBrush}" VerticalAlignment="Bottom" Margin="0,0,4,0"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
+            <cards:StatCardControl Margin="12,0,0,0"
+                                   Title="صافي الأرباح"
+                                   IconGeometry="{StaticResource IconInvoice}"
+                                   IconBackground="{StaticResource DangerLightBrush}">
+                <cards:StatCardControl.Value>
+                    <MultiBinding StringFormat="{}{0:N1} {1}">
+                        <Binding Path="NetProfit"/>
+                        <Binding Path="CurrencyCode"/>
+                    </MultiBinding>
+                </cards:StatCardControl.Value>
+            </cards:StatCardControl>
         </UniformGrid>
 
         <!-- Main Splits -->

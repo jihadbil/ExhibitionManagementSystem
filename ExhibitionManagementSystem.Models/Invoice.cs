@@ -122,4 +122,10 @@ public class Invoice : IAuditableEntity, ISoftDeletable
     /// المدفوعات المسجلة على الفاتورة.
     /// </summary>
     public virtual ICollection<Payment> Payments { get; set; } = new HashSet<Payment>();
+
+    /// <summary>
+    /// البنود التفصيلية التابعة للفاتورة.
+    /// </summary>
+    public virtual ICollection<InvoiceItem> InvoiceItems { get; set; } = new HashSet<InvoiceItem>();
 }
+

@@ -15,4 +15,15 @@ public partial class EventsPage : UserControl
 
         Loaded += async (s, e) => await ViewModel.OnNavigatedToAsync();
     }
+
+    private void AddEvent_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        var formControl = new Controls.Forms.EventFormControl { DataContext = ViewModel };
+        var dialog = new Controls.Dialogs.FormDialog(formControl, "إضافة فعالية جديدة")
+        {
+            Owner = System.Windows.Window.GetWindow(this)
+        };
+        ViewModel.CloseAction = () => dialog.Close();
+        dialog.ShowDialog();
+    }
 }

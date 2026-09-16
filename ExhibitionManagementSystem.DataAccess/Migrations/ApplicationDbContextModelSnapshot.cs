@@ -211,6 +211,9 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BoothID"));
 
+                    b.Property<int?>("AssignedPriceRuleID")
+                        .HasColumnType("int");
+
                     b.Property<string>("BoothNumber")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -277,6 +280,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasColumnType("decimal(10,2)");
 
                     b.HasKey("BoothID");
+
+                    b.HasIndex("AssignedPriceRuleID");
 
                     b.HasIndex("MergeID");
 
@@ -415,6 +420,10 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("RuleName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<int>("TenantID")
                         .HasColumnType("int");
 
@@ -502,9 +511,6 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<int?>("ExhibitorID1")
                         .HasColumnType("int");
 
-                    b.Property<int>("InvoiceID")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -548,8 +554,6 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.HasIndex("ExhibitorID");
 
                     b.HasIndex("ExhibitorID1");
-
-                    b.HasIndex("InvoiceID");
 
                     b.HasIndex("MergeID");
 
@@ -1193,6 +1197,38 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .IsUnique();
 
                     b.ToTable("Invoices");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.InvoiceItem", b =>
+                {
+                    b.Property<int>("InvoiceItemID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InvoiceItemID"));
+
+                    b.Property<int>("InvoiceID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("InvoiceItemID");
+
+                    b.HasIndex("InvoiceID");
+
+                    b.ToTable("InvoiceItems");
                 });
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.PackageService", b =>
@@ -2145,6 +2181,10 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Booth", b =>
                 {
+                    b.HasOne("ExhibitionManagementSystem.Models.BoothPriceRule", "AssignedPriceRule")
+                        .WithMany()
+                        .HasForeignKey("AssignedPriceRuleID");
+
                     b.HasOne("ExhibitionManagementSystem.Models.Hall", "Hall")
                         .WithMany("Booths")
                         .HasForeignKey("HallID")
@@ -2155,6 +2195,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .WithMany()
                         .HasForeignKey("MergeID")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AssignedPriceRule");
 
                     b.Navigation("BoothMerge");
 
@@ -2269,12 +2311,6 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .WithMany("BoothReservations")
                         .HasForeignKey("ExhibitorID1");
 
-                    b.HasOne("ExhibitionManagementSystem.Models.Invoice", "Invoice")
-                        .WithMany()
-                        .HasForeignKey("InvoiceID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("ExhibitionManagementSystem.Models.BoothMerge", "BoothMerge")
                         .WithMany()
                         .HasForeignKey("MergeID")
@@ -2291,8 +2327,6 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Navigation("Exhibition");
 
                     b.Navigation("Exhibitor");
-
-                    b.Navigation("Invoice");
                 });
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.BoothStaff", b =>
@@ -2488,7 +2522,7 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .IsRequired();
 
                     b.HasOne("ExhibitionManagementSystem.Models.BoothReservation", "Reservation")
-                        .WithOne()
+                        .WithOne("Invoice")
                         .HasForeignKey("ExhibitionManagementSystem.Models.Invoice", "ReservationID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -2504,6 +2538,17 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Navigation("Reservation");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.InvoiceItem", b =>
+                {
+                    b.HasOne("ExhibitionManagementSystem.Models.Invoice", "Invoice")
+                        .WithMany("InvoiceItems")
+                        .HasForeignKey("InvoiceID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Invoice");
                 });
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.PackageService", b =>
@@ -2875,6 +2920,9 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.BoothReservation", b =>
                 {
+                    b.Navigation("Invoice")
+                        .IsRequired();
+
                     b.Navigation("ReservationServices");
                 });
 
@@ -2897,6 +2945,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Invoice", b =>
                 {
+                    b.Navigation("InvoiceItems");
+
                     b.Navigation("Payments");
                 });
 

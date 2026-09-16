@@ -10,10 +10,12 @@
                 <!-- ترتيب التحميل مهم: Colors أولاً -->
                 <ResourceDictionary Source="Resources/Colors/AppColors.xaml"/>
                 <ResourceDictionary Source="Resources/Fonts/AppFonts.xaml"/>
+                <ResourceDictionary Source="Resources/Icons/AppIcons.xaml"/>
                 <ResourceDictionary Source="Resources/Styles/ButtonStyles.xaml"/>
                 <ResourceDictionary Source="Resources/Styles/CardStyles.xaml"/>
                 <ResourceDictionary Source="Resources/Styles/InputStyles.xaml"/>
                 <ResourceDictionary Source="Resources/Styles/TableStyles.xaml"/>
+                <ResourceDictionary Source="Resources/Styles/TabStyles.xaml"/>
                 <ResourceDictionary Source="Resources/Animations/AppAnimations.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
@@ -25,6 +27,12 @@
             <conv:StatusToTextConverter x:Key="StatusToText"/>
             <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
             <conv:NullToVisibilityConverter x:Key="InverseNullToVisibility" Inverse="True"/>
+            <conv:CountToVisibilityConverter x:Key="CountToVisibility"/>
+            <conv:CountToVisibilityConverter x:Key="InverseCountToVisibility" Inverse="True"/>
+            <conv:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <conv:BoolToStatusBrushConverter x:Key="BoolToStatusBrushConverter"/>
+            <conv:BoolToAvailabilityTextConverter x:Key="BoolToAvailabilityTextConverter"/>
+            <conv:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
 
             <!-- FlowDirection RTL عاماً لكل النوافذ -->
             <Style TargetType="Window">

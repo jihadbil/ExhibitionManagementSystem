@@ -5,31 +5,124 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="{Binding Title, RelativeSource={RelativeSource Self}}" 
-        SizeToContent="WidthAndHeight"
+        SizeToContent="Height"
+        Width="880"
+        MinWidth="840"
+        MaxWidth="1040"
+        MinHeight="480"
+        MaxHeight="900"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
         ShowInTaskbar="False"
-        Background="{StaticResource BgMainBrush}"
-        BorderBrush="{StaticResource BorderMainBrush}"
-        BorderThickness="1"
-        MinWidth="500"
-        MinHeight="300"
         FlowDirection="RightToLeft">
-    <Border Padding="24" Background="{StaticResource BgCardBrush}" CornerRadius="12">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+    
+    <Grid Margin="20" Width="840">
+        <!-- Main Card Outer Container with Shadow -->
+        <Border Background="{StaticResource BgCardBrush}" 
+                BorderBrush="{StaticResource BorderMainBrush}" 
+                BorderThickness="1" 
+                CornerRadius="18"
+                MinWidth="720">
+            <Border.Effect>
+                <DropShadowEffect Color="#0F172A" BlurRadius="36" ShadowDepth="8" Opacity="0.22"/>
+            </Border.Effect>
 
-            <!-- Header -->
-            <TextBlock x:Name="TitleText" Grid.Row="0" 
-                       Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}" 
-                       Style="{StaticResource H2Style}" 
-                       Margin="0,0,0,20"/>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <!-- Draggable Header -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Divider line -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Form Content Area with Scroll Support -->
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-            <!-- Form Content -->
-            <ContentControl x:Name="DialogContent" Grid.Row="1"/>
-        </Grid>
-    </Border>
+                <!-- Header Bar -->
+                <Border Grid.Row="0" 
+                        Background="{StaticResource BgMainBrush}" 
+                        CornerRadius="18,18,0,0" 
+                        Padding="28,20" 
+                        MouseLeftButtonDown="Header_MouseLeftButtonDown"
+                        Cursor="SizeAll">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <!-- Title & Badge -->
+                            <ColumnDefinition Width="*"/>
+                            <!-- Close Action Button -->
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Icon Badge -->
+                            <Border Width="46" Height="46" 
+                                    CornerRadius="12" 
+                                    Background="{StaticResource PrimaryGradientBrush}" 
+                                    Margin="0,0,16,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="📝" 
+                                           FontSize="22" 
+                                           HorizontalAlignment="Center" 
+                                           VerticalAlignment="Center"
+                                           Foreground="White"/>
+                            </Border>
+
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="TitleText" 
+                                           Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                           FontSize="20" 
+                                           FontWeight="Bold" 
+                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                <TextBlock Text="يرجى مراجعة وتعبئة البيانات المطلوبة بدقة أدناه" 
+                                           FontSize="13" 
+                                           Foreground="{StaticResource TextSecondaryBrush}" 
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Close Button -->
+                        <Button Grid.Column="1" 
+                                Click="CloseButton_Click" 
+                                Cursor="Hand" 
+                                Width="40" Height="40" 
+                                VerticalAlignment="Center">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="#F1F5F9"/>
+                                    <Setter Property="Foreground" Value="#64748B"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="20">
+                                                    <TextBlock Text="✕" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="btnBorder" Property="Background" Value="#FEE2E2"/>
+                                                        <Setter Property="Foreground" Value="#EF4444"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Header Divider Line -->
+                <Border Grid.Row="1" Height="1" Background="{StaticResource BorderMainBrush}"/>
+
+                <!-- Form Content Container -->
+                <Border Grid.Row="2" Padding="28,24" MaxHeight="720">
+                    <ContentControl x:Name="DialogContent"/>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>
+

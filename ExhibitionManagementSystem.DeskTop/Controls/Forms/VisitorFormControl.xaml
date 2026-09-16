@@ -1,0 +1,95 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Controls.Forms.VisitorFormControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="540" d:DesignWidth="680"
+             FlowDirection="RightToLeft">
+    <Grid Margin="0" MinWidth="640">
+        <Grid.RowDefinitions>
+            <!-- Form Content -->
+            <RowDefinition Height="*"/>
+            <!-- Footer Actions -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,20">
+            <StackPanel Margin="0,0,4,0">
+                
+                <Border Style="{StaticResource FormGroupCardStyle}" Padding="20">
+                    <StackPanel>
+                        <TextBlock Text="🎫 تسجيل بيانات الزائر" Style="{StaticResource FormSectionHeaderStyle}" Margin="0,0,0,16"/>
+
+                        <!-- Full Name -->
+                        <TextBlock Style="{StaticResource LabelStyle}" Margin="0,0,0,8">
+                            <Run Text="الاسم الكامل "/><Run Text="*" Foreground="{StaticResource DangerBrush}"/>
+                        </TextBlock>
+                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                 Text="{Binding NewVisitorFullName, UpdateSourceTrigger=PropertyChanged}" 
+                                 Tag="أدخل اسم الزائر الرباعي"
+                                 Margin="0,0,0,18"/>
+
+                        <Grid Margin="0,0,0,18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Phone -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="رقم الهاتف" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                         Text="{Binding NewVisitorPhone, UpdateSourceTrigger=PropertyChanged}" 
+                                         Tag="+966 5x xxx xxxx"/>
+                            </StackPanel>
+
+                            <!-- Email -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="البريد الإلكتروني" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                         Text="{Binding NewVisitorEmail, UpdateSourceTrigger=PropertyChanged}" 
+                                         Tag="visitor@domain.com"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Nationality -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="الجنسية" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                         Text="{Binding NewVisitorNationality, UpdateSourceTrigger=PropertyChanged}" 
+                                         Tag="سعودي / مقيم"/>
+                            </StackPanel>
+
+                            <!-- Visitor Type -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="تصنيف الزائر" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                          ItemsSource="{Binding VisitorTypes}" 
+                                          SelectedItem="{Binding NewVisitorType}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer Actions -->
+        <Border Grid.Row="1" BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="0,1,0,0" Padding="0,20,0,0">
+            <Button Content="✓ حفظ وتسجيل الزائر" 
+                    Style="{StaticResource PrimaryButtonStyle}" 
+                    Command="{Binding RegisterVisitorCommand}" 
+                    Height="48" 
+                    HorizontalAlignment="Stretch"/>
+        </Border>
+    </Grid>
+</UserControl>

@@ -19,12 +19,28 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="12">
-                        <ScrollViewer x:Name="PART_ContentHost"
-                                       Focusable="False"
-                                       HorizontalScrollBarVisibility="Hidden"
-                                       VerticalScrollBarVisibility="Hidden"/>
+                        <Grid>
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                           Focusable="False"
+                                           HorizontalScrollBarVisibility="Hidden"
+                                           VerticalScrollBarVisibility="Hidden"/>
+                            <TextBlock x:Name="PlaceholderText"
+                                       Text="{TemplateBinding Tag}"
+                                       Foreground="{StaticResource TextMutedBrush}"
+                                       FontSize="14"
+                                       Padding="16,12"
+                                       VerticalAlignment="Center"
+                                       IsHitTestVisible="False"
+                                       Visibility="Collapsed"/>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="PlaceholderText" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="Text" Value="{x:Null}">
+                            <Setter TargetName="PlaceholderText" Property="Visibility" Value="Visible"/>
+                        </Trigger>
                         <Trigger Property="IsFocused" Value="True">
                             <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource BorderFocusBrush}"/>
                             <Setter TargetName="Root" Property="Background" Value="White"/>
@@ -168,6 +184,83 @@
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Background" Value="{StaticResource BgSecondaryBrush}"/>
+                            <Setter Property="Opacity" Value="0.6"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!-- Standard DatePicker -->
+    <Style x:Key="StandardDatePickerStyle" TargetType="DatePicker">
+        <Setter Property="Background" Value="{StaticResource BgInputBrush}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Padding" Value="16,12"/>
+        <Setter Property="Height" Value="48"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontFamily" Value="{StaticResource WorkSansRegular}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DatePicker">
+                    <Grid x:Name="DatePickerRoot">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.ColumnSpan="2"
+                                x:Name="DatePickerBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12"/>
+                        <DatePickerTextBox x:Name="PART_TextBox"
+                                           Grid.Column="0"
+                                           Padding="{TemplateBinding Padding}"
+                                           Background="Transparent"
+                                           BorderThickness="0"
+                                           VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                           Focusable="{TemplateBinding Focusable}"/>
+                        <Button x:Name="PART_Button"
+                                Grid.Column="1"
+                                Width="40"
+                                Height="36"
+                                Margin="0,0,6,0"
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Focusable="False">
+                            <TextBlock Text="📅"
+                                       FontSize="16"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Button>
+                        <Popup x:Name="PART_Popup"
+                               Placement="Bottom"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                               AllowsTransparency="True"
+                               Focusable="False"
+                               PopupAnimation="Slide">
+                            <Border Background="White"
+                                    BorderBrush="{StaticResource BorderMainBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="12"
+                                    Effect="{DynamicResource ShadowEffect}">
+                                <Border.Resources>
+                                    <DropShadowEffect x:Key="ShadowEffect" Color="#000000" BlurRadius="12" ShadowDepth="2" Opacity="0.1"/>
+                                </Border.Resources>
+                                <Calendar x:Name="PART_Calendar" Margin="4"/>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="DatePickerBorder" Property="BorderBrush" Value="{StaticResource BorderFocusBrush}"/>
+                            <Setter TargetName="DatePickerBorder" Property="Background" Value="White"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="DatePickerBorder" Property="Background" Value="{StaticResource BgSecondaryBrush}"/>
                             <Setter Property="Opacity" Value="0.6"/>
                         </Trigger>
                     </ControlTemplate.Triggers>

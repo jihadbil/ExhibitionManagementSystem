@@ -1,0 +1,109 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Controls.Forms.BoothFormControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignWidth="680" d:DesignHeight="520"
+             FlowDirection="RightToLeft">
+    <Grid Margin="0" MinWidth="640">
+        <Grid.RowDefinitions>
+            <!-- Form Fields Area -->
+            <RowDefinition Height="*"/>
+            <!-- Footer Actions -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,20">
+            <StackPanel Margin="0,0,4,0">
+                
+                <Border Style="{StaticResource FormGroupCardStyle}" Padding="20">
+                    <StackPanel>
+                        <TextBlock Text="🎪 مواصفات وتسعير الجناح" Style="{StaticResource FormSectionHeaderStyle}" Margin="0,0,0,16"/>
+
+                        <!-- BoothNumber -->
+                        <TextBlock Style="{StaticResource LabelStyle}" Margin="0,0,0,8">
+                            <Run Text="رقم الجناح "/><Run Text="*" Foreground="{StaticResource DangerBrush}"/>
+                        </TextBlock>
+                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                 Text="{Binding EditBoothNumber, UpdateSourceTrigger=PropertyChanged}" 
+                                 Tag="مثال: A-102"
+                                 Margin="0,0,0,18"/>
+
+                        <Grid Margin="0,0,0,18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Width -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="العرض (متر)" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                         Text="{Binding EditWidth, UpdateSourceTrigger=PropertyChanged}" 
+                                         Tag="3"/>
+                            </StackPanel>
+
+                            <!-- Height -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="الطول / العمق (متر)" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                         Text="{Binding EditHeight, UpdateSourceTrigger=PropertyChanged}" 
+                                         Tag="3"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- ShapeType -->
+                        <TextBlock Text="فئة / نوع الجناح" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                        <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                  ItemsSource="{Binding ShapeTypes}" 
+                                  SelectedItem="{Binding EditShapeType}"
+                                  Margin="0,0,0,18"/>
+
+                        <!-- Custom Pricing Rule -->
+                        <TextBlock Text="قاعدة تسعير مخصصة (اختياري)" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                        <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                  ItemsSource="{Binding PricingRules}" 
+                                  DisplayMemberPath="RuleName"
+                                  SelectedValuePath="RuleID"
+                                  SelectedValue="{Binding EditAssignedPriceRuleId}" 
+                                  Margin="0,0,0,18"/>
+
+                        <!-- Pricing Preview Box -->
+                        <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="12" Padding="16">
+                            <StackPanel>
+                                <TextBlock Text="💡 معاينة التسعير التقديري" FontWeight="Bold" Foreground="{StaticResource PrimaryDarkBrush}" Margin="0,0,0,6" FontSize="14"/>
+                                <TextBlock Text="{Binding EditPricingPreviewText}" TextWrapping="Wrap" LineHeight="20" Foreground="{StaticResource TextSecondaryBrush}" FontSize="13"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Actions -->
+        <Border Grid.Row="1" BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="0,1,0,0" Padding="0,20,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Content="✓ حفظ التعديلات" 
+                        Command="{Binding UpdateBoothCommand}" 
+                        Style="{StaticResource PrimaryButtonStyle}" 
+                        Grid.Column="1" 
+                        Width="160" Height="48"
+                        Margin="0,0,14,0"/>
+                <Button Content="✕ إلغاء" 
+                        Click="Cancel_Click" 
+                        Style="{StaticResource SecondaryButtonStyle}" 
+                        Grid.Column="2" 
+                        Width="120" Height="48"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

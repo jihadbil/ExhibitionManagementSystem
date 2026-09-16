@@ -39,10 +39,25 @@ public partial class ExhibitionCardControl : UserControl
 
     public event EventHandler<int>? EditRequested;
     public event EventHandler<int>? DeleteRequested;
+    public event EventHandler<(int ExhibitionId, string Status)>? StatusChanged;
 
     public ExhibitionCardControl()
     {
         InitializeComponent();
+        Loaded += (s, e) =>
+        {
+            if (StatusCombo != null && !string.IsNullOrEmpty(Status))
+            {
+                foreach (ComboBoxItem item in StatusCombo.Items)
+                {
+                    if (item.Tag?.ToString() == Status)
+                    {
+                        StatusCombo.SelectedItem = item;
+                        break;
+                    }
+                }
+            }
+        };
     }
 
     private static void OnTypeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -50,7 +65,6 @@ public partial class ExhibitionCardControl : UserControl
         if (d is ExhibitionCardControl card)
         {
             string type = e.NewValue?.ToString() ?? string.Empty;
-            card.EmojiText.Text = ExhibitionTypeHelper.GetEmoji(type);
             card.TypeLabel.Text = ExhibitionTypeHelper.GetDisplayName(type);
         }
     }
@@ -63,5 +77,18 @@ public partial class ExhibitionCardControl : UserControl
     private void Delete_Click(object sender, RoutedEventArgs e)
     {
         DeleteRequested?.Invoke(this, ExhibitionId);
+    }
+
+    private void StatusCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (IsLoaded && StatusCombo.SelectedItem is ComboBoxItem item)
+        {
+            string newStatus = item.Tag?.ToString() ?? "";
+            if (!string.IsNullOrEmpty(newStatus) && newStatus != Status)
+            {
+                Status = newStatus;
+                StatusChanged?.Invoke(this, (ExhibitionId, newStatus));
+            }
+        }
     }
 }

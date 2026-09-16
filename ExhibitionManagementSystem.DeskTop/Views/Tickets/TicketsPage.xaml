@@ -4,6 +4,9 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:badges="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Badges"
+             xmlns:feedback="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Feedback"
+             xmlns:nav="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Navigation"
+             xmlns:forms="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Forms"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1000"
              FlowDirection="RightToLeft">
@@ -19,15 +22,12 @@
         <TextBlock Grid.Row="0" Text="إدارة التذاكر والزوار" Style="{StaticResource H1Style}" Margin="0,0,0,24"/>
 
         <!-- Tabs -->
-        <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
+        <TabControl Grid.Row="1" Style="{StaticResource AppTabControlStyle}">
             <!-- TAB 1: Visitors -->
-            <TabItem Header="👥 الزوار المسجلين" Height="36" Padding="16,0" FontFamily="{StaticResource WorkSansMedium}" FontSize="14" FontWeight="Medium">
+            <TabItem Header="الزوار المسجلين" Style="{StaticResource AppTabItemStyle}">
                 <Grid Margin="0,20,0,0">
                     <Grid.ColumnDefinitions>
-                        <!-- List (2/3) -->
-                        <ColumnDefinition Width="2*"/>
-                        <ColumnDefinition Width="24"/>
-                        <!-- Register Form (1/3) -->
+                        <!-- List (Full width) -->
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
@@ -41,122 +41,63 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Text="قائمة الزوار المسجلين" Style="{StaticResource H3Style}" Margin="0,0,0,16" Grid.Row="0"/>
+                            <Grid Grid.Row="0" Margin="0,0,0,16">
+                                <TextBlock Text="قائمة الزوار المسجلين" Style="{StaticResource H3Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                <Button Content="+ تسجيل زائر" 
+                                        Style="{StaticResource PrimaryButtonStyle}" 
+                                        Click="RegisterVisitor_Click"
+                                        VerticalAlignment="Center" 
+                                        HorizontalAlignment="Left"
+                                        Width="140" Height="36"/>
+                            </Grid>
 
                             <!-- Search -->
-                            <Grid Grid.Row="1" Margin="0,0,0,16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                         Text="{Binding VisitorSearch, UpdateSourceTrigger=PropertyChanged}" 
-                                         Grid.Column="0"
-                                         VerticalContentAlignment="Center"
-                                         Tag="ابحث عن زائر بالاسم، الهاتف، البريد أو الجنسية..."/>
-                                <Button Style="{StaticResource PrimaryButtonStyle}" 
-                                        Command="{Binding SearchVisitorsCommand}"
-                                        Content="🔍 بحث" 
-                                        Grid.Column="2"
-                                        Width="100" Height="48"/>
-                            </Grid>
+                            <forms:SearchBarControl Grid.Row="1" Margin="0,0,0,16"
+                                                    SearchText="{Binding VisitorSearch}"
+                                                    PlaceholderText="ابحث عن زائر بالاسم، الهاتف، البريد أو الجنسية..."
+                                                    SearchCommand="{Binding SearchVisitorsCommand}"/>
 
                             <!-- DataGrid -->
-                            <DataGrid ItemsSource="{Binding Visitors}"
-                                      Style="{StaticResource AppDataGridStyle}"
-                                      ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
-                                      RowStyle="{StaticResource AppDataGridRowStyle}"
-                                      CellStyle="{StaticResource AppDataGridCellStyle}"
-                                      AutoGenerateColumns="False"
-                                      Grid.Row="2">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="الاسم الكامل" Binding="{Binding FullName}" Width="2*"/>
-                                    <DataGridTextColumn Header="الهاتف" Binding="{Binding Phone}" Width="1.5*"/>
-                                    <DataGridTextColumn Header="البريد الإلكتروني" Binding="{Binding Email}" Width="2*"/>
-                                    <DataGridTextColumn Header="الجنسية" Binding="{Binding Nationality}" Width="*"/>
-                                    <DataGridTextColumn Header="نوع الزائر" Binding="{Binding VisitorType}" Width="*"/>
-                                    <DataGridTextColumn Header="التذاكر المصدرة" Binding="{Binding TicketsCount}" Width="*"/>
-                                </DataGrid.Columns>
-                            </DataGrid>
+                            <Grid Grid.Row="2">
+                                <DataGrid ItemsSource="{Binding Visitors}"
+                                          Style="{StaticResource AppDataGridStyle}"
+                                          ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
+                                          RowStyle="{StaticResource AppDataGridRowStyle}"
+                                          CellStyle="{StaticResource AppDataGridCellStyle}"
+                                          AutoGenerateColumns="False"
+                                          Visibility="{Binding Visitors.Count, Converter={StaticResource InverseCountToVisibility}}">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="الاسم الكامل" Binding="{Binding FullName}" Width="2*"/>
+                                        <DataGridTextColumn Header="الهاتف" Binding="{Binding Phone}" Width="1.5*"/>
+                                        <DataGridTextColumn Header="البريد الإلكتروني" Binding="{Binding Email}" Width="2*"/>
+                                        <DataGridTextColumn Header="الجنسية" Binding="{Binding Nationality}" Width="*"/>
+                                        <DataGridTextColumn Header="نوع الزائر" Binding="{Binding VisitorType}" Width="*"/>
+                                        <DataGridTextColumn Header="التذاكر المصدرة" Binding="{Binding TicketsCount}" Width="*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <feedback:EmptyStateControl 
+                                    Visibility="{Binding Visitors.Count, Converter={StaticResource CountToVisibility}}"
+                                    IconGeometry="{StaticResource IconUsers}"
+                                    Title="لا يوجد زوار حالياً"
+                                    Description="لم يتم تسجيل أي زائر بعد في النظام أو لا توجد نتائج مطابقة لعملية البحث."/>
+                            </Grid>
 
                             <!-- Pagination -->
-                            <Grid Grid.Row="3" Margin="0,12,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Button Style="{StaticResource SecondaryButtonStyle}" 
-                                        Command="{Binding VisitorsPrevPageCommand}"
-                                        Content="السابق" Grid.Column="0" HorizontalAlignment="Right" Width="100"/>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
-                                    <TextBlock Text="الصفحة " Style="{StaticResource BodySecondaryStyle}"/>
-                                    <TextBlock Text="{Binding VisitorsCurrentPage}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
-                                    <TextBlock Text=" من " Style="{StaticResource BodySecondaryStyle}"/>
-                                    <TextBlock Text="{Binding VisitorsTotalPages}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
-                                    <TextBlock Text=" (الإجمالي: " Style="{StaticResource BodySecondaryStyle}"/>
-                                    <TextBlock Text="{Binding VisitorsTotalCount}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
-                                    <TextBlock Text=" زائر)" Style="{StaticResource BodySecondaryStyle}"/>
-                                </StackPanel>
-                                <Button Style="{StaticResource SecondaryButtonStyle}" 
-                                        Command="{Binding VisitorsNextPageCommand}"
-                                        Content="التالي" Grid.Column="2" HorizontalAlignment="Left" Width="100"/>
-                            </Grid>
+                            <nav:PaginationControl Grid.Row="3"
+                                                   CurrentPage="{Binding VisitorsCurrentPage}"
+                                                   TotalPages="{Binding VisitorsTotalPages}"
+                                                   TotalCount="{Binding VisitorsTotalCount}"
+                                                   UnitLabel="زائر"
+                                                   PrevCommand="{Binding VisitorsPrevPageCommand}"
+                                                   NextCommand="{Binding VisitorsNextPageCommand}"/>
                         </Grid>
-                    </Border>
-
-                    <!-- Register form card -->
-                    <Border Grid.Column="2" Style="{StaticResource StandardCardStyle}" Padding="20" Background="White">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel>
-                                <TextBlock Text="تسجيل زائر جديد" Style="{StaticResource H3Style}" Margin="0,0,0,16"/>
-
-                                <!-- Full Name -->
-                                <TextBlock Text="الاسم الكامل" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                         Text="{Binding NewVisitorFullName, UpdateSourceTrigger=PropertyChanged}" 
-                                         Margin="0,0,0,16"/>
-
-                                <!-- Phone -->
-                                <TextBlock Text="رقم الهاتف" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                         Text="{Binding NewVisitorPhone, UpdateSourceTrigger=PropertyChanged}" 
-                                         Margin="0,0,0,16"/>
-
-                                <!-- Email -->
-                                <TextBlock Text="البريد الإلكتروني" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                         Text="{Binding NewVisitorEmail, UpdateSourceTrigger=PropertyChanged}" 
-                                         Margin="0,0,0,16"/>
-
-                                <!-- Nationality -->
-                                <TextBlock Text="الجنسية" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                         Text="{Binding NewVisitorNationality, UpdateSourceTrigger=PropertyChanged}" 
-                                         Margin="0,0,0,16"/>
-
-                                <!-- Visitor Type -->
-                                <TextBlock Text="تصنيف الزائر" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
-                                          ItemsSource="{Binding VisitorTypes}" 
-                                          SelectedItem="{Binding NewVisitorType}" 
-                                          Margin="0,0,0,24"/>
-
-                                <!-- Save Button -->
-                                <Button Content="تسجيل الزائر ✓" 
-                                        Style="{StaticResource PrimaryButtonStyle}"
-                                        Command="{Binding RegisterVisitorCommand}"
-                                        Height="48"
-                                        HorizontalAlignment="Stretch"/>
-                            </StackPanel>
-                        </ScrollViewer>
                     </Border>
                 </Grid>
             </TabItem>
 
             <!-- TAB 2: Tickets & QR Scans -->
-            <TabItem Header="🎟️ إصدار ومسح التذاكر" Height="36" Padding="16,0" FontFamily="{StaticResource WorkSansMedium}" FontSize="14" FontWeight="Medium">
+            <TabItem Header="إصدار ومسح التذاكر" Style="{StaticResource AppTabItemStyle}">
                 <Grid Margin="0,20,0,0">
                     <Grid.RowDefinitions>
                         <!-- Exhibition Select filter -->
@@ -180,10 +121,7 @@
                     <!-- Main Splits -->
                     <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions>
-                            <!-- Tickets Grid List (2/3) -->
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="24"/>
-                            <!-- Forms Column (1/3) -->
+                            <!-- Tickets Grid List (Full width) -->
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -195,135 +133,83 @@
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Text="قائمة التذاكر المصدرة" Style="{StaticResource H3Style}" Margin="0,0,0,16" Grid.Row="0"/>
+                                <Grid Grid.Row="0" Margin="0,0,0,16">
+                                    <TextBlock Text="قائمة التذاكر المصدرة" Style="{StaticResource H3Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                         <Button Style="{StaticResource PrimaryButtonStyle}" 
+                                                 Click="IssueTicket_Click"
+                                                 Height="36" Margin="0,0,12,0">
+                                             <StackPanel Orientation="Horizontal">
+                                                 <Path Data="{StaticResource IconTicket}" Width="14" Height="14" Stretch="Uniform" Fill="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                 <TextBlock Text="إصدار تذكرة" VerticalAlignment="Center"/>
+                                             </StackPanel>
+                                         </Button>
+                                         <Button Style="{StaticResource PrimaryButtonStyle}" 
+                                                 Click="ScanTicket_Click"
+                                                 Height="36">
+                                             <StackPanel Orientation="Horizontal">
+                                                 <Path Data="{StaticResource IconScan}" Width="14" Height="14" Stretch="Uniform" Fill="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                 <TextBlock Text="مسح تذكرة" VerticalAlignment="Center"/>
+                                             </StackPanel>
+                                         </Button>
+                                    </StackPanel>
+                                </Grid>
 
-                                <DataGrid ItemsSource="{Binding Tickets}"
-                                          Style="{StaticResource AppDataGridStyle}"
-                                          ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
-                                          RowStyle="{StaticResource AppDataGridRowStyle}"
-                                          CellStyle="{StaticResource AppDataGridCellStyle}"
-                                          AutoGenerateColumns="False"
-                                          Grid.Row="1">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="رمز التذكرة QR" Binding="{Binding QRCode}" Width="1.5*"/>
-                                        <DataGridTextColumn Header="اسم الزائر" Binding="{Binding VisitorName}" Width="2*"/>
-                                        <DataGridTextColumn Header="فئة التذكرة" Binding="{Binding TicketType}" Width="*"/>
-                                        <DataGridTextColumn Header="السعر" Binding="{Binding Price}" Width="*"/>
-                                        <DataGridTextColumn Header="العملة" Binding="{Binding CurrencyCode}" Width="*"/>
-                                        <DataGridTextColumn Header="عمليات المسح" Binding="{Binding ScansCount}" Width="*"/>
+                                <Grid Grid.Row="1">
+                                    <DataGrid ItemsSource="{Binding Tickets}"
+                                              Style="{StaticResource AppDataGridStyle}"
+                                              ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
+                                              RowStyle="{StaticResource AppDataGridRowStyle}"
+                                              CellStyle="{StaticResource AppDataGridCellStyle}"
+                                              AutoGenerateColumns="False"
+                                              Visibility="{Binding Tickets.Count, Converter={StaticResource InverseCountToVisibility}}">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="رمز التذكرة QR" Binding="{Binding QRCode}" Width="1.5*"/>
+                                            <DataGridTextColumn Header="اسم الزائر" Binding="{Binding VisitorName}" Width="2*"/>
+                                            <DataGridTextColumn Header="فئة التذكرة" Binding="{Binding TicketType}" Width="*"/>
+                                            <DataGridTextColumn Header="السعر" Binding="{Binding Price}" Width="*"/>
+                                            <DataGridTextColumn Header="العملة" Binding="{Binding CurrencyCode}" Width="*"/>
+                                            <DataGridTextColumn Header="عمليات المسح" Binding="{Binding ScansCount}" Width="*"/>
 
-                                        <DataGridTemplateColumn Header="الحالة" Width="*">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <badges:StatusBadgeControl Status="{Binding Status}"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="الحالة" Width="*">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <badges:StatusBadgeControl Status="{Binding Status}"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
 
-                                        <!-- Actions -->
-                                        <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <Button Content="إلغاء التذكرة" 
-                                                            Style="{StaticResource DangerButtonStyle}"
-                                                            Command="{Binding DataContext.CancelTicketCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                            CommandParameter="{Binding TicketID}"
-                                                            Padding="12,4" Height="28"
-                                                            IsEnabled="{Binding Status, Converter={StaticResource BoolToVisibility}, ConverterParameter=Inverse}"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                            <!-- Actions -->
+                                            <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="إلغاء التذكرة" 
+                                                                Style="{StaticResource SmallDangerButtonStyle}"
+                                                                Command="{Binding DataContext.CancelTicketCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                CommandParameter="{Binding TicketID}"
+                                                                IsEnabled="{Binding Status, Converter={StaticResource BoolToVisibility}, ConverterParameter=Inverse}"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+
+                                    <feedback:EmptyStateControl 
+                                        Visibility="{Binding Tickets.Count, Converter={StaticResource CountToVisibility}}"
+                                        IconGeometry="{StaticResource IconTicket}"
+                                        Title="لا توجد تذاكر حالياً"
+                                        Description="لم يتم إصدار أي تذاكر بعد لهذا المعرض."/>
+                                </Grid>
                             </Grid>
                         </Border>
-
-                        <!-- Right Column Forms (Issue & Scan) -->
-                        <Grid Grid.Column="2">
-                            <Grid.RowDefinitions>
-                                <!-- Issue Form -->
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="24"/>
-                                <!-- Scan Form -->
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <!-- Issue Ticket Card -->
-                            <Border Grid.Row="0" Style="{StaticResource StandardCardStyle}" Padding="16" Background="White">
-                                <StackPanel>
-                                    <TextBlock Text="إصدار تذكرة جديدة" Style="{StaticResource H3Style}" Margin="0,0,0,16"/>
-
-                                    <!-- Select Visitor -->
-                                    <TextBlock Text="اختر الزائر" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                    <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
-                                              ItemsSource="{Binding Visitors}" 
-                                              SelectedValuePath="VisitorID" 
-                                              DisplayMemberPath="FullName" 
-                                              SelectedValue="{Binding SelectedVisitorId}"
-                                              Margin="0,0,0,12"/>
-
-                                    <Grid Margin="0,0,0,12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="12"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Ticket Type -->
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="فئة التذكرة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                            <ComboBox Style="{StaticResource StandardComboBoxStyle}" Height="40" Padding="8,4"
-                                                      ItemsSource="{Binding TicketTypes}" 
-                                                      SelectedItem="{Binding SelectedTicketType}"/>
-                                        </StackPanel>
-
-                                        <!-- Price -->
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="السعر" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                            <TextBox Style="{StaticResource StandardTextBoxStyle}" Height="40"
-                                                     Text="{Binding NewTicketPrice, UpdateSourceTrigger=PropertyChanged}"/>
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <!-- Currency Code -->
-                                    <TextBlock Text="العملة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                    <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                             Text="{Binding NewTicketCurrencyCode, UpdateSourceTrigger=PropertyChanged}" 
-                                             Margin="0,0,0,16"/>
-
-                                    <!-- Issue Button -->
-                                    <Button Content="إصدار التذكرة 🎟️" 
-                                            Style="{StaticResource PrimaryButtonStyle}"
-                                            Command="{Binding IssueTicketCommand}"
-                                            Height="44"
-                                            HorizontalAlignment="Stretch"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Scan Ticket Card -->
-                            <Border Grid.Row="2" Style="{StaticResource StandardCardStyle}" Padding="16" Background="White">
-                                <StackPanel>
-                                    <TextBlock Text="مسح تذكرة الدخول" Style="{StaticResource H3Style}" Margin="0,0,0,16"/>
-
-                                    <!-- QR Code Input -->
-                                    <TextBlock Text="أدخل رمز التذكرة QR" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                    <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                             Text="{Binding ScannedQrCode, UpdateSourceTrigger=PropertyChanged}" 
-                                             Margin="0,0,0,16"
-                                             Tag="اكتب أو امسح الرمز..."/>
-
-                                    <!-- Scan Check Button -->
-                                    <Button Content="تحقق ومسح التذكرة 📷" 
-                                            Style="{StaticResource PrimaryButtonStyle}"
-                                            Command="{Binding ScanTicketCommand}"
-                                            Height="44"
-                                            HorizontalAlignment="Stretch"/>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
                     </Grid>
                 </Grid>
             </TabItem>
         </TabControl>
+        
+        <!-- Loading Overlay -->
+        <feedback:LoadingOverlayControl Grid.Row="0" Grid.RowSpan="2"
+                                         IsLoading="{Binding IsBusy}"
+                                         Message="جاري تحميل البيانات..."/>
     </Grid>
 </UserControl>

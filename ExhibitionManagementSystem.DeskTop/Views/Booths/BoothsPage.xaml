@@ -4,6 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:badges="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Badges"
+             xmlns:feedback="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Feedback"
+             xmlns:cards="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Cards"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1000"
              FlowDirection="RightToLeft">
@@ -22,16 +24,36 @@
         <!-- Header -->
         <Grid Grid.Row="0" Margin="0,0,0,24">
             <TextBlock Text="إدارة الأجنحة" Style="{StaticResource H1Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-            <Button Content="🗺️ المصمم البصري للأجنحة" 
-                    Style="{StaticResource PrimaryButtonStyle}" 
-                    Command="{Binding OpenDesignerCommand}"
-                    VerticalAlignment="Center" 
-                    HorizontalAlignment="Left"
-                    Width="220" Height="40"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <Button Style="{StaticResource PrimaryButtonStyle}" 
+                        Click="AddBooth_Click"
+                        Height="40" Margin="0,0,12,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource IconAdd}" Width="14" Height="14" Stretch="Uniform" Fill="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="جناح جديد" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource SecondaryButtonStyle}" 
+                        Command="{Binding OpenDesignerCommand}"
+                        Height="40" Margin="0,0,12,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource IconLocation}" Width="14" Height="14" Stretch="Uniform" Fill="{StaticResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="المصمم البصري" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource SecondaryButtonStyle}" 
+                        Command="{Binding OpenNodifyDesignerCommand}"
+                        Height="40">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource IconServices}" Width="14" Height="14" Stretch="Uniform" Fill="{StaticResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="مصمم الأجنحة المطور" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
         </Grid>
 
         <!-- Filters -->
-        <Border Grid.Row="1" Style="{StaticResource StandardCardStyle}" Padding="16" Margin="0,0,0,24">
+        <Border Grid.Row="1" Style="{StaticResource StandardCardStyle}" Margin="0,0,0,24">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -84,50 +106,42 @@
             </Grid.ColumnDefinitions>
 
             <!-- Total Booths -->
-            <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}" Padding="16" Background="White">
-                <StackPanel>
-                    <TextBlock Text="إجمالي الأجنحة" Style="{StaticResource SmallStyle}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <TextBlock Text="{Binding TotalCount}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
+            <cards:StatCardControl Grid.Column="0"
+                                   Title="إجمالي الأجنحة"
+                                   Value="{Binding TotalCount}"
+                                   IconGeometry="{StaticResource IconBooth}"/>
 
             <!-- Available Booths -->
-            <Border Grid.Column="2" Style="{StaticResource StandardCardStyle}" Padding="16" Background="White">
-                <StackPanel>
-                    <TextBlock Text="الأجنحة المتاحة" Style="{StaticResource SmallStyle}" Foreground="{StaticResource SuccessTextBrush}"/>
-                    <TextBlock Text="{Binding AvailableCount}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
+            <cards:StatCardControl Grid.Column="2"
+                                   Title="الأجنحة المتاحة"
+                                   Value="{Binding AvailableCount}"
+                                   IconGeometry="{StaticResource IconApprove}"
+                                   IconBackground="{StaticResource SuccessLightBrush}"/>
 
             <!-- Reserved Booths -->
-            <Border Grid.Column="4" Style="{StaticResource StandardCardStyle}" Padding="16" Background="White">
-                <StackPanel>
-                    <TextBlock Text="الأجنحة المحجوزة" Style="{StaticResource SmallStyle}" Foreground="{StaticResource InfoTextBrush}"/>
-                    <TextBlock Text="{Binding ReservedCount}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource InfoBrush}" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
+            <cards:StatCardControl Grid.Column="4"
+                                   Title="الأجنحة المحجوزة"
+                                   Value="{Binding ReservedCount}"
+                                   IconGeometry="{StaticResource IconReservation}"
+                                   IconBackground="{StaticResource InfoLightBrush}"/>
 
             <!-- Pending Booths -->
-            <Border Grid.Column="6" Style="{StaticResource StandardCardStyle}" Padding="16" Background="White">
-                <StackPanel>
-                    <TextBlock Text="قيد المراجعة" Style="{StaticResource SmallStyle}" Foreground="{StaticResource WarningTextBrush}"/>
-                    <TextBlock Text="{Binding PendingCount}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource WarningBrush}" Margin="0,4,0,0"/>
-                </StackPanel>
-            </Border>
+            <cards:StatCardControl Grid.Column="6"
+                                   Title="قيد المراجعة"
+                                   Value="{Binding PendingCount}"
+                                   IconGeometry="{StaticResource IconWarning}"
+                                   IconBackground="{StaticResource WarningLightBrush}"/>
         </Grid>
 
         <!-- Main Content Split -->
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
-                <!-- Booths Grid (2/3) -->
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="24"/>
-                <!-- Form Panel (1/3) -->
+                <!-- Booths Grid (Full width) -->
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <!-- Booths DataGrid -->
-            <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}" Padding="16">
+            <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -142,12 +156,13 @@
                               RowStyle="{StaticResource AppDataGridRowStyle}"
                               CellStyle="{StaticResource AppDataGridCellStyle}"
                               AutoGenerateColumns="False"
+                              Visibility="{Binding Booths.Count, Converter={StaticResource InverseCountToVisibility}}"
                               Grid.Row="1">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="رقم الجناح" Binding="{Binding BoothNumber}" Width="*"/>
                             <DataGridTextColumn Header="المساحة (م²)" Binding="{Binding OriginalAreaSqM}" Width="*"/>
                             <DataGridTextColumn Header="العرض (م)" Binding="{Binding Width}" Width="*"/>
-                            <DataGridTextColumn Header="الارتفاع (م)" Binding="{Binding Height}" Width="*"/>
+                            <DataGridTextColumn Header="الطول (م)" Binding="{Binding Height}" Width="*"/>
                             
                             <DataGridTemplateColumn Header="الفئة" Width="*">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -169,77 +184,35 @@
                             <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="حذف" 
-                                                Style="{StaticResource DangerButtonStyle}"
-                                                Command="{Binding DataContext.DeleteBoothCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                CommandParameter="{Binding BoothID}"
-                                                Padding="12,4" Height="28"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="تعديل" 
+                                                    Style="{StaticResource SmallSecondaryButtonStyle}"
+                                                    Click="EditBooth_Click"
+                                                    Tag="{Binding}"
+                                                    Margin="0,0,6,0"/>
+                                            <Button Content="حذف" 
+                                                    Style="{StaticResource SmallDangerButtonStyle}"
+                                                    Command="{Binding DataContext.DeleteBoothCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding BoothID}"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
+                    <feedback:EmptyStateControl 
+                        Visibility="{Binding Booths.Count, Converter={StaticResource CountToVisibility}}"
+                        IconGeometry="{StaticResource IconBooth}"
+                        Title="لا توجد أجنحة حالياً"
+                        Description="لا توجد أجنحة مطابقة لخيارات التصفية الحالية أو لم يتم تعريف أجنحة بعد."
+                        Grid.Row="1"/>
                 </Grid>
             </Border>
-
-            <!-- Add Booth Form Panel -->
-            <Border Grid.Column="2" Style="{StaticResource StandardCardStyle}" Padding="20" Background="White">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <TextBlock Text="إضافة جناح جديد" Style="{StaticResource H3Style}" Margin="0,0,0,16"/>
-
-                        <!-- Booth Number -->
-                        <TextBlock Text="رقم الجناح" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                 Text="{Binding NewBoothNumber, UpdateSourceTrigger=PropertyChanged}" 
-                                 Margin="0,0,0,16"/>
-
-                        <!-- Original Area -->
-                        <TextBlock Text="المساحة الإجمالية (م²)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                 Text="{Binding NewOriginalAreaSqM, UpdateSourceTrigger=PropertyChanged}" 
-                                 Margin="0,0,0,16"/>
-
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- Width -->
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="العرض (م)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                         Text="{Binding NewWidth, UpdateSourceTrigger=PropertyChanged}" 
-                                         Margin="0,0,0,16"/>
-                            </StackPanel>
-
-                            <!-- Height -->
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="الارتفاع (م)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                         Text="{Binding NewHeight, UpdateSourceTrigger=PropertyChanged}" 
-                                         Margin="0,0,0,16"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <!-- Category (ShapeType) -->
-                        <TextBlock Text="فئة الجناح" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
-                                  ItemsSource="{Binding ShapeTypes}" 
-                                  SelectedItem="{Binding NewShapeType}" 
-                                  Margin="0,0,0,24"/>
-
-                        <!-- Save Button -->
-                        <Button Content="إضافة الجناح ✓" 
-                                Style="{StaticResource PrimaryButtonStyle}"
-                                Command="{Binding SaveBoothCommand}"
-                                Height="48"
-                                HorizontalAlignment="Stretch"/>
-                    </StackPanel>
-                </ScrollViewer>
-            </Border>
         </Grid>
+        
+        <!-- Loading Overlay -->
+        <feedback:LoadingOverlayControl Grid.Row="0" Grid.RowSpan="4"
+                                         IsLoading="{Binding IsBusy}"
+                                         Message="جاري تحميل الأجنحة..."/>
     </Grid>
 </UserControl>

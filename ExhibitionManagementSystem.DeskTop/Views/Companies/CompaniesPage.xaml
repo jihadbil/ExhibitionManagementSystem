@@ -3,6 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:feedback="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Feedback"
+             xmlns:nav="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Navigation"
+             xmlns:forms="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Forms"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900"
              FlowDirection="RightToLeft">
@@ -19,39 +22,36 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <TextBlock Grid.Row="0" Text="إدارة الشركات العارضة" Style="{StaticResource H1Style}" Margin="0,0,0,24"/>
+        <Grid Grid.Row="0" Margin="0,0,0,24">
+            <TextBlock Text="إدارة الشركات العارضة" Style="{StaticResource H1Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+            <Button Style="{StaticResource PrimaryButtonStyle}" 
+                    Click="AddCompany_Click" 
+                    Width="160" Height="48" 
+                    HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal">
+                    <Path Data="{StaticResource IconAdd}" Width="14" Height="14" Stretch="Uniform" Fill="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="شركة جديدة" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
 
         <!-- Search Bar -->
         <Border Grid.Row="1" Style="{StaticResource StandardCardStyle}" Padding="16" Margin="0,0,0,24">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="12"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
-                         Grid.Column="0"
-                         VerticalContentAlignment="Center"
-                         Tag="ابحث عن شركة باسم الشركة، المجال، أو الجنسية..."/>
-
-                <Button Style="{StaticResource PrimaryButtonStyle}" 
-                        Command="{Binding SearchCommand}"
-                        Content="🔍 بحث" 
-                        Grid.Column="2"
-                        Width="120" Height="48"/>
-            </Grid>
+            <forms:SearchBarControl SearchText="{Binding SearchQuery}"
+                                    PlaceholderText="ابحث عن شركة باسم الشركة، المجال، أو الجنسية..."
+                                    SearchCommand="{Binding SearchCommand}"/>
         </Border>
 
-        <!-- Companies DataGrid -->
+        <!-- Companies DataGrid & Empty State -->
         <Border Grid.Row="2" Style="{StaticResource StandardCardStyle}" Padding="16" Margin="0,0,0,20">
-            <DataGrid ItemsSource="{Binding Companies}"
-                      Style="{StaticResource AppDataGridStyle}"
-                      ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
-                      RowStyle="{StaticResource AppDataGridRowStyle}"
-                      CellStyle="{StaticResource AppDataGridCellStyle}"
-                      AutoGenerateColumns="False">
+            <Grid>
+                <DataGrid ItemsSource="{Binding Companies}"
+                          Style="{StaticResource AppDataGridStyle}"
+                          ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
+                          RowStyle="{StaticResource AppDataGridRowStyle}"
+                          CellStyle="{StaticResource AppDataGridCellStyle}"
+                          AutoGenerateColumns="False"
+                          Visibility="{Binding Companies.Count, Converter={StaticResource InverseCountToVisibility}}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="اسم الشركة" Binding="{Binding CompanyName}" Width="2*"/>
                     <DataGridTextColumn Header="قطاع العمل / المجال" Binding="{Binding Sector}" Width="1.5*"/>
@@ -70,49 +70,43 @@
                     <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Button Content="حذف" 
-                                        Style="{StaticResource DangerButtonStyle}"
-                                        Command="{Binding DataContext.DeleteCompanyCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                        CommandParameter="{Binding ExhibitorID}"
-                                        Padding="12,4" Height="28"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="تعديل" 
+                                            Style="{StaticResource SmallSecondaryButtonStyle}"
+                                            Click="EditCompany_Click"
+                                            Tag="{Binding ExhibitorID}"
+                                            Margin="0,0,8,0"/>
+                                    <Button Content="حذف" 
+                                            Style="{StaticResource SmallDangerButtonStyle}"
+                                            Command="{Binding DataContext.DeleteCompanyCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding ExhibitorID}"/>
+                                </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                 </DataGrid.Columns>
-            </DataGrid>
+                </DataGrid>
+
+                <feedback:EmptyStateControl 
+                    Visibility="{Binding Companies.Count, Converter={StaticResource CountToVisibility}}"
+                    IconGeometry="{StaticResource IconCompany}"
+                    Title="لا توجد شركات عارضة"
+                    Description="لم يتم تسجيل أي شركة عارضة حالياً أو لا توجد نتائج مطابقة لعملية البحث."/>
+            </Grid>
         </Border>
 
         <!-- Pagination -->
-        <Grid Grid.Row="3">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <Button Style="{StaticResource SecondaryButtonStyle}" 
-                    Command="{Binding PrevPageCommand}"
-                    Content="الصفحة السابقة" 
-                    Grid.Column="0"
-                    HorizontalAlignment="Right"
-                    Width="140"/>
-
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0">
-                <TextBlock Text="الصفحة " Style="{StaticResource BodySecondaryStyle}"/>
-                <TextBlock Text="{Binding CurrentPage}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
-                <TextBlock Text=" من " Style="{StaticResource BodySecondaryStyle}"/>
-                <TextBlock Text="{Binding TotalPages}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
-                <TextBlock Text=" (الإجمالي: " Style="{StaticResource BodySecondaryStyle}"/>
-                <TextBlock Text="{Binding TotalCount}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
-                <TextBlock Text=" عارضين)" Style="{StaticResource BodySecondaryStyle}"/>
-            </StackPanel>
-
-            <Button Style="{StaticResource SecondaryButtonStyle}" 
-                    Command="{Binding NextPageCommand}"
-                    Content="الصفحة التالية" 
-                    Grid.Column="2"
-                    HorizontalAlignment="Left"
-                    Width="140"/>
-        </Grid>
+        <nav:PaginationControl Grid.Row="3"
+                               CurrentPage="{Binding CurrentPage}"
+                               TotalPages="{Binding TotalPages}"
+                               TotalCount="{Binding TotalCount}"
+                               UnitLabel="عارضين"
+                               PrevCommand="{Binding PrevPageCommand}"
+                               NextCommand="{Binding NextPageCommand}"/>
+        
+        <!-- Loading Overlay -->
+        <feedback:LoadingOverlayControl Grid.Row="0" Grid.RowSpan="4"
+                                         IsLoading="{Binding IsBusy}"
+                                         Message="جاري تحميل الشركات..."/>
     </Grid>
 </UserControl>

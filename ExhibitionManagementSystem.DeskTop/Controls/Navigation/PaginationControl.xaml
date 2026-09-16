@@ -1,0 +1,47 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Controls.Navigation.PaginationControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             x:Name="Root"
+             d:DesignHeight="50" d:DesignWidth="800">
+    <Grid VerticalAlignment="Bottom">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Backwards Button -->
+        <Button Style="{StaticResource SecondaryButtonStyle}" 
+                Command="{Binding PrevCommand, ElementName=Root}"
+                Content="الصفحة السابقة" 
+                Grid.Column="0"
+                HorizontalAlignment="Right"
+                Width="140"
+                Height="36"/>
+
+        <!-- Status Indicator Info -->
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0">
+            <TextBlock Text="الصفحة " Style="{StaticResource BodySecondaryStyle}"/>
+            <TextBlock Text="{Binding CurrentPage, ElementName=Root}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
+            <TextBlock Text=" من " Style="{StaticResource BodySecondaryStyle}"/>
+            <TextBlock Text="{Binding TotalPages, ElementName=Root}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
+            <TextBlock Text=" (الإجمالي: " Style="{StaticResource BodySecondaryStyle}"/>
+            <TextBlock Text="{Binding TotalCount, ElementName=Root}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
+            <TextBlock Text=" " Style="{StaticResource BodySecondaryStyle}"/>
+            <TextBlock Text="{Binding UnitLabel, ElementName=Root}" Style="{StaticResource BodySecondaryStyle}"/>
+            <TextBlock Text=")" Style="{StaticResource BodySecondaryStyle}"/>
+        </StackPanel>
+
+        <!-- Forwards Button -->
+        <Button Style="{StaticResource SecondaryButtonStyle}" 
+                Command="{Binding NextCommand, ElementName=Root}"
+                Content="الصفحة التالية" 
+                Grid.Column="2"
+                HorizontalAlignment="Left"
+                Width="140"
+                Height="36"/>
+    </Grid>
+</UserControl>

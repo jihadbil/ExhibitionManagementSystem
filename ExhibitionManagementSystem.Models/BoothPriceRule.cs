@@ -44,6 +44,11 @@ public class BoothPriceRule : IAuditableEntity, ISoftDeletable
     [StringLength(100)] public string ProductCategory { get; set; }
 
     /// <summary>
+    /// اسم قاعدة التسعير.
+    /// </summary>
+    [StringLength(150)] public string? RuleName { get; set; }
+
+    /// <summary>
     /// سعر المتر المربع حسب القاعدة.
     /// </summary>
     [Column(TypeName = "decimal(18,2)")] public decimal PricePerSqM { get; set; }

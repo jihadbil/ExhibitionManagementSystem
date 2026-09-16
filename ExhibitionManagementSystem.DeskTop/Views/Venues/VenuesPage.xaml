@@ -19,157 +19,179 @@
             <TextBlock Text="إدارة المواقع والقاعات" Style="{StaticResource H1Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
         </Grid>
 
-        <!-- Main Content Split -->
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <!-- Venues list (Master) -->
-                <ColumnDefinition Width="6*"/>
-                <ColumnDefinition Width="24"/>
-                <!-- Halls list (Detail) -->
-                <ColumnDefinition Width="5*"/>
-            </Grid.ColumnDefinitions>
+        <!-- TabControl -->
+        <TabControl Grid.Row="1" Style="{StaticResource AppTabControlStyle}">
+            <!-- Tab 1: Venues -->
+            <TabItem Header="مواقع إقامة المعارض" Style="{StaticResource AppTabItemStyle}">
+                <Grid Margin="0,20,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-            <!-- Venues Panel (Column 0) -->
-            <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}" Padding="20">
-                <Grid>
+                    <!-- Venues Panel (Column 0) -->
+                    <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}" Padding="20">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Venues Header -->
+                            <Grid Grid.Row="0" Margin="0,0,0,16">
+                                <TextBlock Text="مواقع إقامة المعارض" Style="{StaticResource H3Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                <Button Content="+ موقع جديد" 
+                                        Style="{StaticResource PrimaryButtonStyle}" 
+                                        Click="AddVenue_Click"
+                                        VerticalAlignment="Center" 
+                                        HorizontalAlignment="Left"
+                                        Width="140" Height="36"/>
+                            </Grid>
+
+                            <!-- Venues DataGrid -->
+                            <DataGrid Grid.Row="1"
+                                      ItemsSource="{Binding Venues}"
+                                      SelectedItem="{Binding SelectedVenue, Mode=TwoWay}"
+                                      Style="{StaticResource AppDataGridStyle}"
+                                      ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
+                                      RowStyle="{StaticResource AppDataGridRowStyle}"
+                                      CellStyle="{StaticResource AppDataGridCellStyle}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="اسم الموقع" Binding="{Binding Name}" Width="2*"/>
+                                    <DataGridTextColumn Header="المدينة" Binding="{Binding City}" Width="*"/>
+                                    <DataGridTextColumn Header="الدولة" Binding="{Binding Country}" Width="*"/>
+                                    <DataGridTextColumn Header="السعة" Binding="{Binding TotalCapacity, TargetNullValue='-'}" Width="*"/>
+                                    <DataGridTextColumn Header="القاعات" Binding="{Binding HallsCount}" Width="Auto"/>
+                                    
+                                    <!-- Actions -->
+                                    <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Button Content="تعديل" 
+                                                            Style="{StaticResource SmallSecondaryButtonStyle}"
+                                                            Click="EditVenue_Click"
+                                                            Tag="{Binding VenueID}"
+                                                            Margin="0,0,6,0"/>
+                                                    <Button Content="حذف" 
+                                                            Style="{StaticResource SmallDangerButtonStyle}"
+                                                            Click="DeleteVenue_Click"
+                                                            Tag="{Binding}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- Tab 2: Halls -->
+            <TabItem Header="القاعات والقواطع" Style="{StaticResource AppTabItemStyle}">
+                <Grid Margin="0,20,0,0">
                     <Grid.RowDefinitions>
+                        <!-- Selector Filter -->
                         <RowDefinition Height="Auto"/>
+                        <!-- Grid List -->
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Venues Header -->
-                    <Grid Grid.Row="0" Margin="0,0,0,16">
-                        <TextBlock Text="مواقع إقامة المعارض" Style="{StaticResource H3Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                        <Button Content="+ موقع جديد" 
-                                Style="{StaticResource PrimaryButtonStyle}" 
-                                Click="AddVenue_Click"
-                                VerticalAlignment="Center" 
-                                HorizontalAlignment="Left"
-                                Width="140" Height="36"/>
-                    </Grid>
-
-                    <!-- Venues DataGrid -->
-                    <DataGrid Grid.Row="1"
-                              ItemsSource="{Binding Venues}"
-                              SelectedItem="{Binding SelectedVenue, Mode=TwoWay}"
-                              Style="{StaticResource AppDataGridStyle}"
-                              ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
-                              RowStyle="{StaticResource AppDataGridRowStyle}"
-                              CellStyle="{StaticResource AppDataGridCellStyle}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="اسم الموقع" Binding="{Binding Name}" Width="2*"/>
-                            <DataGridTextColumn Header="المدينة" Binding="{Binding City}" Width="*"/>
-                            <DataGridTextColumn Header="الدولة" Binding="{Binding Country}" Width="*"/>
-                            <DataGridTextColumn Header="السعة" Binding="{Binding TotalCapacity, TargetNullValue='-'}" Width="*"/>
-                            <DataGridTextColumn Header="القاعات" Binding="{Binding HallsCount}" Width="Auto"/>
-                            
-                            <!-- Actions -->
-                            <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Button Content="تعديل" 
-                                                    Style="{StaticResource SecondaryButtonStyle}"
-                                                    Click="EditVenue_Click"
-                                                    Tag="{Binding VenueID}"
-                                                    Padding="8,2" Height="26" Margin="0,0,6,0"/>
-                                            <Button Content="حذف" 
-                                                    Style="{StaticResource DangerButtonStyle}"
-                                                    Click="DeleteVenue_Click"
-                                                    Tag="{Binding}"
-                                                    Padding="8,2" Height="26"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </Border>
-
-            <!-- Halls Panel (Column 2) -->
-            <Grid Grid.Column="2">
-                <!-- If Venue is Selected -->
-                <Border Style="{StaticResource StandardCardStyle}" Padding="20" 
-                        Visibility="{Binding SelectedVenue, Converter={StaticResource NullToVisibility}}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Halls Header -->
-                        <Grid Grid.Row="0" Margin="0,0,0,16">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <TextBlock Text="قاعات موقع: " Style="{StaticResource H3Style}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock Text="{Binding SelectedVenue.Name}" Style="{StaticResource H3Style}" FontWeight="Bold"/>
-                            </StackPanel>
-                            
-                            <Button Content="+ قاعة جديدة" 
-                                    Style="{StaticResource PrimaryButtonStyle}" 
-                                    Click="AddHall_Click"
-                                    VerticalAlignment="Center" 
-                                    HorizontalAlignment="Left"
-                                    Width="120" Height="36"/>
-                        </Grid>
-
-                        <!-- Halls DataGrid -->
-                        <DataGrid Grid.Row="1"
-                                  ItemsSource="{Binding Halls}"
-                                  Style="{StaticResource AppDataGridStyle}"
-                                  ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
-                                  RowStyle="{StaticResource AppDataGridRowStyle}"
-                                  CellStyle="{StaticResource AppDataGridCellStyle}"
-                                  AutoGenerateColumns="False"
-                                  IsReadOnly="True">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="اسم القاعة" Binding="{Binding HallName}" Width="2*"/>
-                                <DataGridTextColumn Header="المساحة (م²)" Binding="{Binding AreaSqM, TargetNullValue='-'}" Width="*"/>
-                                <DataGridTextColumn Header="أقصى أجنحة" Binding="{Binding MaxBooths, TargetNullValue='-'}" Width="*"/>
-                                <DataGridTextColumn Header="الأجنحة" Binding="{Binding BoothsCount}" Width="Auto"/>
-
-                                <!-- Actions -->
-                                <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal">
-                                                <Button Content="تعديل" 
-                                                        Style="{StaticResource SecondaryButtonStyle}"
-                                                        Click="EditHall_Click"
-                                                        Tag="{Binding HallID}"
-                                                        Padding="8,2" Height="26" Margin="0,0,6,0"/>
-                                                <Button Content="حذف" 
-                                                        Style="{StaticResource DangerButtonStyle}"
-                                                        Click="DeleteHall_Click"
-                                                        Tag="{Binding}"
-                                                        Padding="8,2" Height="26"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </Border>
-
-                <!-- If NO Venue is Selected -->
-                <Border Style="{StaticResource StandardCardStyle}" Padding="20" Background="{StaticResource BgSecondaryBrush}"
-                        Visibility="{Binding SelectedVenue, Converter={StaticResource InverseNullToVisibility}}">
-                    <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="📍" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
-                            <TextBlock Text="لم يتم اختيار موقع" Style="{StaticResource H2Style}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                            <TextBlock Text="الرجاء اختيار موقع من القائمة الجانبية لاستعراض وإدارة القاعات الخاصة به." 
-                                       Style="{StaticResource BodySecondaryStyle}" 
-                                       TextAlignment="Center" 
-                                       MaxWidth="300"
-                                       TextWrapping="Wrap"/>
+                    <!-- Venue Selector Filter -->
+                    <Border Grid.Row="0" Style="{StaticResource StandardCardStyle}" Padding="16" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Text="تصفية القاعات حسب الموقع" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                            <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                      ItemsSource="{Binding Venues}" 
+                                      SelectedValuePath="VenueID" 
+                                      DisplayMemberPath="Name" 
+                                      SelectedItem="{Binding SelectedVenue, Mode=TwoWay}"/>
                         </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <!-- If Venue is Selected -->
+                        <Border Style="{StaticResource StandardCardStyle}" Padding="20" 
+                                Visibility="{Binding SelectedVenue, Converter={StaticResource NullToVisibility}}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Halls Header -->
+                                <Grid Grid.Row="0" Margin="0,0,0,16">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <TextBlock Text="قاعات موقع: " Style="{StaticResource H3Style}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock Text="{Binding SelectedVenue.Name}" Style="{StaticResource H3Style}" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    
+                                    <Button Content="+ قاعة جديدة" 
+                                            Style="{StaticResource PrimaryButtonStyle}" 
+                                            Click="AddHall_Click"
+                                            VerticalAlignment="Center" 
+                                            HorizontalAlignment="Left"
+                                            Width="120" Height="36"/>
+                                </Grid>
+
+                                <!-- Halls DataGrid -->
+                                <DataGrid Grid.Row="1"
+                                          ItemsSource="{Binding Halls}"
+                                          Style="{StaticResource AppDataGridStyle}"
+                                          ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
+                                          RowStyle="{StaticResource AppDataGridRowStyle}"
+                                          CellStyle="{StaticResource AppDataGridCellStyle}"
+                                          AutoGenerateColumns="False"
+                                          IsReadOnly="True">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="اسم القاعة" Binding="{Binding HallName}" Width="2*"/>
+                                        <DataGridTextColumn Header="المساحة (م²)" Binding="{Binding AreaSqM, TargetNullValue='-'}" Width="*"/>
+                                        <DataGridTextColumn Header="أقصى أجنحة" Binding="{Binding MaxBooths, TargetNullValue='-'}" Width="*"/>
+                                        <DataGridTextColumn Header="الأجنحة" Binding="{Binding BoothsCount}" Width="Auto"/>
+
+                                        <!-- Actions -->
+                                        <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Button Content="تعديل" 
+                                                                Style="{StaticResource SmallSecondaryButtonStyle}"
+                                                                Click="EditHall_Click"
+                                                                Tag="{Binding HallID}"
+                                                                Margin="0,0,6,0"/>
+                                                        <Button Content="حذف" 
+                                                                Style="{StaticResource SmallDangerButtonStyle}"
+                                                                Click="DeleteHall_Click"
+                                                                Tag="{Binding}"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+
+                        <!-- If NO Venue is Selected -->
+                        <Border Style="{StaticResource StandardCardStyle}" Padding="20" Background="{StaticResource BgSecondaryBrush}"
+                                Visibility="{Binding SelectedVenue, Converter={StaticResource InverseNullToVisibility}}">
+                            <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <TextBlock Text="📍" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                                    <TextBlock Text="لم يتم اختيار موقع" Style="{StaticResource H2Style}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                    <TextBlock Text="الرجاء اختيار موقع من القائمة المنسدلة في الأعلى لاستعراض وإدارة القاعات الخاصة به." 
+                                               Style="{StaticResource BodySecondaryStyle}" 
+                                               TextAlignment="Center" 
+                                               MaxWidth="350"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
                     </Grid>
-                </Border>
-            </Grid>
-        </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </Grid>
 </UserControl>

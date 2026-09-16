@@ -4,9 +4,9 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignWidth="600" d:DesignHeight="600"
+             d:DesignWidth="720" d:DesignHeight="680"
              FlowDirection="RightToLeft">
-    <Grid Margin="4">
+    <Grid Margin="0" MinWidth="680">
         <Grid.RowDefinitions>
             <!-- Form Fields Scroll Area -->
             <RowDefinition Height="*"/>
@@ -16,148 +16,167 @@
 
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,20">
             <StackPanel Margin="0,0,4,0">
-                <!-- Name -->
-                <TextBlock Text="اسم المعرض" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                         Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
-                         Margin="0,0,0,16"/>
+                
+                <!-- Section 1: Main Info Card -->
+                <Border Style="{StaticResource FormGroupCardStyle}" Padding="20">
+                    <StackPanel>
+                        <TextBlock Text="🏛️ بيانات المعرض الأساسية" Style="{StaticResource FormSectionHeaderStyle}" Margin="0,0,0,16"/>
 
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Type -->
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="نوع المعرض" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
-                                  ItemsSource="{Binding ExhibitionTypes}" 
-                                  SelectedItem="{Binding Type}" 
-                                  Margin="0,0,0,16"/>
-                    </StackPanel>
-
-                    <!-- Edition -->
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="الإصدار / الدورة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                        <!-- Name -->
+                        <TextBlock Style="{StaticResource LabelStyle}" Margin="0,0,0,8">
+                            <Run Text="اسم المعرض "/><Run Text="*" Foreground="{StaticResource DangerBrush}"/>
+                        </TextBlock>
                         <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                 Text="{Binding Edition, UpdateSourceTrigger=PropertyChanged}" 
-                                 Margin="0,0,0,16"/>
-                    </StackPanel>
-                </Grid>
+                                 Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
+                                 Tag="أدخل اسم المعرض الرسمي"
+                                 Margin="0,0,0,18"/>
 
-                <!-- Venue -->
-                <TextBlock Text="موقع المعرض (الصالة/المركز)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
-                          ItemsSource="{Binding Venues}" 
-                          SelectedValuePath="VenueID" 
-                          DisplayMemberPath="Name" 
-                          SelectedValue="{Binding SelectedVenueId}" 
-                          Margin="0,0,0,16"/>
+                        <Grid Margin="0,0,0,18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
+                            <!-- Type -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="نوع المعرض" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                          ItemsSource="{Binding ExhibitionTypes}" 
+                                          SelectedItem="{Binding Type}"/>
+                            </StackPanel>
 
-                    <!-- Start Date -->
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="تاريخ البدء" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <DatePicker SelectedDate="{Binding StartDate}" Height="48" Margin="0,0,0,16"/>
-                    </StackPanel>
+                            <!-- Edition -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="الإصدار / الدورة" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                         Text="{Binding Edition, UpdateSourceTrigger=PropertyChanged}" 
+                                         Tag="مثال: الدورة الخامسة 2026"/>
+                            </StackPanel>
+                        </Grid>
 
-                    <!-- End Date -->
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="تاريخ الانتهاء" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <DatePicker SelectedDate="{Binding EndDate}" Height="48" Margin="0,0,0,16"/>
-                    </StackPanel>
-                </Grid>
-
-                <!-- Description -->
-                <TextBlock Text="الوصف / التفاصيل" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                         Height="80" 
-                         TextWrapping="Wrap" 
-                         AcceptsReturn="True" 
-                         Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" 
-                         Margin="0,0,0,16"/>
-
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Expected Visitors -->
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="الزوار المتوقعون" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                 Text="{Binding ExpectedVisitors, TargetNullValue='', UpdateSourceTrigger=PropertyChanged}" 
-                                 Margin="0,0,0,16"/>
-                    </StackPanel>
-
-                    <!-- Entry Fee -->
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="رسوم الدخول" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                 Text="{Binding EntryFee, TargetNullValue='', UpdateSourceTrigger=PropertyChanged}" 
-                                 Margin="0,0,0,16"/>
-                    </StackPanel>
-                </Grid>
-
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Entry Currency -->
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="العملة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                        <!-- Venue -->
+                        <TextBlock Text="موقع المعرض (الصالة/المركز)" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
                         <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
-                                  ItemsSource="{Binding Currencies}" 
-                                  SelectedValuePath="CurrencyCode" 
-                                  DisplayMemberPath="CurrencyCode" 
-                                  SelectedValue="{Binding EntryCurrency}" 
-                                  Margin="0,0,0,16"/>
-                    </StackPanel>
+                                  ItemsSource="{Binding Venues}" 
+                                  SelectedValuePath="VenueID" 
+                                  DisplayMemberPath="Name" 
+                                  SelectedValue="{Binding SelectedVenueId}" 
+                                  Margin="0,0,0,18"/>
 
-                    <!-- Status (Only editable or relevant in edit mode) -->
-                    <StackPanel Grid.Column="2" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Text="حالة المعرض" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
-                                  ItemsSource="{Binding Statuses}" 
-                                  SelectedItem="{Binding Status}" 
-                                  Margin="0,0,0,16"/>
+                        <Grid Margin="0,0,0,18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Start Date -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="تاريخ البدء" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <DatePicker SelectedDate="{Binding StartDate}" Style="{StaticResource StandardDatePickerStyle}"/>
+                            </StackPanel>
+
+                            <!-- End Date -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="تاريخ الانتهاء" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <DatePicker SelectedDate="{Binding EndDate}" Style="{StaticResource StandardDatePickerStyle}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Description -->
+                        <TextBlock Text="الوصف والتفاصيل" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                 Height="80" 
+                                 TextWrapping="Wrap" 
+                                 AcceptsReturn="True" 
+                                 VerticalContentAlignment="Top"
+                                 Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" 
+                                 Tag="أدخل نبذة تفصيلية عن المعرض والأهداف..."/>
                     </StackPanel>
-                </Grid>
+                </Border>
+
+                <!-- Section 2: Financial & Status Card -->
+                <Border Style="{StaticResource FormGroupCardStyle}" Padding="20">
+                    <StackPanel>
+                        <TextBlock Text="💰 الإعدادات المالية والتنظيمية" Style="{StaticResource FormSectionHeaderStyle}" Margin="0,0,0,16"/>
+
+                        <Grid Margin="0,0,0,18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Expected Visitors -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="الزوار المتوقعون" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                         Text="{Binding ExpectedVisitors, TargetNullValue='', UpdateSourceTrigger=PropertyChanged}" 
+                                         Tag="مثال: 15000"/>
+                            </StackPanel>
+
+                            <!-- Entry Fee -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="رسوم الدخول" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                         Text="{Binding EntryFee, TargetNullValue='', UpdateSourceTrigger=PropertyChanged}" 
+                                         Tag="0 = مجاني"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Entry Currency -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="العملة" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                          ItemsSource="{Binding Currencies}" 
+                                          SelectedValuePath="CurrencyCode" 
+                                          DisplayMemberPath="CurrencyCode" 
+                                          SelectedValue="{Binding EntryCurrency}"/>
+                            </StackPanel>
+
+                            <!-- Status -->
+                            <StackPanel Grid.Column="2" Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="حالة المعرض" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                                <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                          ItemsSource="{Binding Statuses}" 
+                                          SelectedItem="{Binding Status}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Actions -->
-        <Grid Grid.Row="1" Margin="0,10,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+        <!-- Footer Actions -->
+        <Border Grid.Row="1" BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="0,1,0,0" Padding="0,20,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <Button Content="حفظ" 
-                    Command="{Binding SaveCommand}" 
-                    Style="{StaticResource PrimaryButtonStyle}" 
-                    Grid.Column="1" 
-                    Width="120" 
-                    Margin="0,0,12,0"/>
-            <Button Content="إلغاء" 
-                    Command="{Binding CancelCommand}" 
-                    Style="{StaticResource SecondaryButtonStyle}" 
-                    Grid.Column="2" 
-                    Width="120"/>
-        </Grid>
+                <Button Content="✓ حفظ المعرض" 
+                        Command="{Binding SaveCommand}" 
+                        Style="{StaticResource PrimaryButtonStyle}" 
+                        Grid.Column="1" 
+                        Width="160" Height="48"
+                        Margin="0,0,14,0"/>
+                <Button Content="✕ إلغاء" 
+                        Command="{Binding CancelCommand}" 
+                        Style="{StaticResource SecondaryButtonStyle}" 
+                        Grid.Column="2" 
+                        Width="120" Height="48"/>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

@@ -1,0 +1,32 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Controls.Forms.SearchBarControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             x:Name="Root"
+             d:DesignHeight="50" d:DesignWidth="600">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="12"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                 Text="{Binding SearchText, ElementName=Root, UpdateSourceTrigger=PropertyChanged}" 
+                 Grid.Column="0"
+                 VerticalContentAlignment="Center"
+                 Tag="{Binding PlaceholderText, ElementName=Root}"/>
+
+        <Button Style="{StaticResource PrimaryButtonStyle}" 
+                Command="{Binding SearchCommand, ElementName=Root}"
+                Grid.Column="2"
+                Width="160" Height="48">
+            <StackPanel Orientation="Horizontal">
+                <Path Data="{StaticResource IconSearch}" Width="14" Height="14" Stretch="Uniform" Fill="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding ButtonText, ElementName=Root}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Button>
+    </Grid>
+</UserControl>

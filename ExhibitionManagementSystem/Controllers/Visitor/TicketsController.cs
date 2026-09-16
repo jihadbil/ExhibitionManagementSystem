@@ -63,6 +63,14 @@ public class TicketsController : BaseApiController
         var result = await _ticketService.GetScanHistoryAsync(TenantId, ticketId);
         return ToActionResult(result);
     }
+
+    // PATCH /api/tickets/{ticketId}/cancel
+    [HttpPatch("{ticketId:int}/cancel")]
+    public async Task<IActionResult> Cancel(int ticketId)
+    {
+        var result = await _ticketService.CancelTicketAsync(TenantId, ticketId);
+        return ToActionResult(result);
+    }
 }
 
 public record ScanTicketRequest(string QrCode, string Direction, string? Location);

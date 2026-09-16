@@ -137,6 +137,10 @@ public partial class TicketsViewModel : ViewModelBase
         }, "خطأ أثناء البحث عن الزوار");
     }
 
+    public Action? CloseVisitorAction { get; set; }
+    public Action? CloseIssueTicketAction { get; set; }
+    public Action? CloseScanTicketAction { get; set; }
+
     [RelayCommand]
     private async Task RegisterVisitorAsync()
     {
@@ -166,6 +170,7 @@ public partial class TicketsViewModel : ViewModelBase
                 NewVisitorPhone = string.Empty;
                 NewVisitorEmail = string.Empty;
                 await LoadVisitorsAsync();
+                CloseVisitorAction?.Invoke();
             }
             else
             {
@@ -280,6 +285,7 @@ public partial class TicketsViewModel : ViewModelBase
             {
                 NotificationService.ShowSuccess($"تم إصدار التذكرة بنجاح. رمز الـ QR: {result.Data.QRCode} ✓");
                 await LoadTicketsAsync();
+                CloseIssueTicketAction?.Invoke();
             }
             else
             {
@@ -310,6 +316,7 @@ public partial class TicketsViewModel : ViewModelBase
                 {
                     await LoadTicketsAsync();
                 }
+                CloseScanTicketAction?.Invoke();
             }
             else
             {

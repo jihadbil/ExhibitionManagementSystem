@@ -17,18 +17,23 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Page Title -->
-            <TextBlock x:Name="PageTitleText"
-                       Grid.Column="0"
-                       FontFamily="{StaticResource WorkSansBold}"
-                       FontSize="18"
-                       FontWeight="Bold"
-                       Foreground="{StaticResource TextPrimaryBrush}"
-                       VerticalAlignment="Center"
-                       Text="لوحة التحكم"/>
+            <!-- Page Title with Breadcrumb -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Grid.Column="0">
+                <TextBlock Text="ExpoManager" Style="{StaticResource BodySecondaryStyle}"
+                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="/" Foreground="{StaticResource TextMutedBrush}"
+                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock x:Name="PageTitleText"
+                           FontFamily="{StaticResource WorkSansBold}"
+                           FontSize="18"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"
+                           Text="لوحة التحكم"/>
+            </StackPanel>
 
-            <!-- Search Bar (Stub placeholder) -->
-            <Grid Grid.Column="1" HorizontalAlignment="Center" Width="400" MaxWidth="400" Height="38">
+            <!-- Search Bar (Stub placeholder - Collapsed to avoid UX confusion) -->
+            <Grid Grid.Column="1" HorizontalAlignment="Center" Width="400" MaxWidth="400" Height="38" Visibility="Collapsed">
                 <TextBox Style="{StaticResource StandardTextBoxStyle}"
                          Padding="16,0"
                          Height="38"
@@ -40,12 +45,18 @@
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                 <!-- Notifications Bell -->
                 <Button Style="{StaticResource IconButtonStyle}" Margin="0,0,8,0">
-                    <TextBlock Text="🔔" FontSize="16"/>
+                    <Path Data="{StaticResource IconNotification}"
+                          Width="16" Height="16"
+                          Stretch="Uniform"
+                          Fill="{StaticResource TextSecondaryBrush}"/>
                 </Button>
 
                 <!-- Settings Gear -->
                 <Button Style="{StaticResource IconButtonStyle}" Margin="0,0,16,0" Click="Settings_Click">
-                    <TextBlock Text="⚙" FontSize="16"/>
+                    <Path Data="{StaticResource IconSettings}"
+                          Width="16" Height="16"
+                          Stretch="Uniform"
+                          Fill="{StaticResource TextSecondaryBrush}"/>
                 </Button>
 
                 <!-- User Initial Badge -->

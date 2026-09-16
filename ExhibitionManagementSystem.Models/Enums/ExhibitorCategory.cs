@@ -6,9 +6,9 @@ namespace ExhibitionManagementSystem.Models.Enums;
 public enum ExhibitorCategory
 {
     /// <summary>
-    /// عارض أجنبي.
+    /// عارض دولي.
     /// </summary>
-    Foreign,
+    International,
 
     /// <summary>
     /// عارض محلي.

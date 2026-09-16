@@ -16,7 +16,12 @@
 
             <!-- Brand Section -->
             <StackPanel Grid.Row="0" Margin="24,32,24,24" Orientation="Horizontal">
-                <TextBlock Text="🏛️" FontSize="28" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                <Path Data="{StaticResource IconExhibition}"
+                      Width="28" Height="28"
+                      Stretch="Uniform"
+                      Fill="{StaticResource PrimaryBrush}"
+                      Margin="0,0,12,0"
+                      VerticalAlignment="Center"/>
                 <TextBlock Text="ExpoManager" 
                            FontFamily="{StaticResource WorkSansBold}"
                            FontSize="20"
@@ -26,61 +31,175 @@
             </StackPanel>
 
             <!-- Navigation Items -->
-            <ItemsControl Grid.Row="1" x:Name="NavItemsList" Margin="12,0">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border x:Name="ItemBorder"
-                                Background="Transparent"
-                                CornerRadius="12"
-                                Margin="0,2"
-                                Padding="16,12"
-                                Cursor="Hand"
-                                MouseLeftButtonDown="NavItem_Click">
-                            <Grid x:Name="ItemGrid">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" BorderThickness="0">
+                <ItemsControl x:Name="NavItemsList" Margin="12,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,0,12">
+                                <!-- Category Header -->
+                                <Border x:Name="HeaderBorder"
+                                        Background="Transparent"
+                                        CornerRadius="8"
+                                        Padding="12,8"
+                                        Margin="4,0,4,4"
+                                        Cursor="Hand"
+                                        MouseLeftButtonDown="CategoryHeader_Click">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Category Name -->
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding Name}"
+                                                   FontFamily="{StaticResource WorkSansBold}"
+                                                   FontSize="12"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        
+                                        <!-- Chevron -->
+                                        <TextBlock x:Name="ChevronText"
+                                                   Grid.Column="1"
+                                                   Text="▼"
+                                                   FontFamily="{StaticResource WorkSansBold}"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
                                 
-                                <TextBlock x:Name="IconText"
-                                           Grid.Column="0"
-                                           Text="{Binding Icon}"
-                                           FontSize="16"
-                                           Foreground="{StaticResource SidebarTextBrush}"
-                                           Margin="0,0,12,0"
-                                           Width="20"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                                
-                                <TextBlock x:Name="LabelText"
-                                           Grid.Column="1"
-                                           Text="{Binding Label}"
-                                           FontFamily="{StaticResource WorkSansMedium}"
-                                           FontSize="14"
-                                           Foreground="{StaticResource SidebarTextBrush}"
-                                           VerticalAlignment="Center"/>
-                            </Grid>
-                        </Border>
-                        <DataTemplate.Triggers>
-                            <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
-                                <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
-                                <Setter TargetName="LabelText" Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
-                                <Setter TargetName="LabelText" Property="FontWeight" Value="SemiBold"/>
-                            </DataTrigger>
-                            <MultiDataTrigger>
-                                <MultiDataTrigger.Conditions>
-                                    <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
-                                    <Condition Binding="{Binding IsActive}" Value="False"/>
-                                </MultiDataTrigger.Conditions>
-                                <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource BgSecondaryBrush}"/>
-                                <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                                <Setter TargetName="LabelText" Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                            </MultiDataTrigger>
-                        </DataTemplate.Triggers>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                                <!-- Category Items -->
+                                <ItemsControl ItemsSource="{Binding Items}"
+                                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border x:Name="ItemBorder"
+                                                    Background="Transparent"
+                                                    CornerRadius="12"
+                                                    Margin="0,2"
+                                                    Padding="16,10"
+                                                    Cursor="Hand"
+                                                    MouseLeftButtonDown="NavItem_Click">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    
+                                                    <Border x:Name="ActiveBar" Grid.Column="0"
+                                                            Background="{StaticResource PrimaryBrush}"
+                                                            CornerRadius="1.5" Width="3" Height="18"
+                                                            Margin="0,0,8,0"
+                                                            VerticalAlignment="Center"
+                                                            Visibility="Collapsed"/>
+                                                    
+                                                    <Grid x:Name="ItemGrid" Grid.Column="1">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Path x:Name="IconPath"
+                                                              Grid.Column="0"
+                                                              Width="18" Height="18"
+                                                              Stretch="Uniform"
+                                                              Fill="{StaticResource SidebarTextBrush}"
+                                                              Margin="0,0,12,0"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"/>
+                                                        
+                                                        <TextBlock x:Name="LabelText"
+                                                                   Grid.Column="1"
+                                                                   Text="{Binding Label}"
+                                                                   FontFamily="{StaticResource WorkSansMedium}"
+                                                                   FontSize="14"
+                                                                   Foreground="{StaticResource SidebarTextBrush}"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Grid>
+                                            </Border>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconDashboard">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconDashboard}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconAnalytics">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconAnalytics}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconExhibition">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconExhibition}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconCalendar">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconCalendar}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconLocation">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconLocation}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconBooth">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconBooth}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconReservation">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconReservation}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconInvoice">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconInvoice}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconServices">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconServices}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconTicket">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconTicket}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconCompany">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconCompany}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconUsers">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconUsers}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconTenants">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconTenants}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconAdmin">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconAdmin}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Icon}" Value="IconSettings">
+                                                    <Setter TargetName="IconPath" Property="Data" Value="{StaticResource IconSettings}"/>
+                                                </DataTrigger>
+                                                
+                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                    <Setter TargetName="ActiveBar" Property="Visibility" Value="Visible"/>
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
+                                                    <Setter TargetName="IconPath" Property="Fill" Value="{StaticResource PrimaryBrush}"/>
+                                                    <Setter TargetName="LabelText" Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                                    <Setter TargetName="LabelText" Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                                                        <Condition Binding="{Binding IsActive}" Value="False"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource BgSecondaryBrush}"/>
+                                                    <Setter TargetName="IconPath" Property="Fill" Value="{StaticResource TextPrimaryBrush}"/>
+                                                    <Setter TargetName="LabelText" Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                                </MultiDataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                            <DataTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True" SourceName="HeaderBorder">
+                                    <Setter TargetName="HeaderBorder" Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
+                                    <Setter TargetName="ChevronText" Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                                    <Setter TargetName="ChevronText" Property="Text" Value="◀"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
 
             <!-- Footer / Logout Section -->
             <StackPanel Grid.Row="2" Margin="12,24" VerticalAlignment="Bottom">
@@ -105,7 +224,12 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="🚪" FontSize="16" Foreground="{StaticResource DangerBrush}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconLogout}" 
+                              Width="16" Height="16"
+                              Stretch="Uniform"
+                              Fill="{StaticResource DangerBrush}" 
+                              Margin="0,0,12,0" 
+                              VerticalAlignment="Center"/>
                         <TextBlock Text="تسجيل الخروج"
                                    FontFamily="{StaticResource WorkSansMedium}"
                                    FontSize="14"

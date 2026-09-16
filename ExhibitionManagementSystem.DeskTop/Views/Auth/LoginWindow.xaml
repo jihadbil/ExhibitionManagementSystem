@@ -5,7 +5,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         mc:Ignorable="d"
         Title="ExpoManager — تسجيل الدخول" 
-        Width="1000" Height="650" 
+        Width="1200" Height="780" 
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         FlowDirection="RightToLeft"
@@ -19,67 +19,78 @@
         </Grid.ColumnDefinitions>
 
         <!-- Left side: Form -->
-        <Border Grid.Column="0" Background="White" Padding="60">
-            <StackPanel VerticalAlignment="Center" MaxWidth="380">
+        <Border Grid.Column="0" Background="White" Padding="64,48">
+            <StackPanel VerticalAlignment="Center" MaxWidth="460">
 
                 <!-- Logo/Title -->
-                <TextBlock Text="ExpoManager" Style="{StaticResource H2Style}" Margin="0,0,0,8"/>
-                <TextBlock Text="مرحباً بك، سجّل دخولك للمتابعة"
+                <TextBlock Text="ExpoManager" Style="{StaticResource H1Style}" FontSize="34" Margin="0,0,0,10"/>
+                <TextBlock Text="مرحباً بك، سجّل دخولك للمتابعة وإدارة فعالياتك"
                            Style="{StaticResource BodySecondaryStyle}"
-                           Margin="0,0,0,32"/>
+                           FontSize="15"
+                           Margin="0,0,0,36"/>
 
                 <!-- Email Input -->
-                <TextBlock Text="البريد الإلكتروني" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                <TextBlock Text="البريد الإلكتروني" Style="{StaticResource LabelStyle}" FontSize="14" Margin="0,0,0,8"/>
              
                 <TextBox Style="{StaticResource StandardTextBoxStyle}"
                          Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,0,0,16"/>
+                         Height="48" FontSize="14"
+                         Margin="0,0,0,20"/>
 
                 <!-- Password Input -->
-                <TextBlock Text="كلمة المرور" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                <TextBlock Text="كلمة المرور" Style="{StaticResource LabelStyle}" FontSize="14" Margin="0,0,0,8"/>
                 <PasswordBox x:Name="PasswordField"
                              Style="{StaticResource StandardPasswordBoxStyle}"
                              PasswordChanged="PasswordField_PasswordChanged"
-                             Margin="0,0,0,8"/>
+                             Height="48" FontSize="14"
+                             Margin="0,0,0,12"/>
 
                 <!-- Error Message -->
                 <TextBlock Text="{Binding ErrorMessage}"
                            Foreground="{StaticResource DangerBrush}"
                            FontSize="13"
+                           TextWrapping="Wrap"
                            Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}"
-                           Margin="0,0,0,16"/>
+                           Margin="0,0,0,18"/>
 
                 <!-- Loading indicator -->
-                <ProgressBar IsIndeterminate="True" Height="3"
+                <ProgressBar IsIndeterminate="True" Height="4"
                              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"
                              Foreground="{StaticResource PrimaryBrush}"
-                             Margin="0,0,0,16"/>
+                             Margin="0,0,0,18"/>
 
                 <!-- Login Button -->
                 <Button Content="تسجيل الدخول"
                         Style="{StaticResource PrimaryButtonStyle}"
                         Command="{Binding LoginCommand}"
                         HorizontalAlignment="Stretch"
-                        Margin="0,0,0,16"/>
+                        Height="50" FontSize="15"
+                        Margin="0,0,0,20"/>
 
                 <!-- Forgot Password -->
                 <Button Content="نسيت كلمة المرور؟"
                         Style="{StaticResource LinkButtonStyle}"
                         Command="{Binding ForgotPasswordCommand}"
-                        HorizontalAlignment="Center"/>
+                        HorizontalAlignment="Center"
+                        FontSize="14"/>
             </StackPanel>
         </Border>
 
         <!-- Right side: Brand Panel -->
         <Border Grid.Column="1" Background="{StaticResource PrimaryGradientBrush}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="🏛️" FontSize="72" HorizontalAlignment="Center" Margin="0,0,0,24"/>
+                <Path Data="{StaticResource IconExhibition}"
+                      Width="92" Height="92"
+                      Stretch="Uniform"
+                      Fill="White"
+                      HorizontalAlignment="Center"
+                      Margin="0,0,0,28"/>
                 <TextBlock Text="ExpoManager"
-                           Foreground="White" FontSize="36" FontWeight="Bold"
+                           Foreground="White" FontSize="44" FontWeight="Bold"
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="نظام إدارة المعارض المتكامل"
-                           Foreground="White" FontSize="16" Opacity="0.85"
-                           HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                <TextBlock Text="نظام إدارة المعارض والفعاليات المتكامل"
+                           Foreground="White" FontSize="18" Opacity="0.9"
+                           HorizontalAlignment="Center" Margin="0,16,0,0"/>
             </StackPanel>
         </Border>
     </Grid>

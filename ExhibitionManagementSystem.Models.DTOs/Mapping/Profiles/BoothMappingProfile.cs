@@ -32,7 +32,8 @@ public class BoothMappingProfile : Profile
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedByUserId, opt => opt.Ignore())
             .ForMember(dest => dest.Hall, opt => opt.Ignore())
-            .ForMember(dest => dest.BoothMerge, opt => opt.Ignore());
+            .ForMember(dest => dest.BoothMerge, opt => opt.Ignore())
+            .ForMember(dest => dest.AssignedPriceRule, opt => opt.Ignore());
 
         CreateMap<BoothUpdateDto, Models.Booth>()
             .ForMember(dest => dest.BoothID, opt => opt.Ignore())
@@ -49,7 +50,8 @@ public class BoothMappingProfile : Profile
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedByUserId, opt => opt.Ignore())
             .ForMember(dest => dest.Hall, opt => opt.Ignore())
-            .ForMember(dest => dest.BoothMerge, opt => opt.Ignore());
+            .ForMember(dest => dest.BoothMerge, opt => opt.Ignore())
+            .ForMember(dest => dest.AssignedPriceRule, opt => opt.Ignore());
 
         CreateMap<BoothMerge, BoothMergeDto>()
             .ForMember(dest => dest.MergedAreaSqM, opt => opt.MapFrom(src => src.TotalAreaSqM))

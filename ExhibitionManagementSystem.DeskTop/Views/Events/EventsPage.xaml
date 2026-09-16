@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:feedback="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Feedback"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1000"
              FlowDirection="RightToLeft">
@@ -17,7 +18,15 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <TextBlock Grid.Row="0" Text="جدول الفعاليات والمؤتمرات" Style="{StaticResource H1Style}" Margin="0,0,0,24"/>
+        <Grid Grid.Row="0" Margin="0,0,0,24">
+            <TextBlock Text="جدول الفعاليات والمؤتمرات" Style="{StaticResource H1Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+            <Button Content="+ إضافة فعالية" 
+                    Style="{StaticResource PrimaryButtonStyle}" 
+                    Click="AddEvent_Click"
+                    VerticalAlignment="Center" 
+                    HorizontalAlignment="Left"
+                    Width="140" Height="40"/>
+        </Grid>
 
         <!-- Filters -->
         <Border Grid.Row="1" Style="{StaticResource StandardCardStyle}" Padding="16" Margin="0,0,0,24">
@@ -40,10 +49,7 @@
         <!-- Split Grid -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <!-- Events List (2/3) -->
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="24"/>
-                <!-- Form Panel (1/3) -->
+                <!-- Events List (Full width) -->
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -63,6 +69,7 @@
                               RowStyle="{StaticResource AppDataGridRowStyle}"
                               CellStyle="{StaticResource AppDataGridCellStyle}"
                               AutoGenerateColumns="False"
+                              Visibility="{Binding Events.Count, Converter={StaticResource InverseCountToVisibility}}"
                               Grid.Row="1">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="النشاط / الفعالية" Binding="{Binding EventName}" Width="1.5*"/>
@@ -83,127 +90,33 @@
                             <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="حذف" 
-                                                Style="{StaticResource DangerButtonStyle}"
+                                        <Button Style="{StaticResource DangerButtonStyle}"
                                                 Command="{Binding DataContext.DeleteScheduleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                 CommandParameter="{Binding ScheduleID}"
-                                                Padding="12,4" Height="28"/>
+                                                Padding="10,2" Height="28">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="{StaticResource IconDelete}" Width="11" Height="11" Stretch="Uniform" Fill="White" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="حذف" FontSize="11" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
+                    <feedback:EmptyStateControl 
+                         Visibility="{Binding Events.Count, Converter={StaticResource CountToVisibility}}"
+                         IconGeometry="{StaticResource IconCalendar}"
+                         Title="لا توجد فعاليات حالياً"
+                         Description="لم يتم تسجيل أي ندوة أو نشاط بعد لهذا المعرض."
+                         Grid.Row="1"/>
                 </Grid>
             </Border>
-
-            <!-- Add Event Form Panel -->
-            <Border Grid.Column="2" Style="{StaticResource StandardCardStyle}" Padding="20" Background="White">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <TextBlock Text="إضافة فعالية جديدة" Style="{StaticResource H3Style}" Margin="0,0,0,16"/>
-
-                        <!-- Event Name -->
-                        <TextBlock Text="اسم الفعالية / المحاضرة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                 Text="{Binding NewEventName, UpdateSourceTrigger=PropertyChanged}" 
-                                 Margin="0,0,0,16"/>
-
-                        <!-- Speaker Name -->
-                        <TextBlock Text="المتحدث / مقدم الندوة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                 Text="{Binding NewSpeakerName, UpdateSourceTrigger=PropertyChanged}" 
-                                 Margin="0,0,0,16"/>
-
-                        <!-- Dates & Times Grid -->
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- Start Date -->
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="تاريخ البدء" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <DatePicker SelectedDate="{Binding NewStartDate}" Height="40" Margin="0,0,0,12"/>
-                            </StackPanel>
-
-                            <!-- Start Time -->
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="وقت البدء (hh:mm)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <TextBox Style="{StaticResource StandardTextBoxStyle}" Height="40"
-                                         Text="{Binding NewStartTime, StringFormat='{}{0:hh\\:mm}'}" />
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid Margin="0,0,0,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- End Date -->
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="تاريخ الانتهاء" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <DatePicker SelectedDate="{Binding NewEndDate}" Height="40" Margin="0,0,0,12"/>
-                            </StackPanel>
-
-                            <!-- End Time -->
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="وقت الانتهاء (hh:mm)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <TextBox Style="{StaticResource StandardTextBoxStyle}" Height="40"
-                                         Text="{Binding NewEndTime, StringFormat='{}{0:hh\\:mm}'}" />
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid Margin="0,0,0,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- Max Attendees -->
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="الحد الأقصى للحضور" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <TextBox Style="{StaticResource StandardTextBoxStyle}" Height="40"
-                                         Text="{Binding NewMaxAttendees, TargetNullValue=''}" />
-                            </StackPanel>
-
-                            <!-- Event Type -->
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="نوع الفعالية" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                                <ComboBox Style="{StaticResource StandardComboBoxStyle}" Height="40" Padding="8,4"
-                                          ItemsSource="{Binding EventTypes}" 
-                                          SelectedItem="{Binding NewEventType}"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <!-- Description -->
-                        <TextBlock Text="الوصف / محاور الفعالية" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
-                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                                 Height="60" 
-                                 TextWrapping="Wrap" 
-                                 AcceptsReturn="True" 
-                                 Text="{Binding NewDescription, UpdateSourceTrigger=PropertyChanged}" 
-                                 Margin="0,0,0,16"/>
-
-                        <!-- Is Public -->
-                        <CheckBox Content="فعالية عامة للجمهور" 
-                                  IsChecked="{Binding NewIsPublic}"
-                                  FontFamily="{StaticResource WorkSansMedium}" 
-                                  Margin="0,0,0,20"/>
-
-                        <!-- Save Button -->
-                        <Button Content="إدراج الفعالية ✓" 
-                                Style="{StaticResource PrimaryButtonStyle}"
-                                Command="{Binding AddScheduleCommand}"
-                                Height="48"
-                                HorizontalAlignment="Stretch"/>
-                    </StackPanel>
-                </ScrollViewer>
-            </Border>
         </Grid>
+
+        <!-- Loading Overlay -->
+        <feedback:LoadingOverlayControl Grid.Row="0" Grid.RowSpan="3"
+                                          IsLoading="{Binding IsBusy}"
+                                          Message="جاري تحميل الفعاليات..."/>
     </Grid>
 </UserControl>

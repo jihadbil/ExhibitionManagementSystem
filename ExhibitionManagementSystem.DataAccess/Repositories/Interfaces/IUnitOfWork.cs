@@ -23,7 +23,9 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Interfaces
         IBoothPriceRuleRepository BoothPriceRules { get; }
         IServicePriceRuleRepository ServicePriceRules { get; }
         IInvoiceRepository Invoices { get; }
+        IInvoiceItemRepository InvoiceItems { get; }
         IPaymentRepository Payments { get; }
+
         IVisitorRepository Visitors { get; }
         ITicketRepository Tickets { get; }
         ITicketScanRepository TicketScans { get; }
@@ -33,6 +35,12 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Interfaces
         IExchangeRateRepository ExchangeRates { get; }
         IAuditLogRepository AuditLogs { get; }
         IExpenseRepository Expenses { get; }
+        IBadgeTemplateRepository BadgeTemplates { get; }
+        ISponsorRepository Sponsors { get; }
+        ISponsorshipPackageRepository SponsorshipPackages { get; }
+        ISponsorshipContractRepository SponsorshipContracts { get; }
+        IAdvertisingSpaceRepository AdvertisingSpaces { get; }
+        ISponsorAdAssignmentRepository SponsorAdAssignments { get; }
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

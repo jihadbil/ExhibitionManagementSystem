@@ -4,17 +4,17 @@
     <!-- ═══════════════════════════════════════════════════════
          PRIMARY COLORS
     ═══════════════════════════════════════════════════════ -->
-    <Color x:Key="PrimaryColor">#FF6366F1</Color>
-    <Color x:Key="PrimaryDarkColor">#FF4F46E5</Color>
-    <Color x:Key="SecondaryColor">#FF8B5CF6</Color>
+    <Color x:Key="PrimaryColor">#FF1E40AF</Color>
+    <Color x:Key="PrimaryDarkColor">#FF1E3A8A</Color>
+    <Color x:Key="SecondaryColor">#FF0EA5E9</Color>
 
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
     <SolidColorBrush x:Key="PrimaryDarkBrush" Color="{StaticResource PrimaryDarkColor}"/>
     <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource SecondaryColor}"/>
 
     <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0.5" EndPoint="1,0.5">
-        <GradientStop Color="#FF6366F1" Offset="0"/>
-        <GradientStop Color="#FF8B5CF6" Offset="1"/>
+        <GradientStop Color="#FF1E40AF" Offset="0"/>
+        <GradientStop Color="#FF0EA5E9" Offset="1"/>
     </LinearGradientBrush>
 
     <!-- ═══════════════════════════════════════════════════════
@@ -70,8 +70,8 @@
          BORDERS & SHADOWS
     ═══════════════════════════════════════════════════════ -->
     <SolidColorBrush x:Key="BorderMainBrush" Color="#FFE2E8F0"/>
-    <SolidColorBrush x:Key="BorderFocusBrush" Color="#FF6366F1"/>
-    <SolidColorBrush x:Key="SidebarActiveShadowBrush" Color="#4D6366F1"/>
+    <SolidColorBrush x:Key="BorderFocusBrush" Color="#FF2563EB"/>
+    <SolidColorBrush x:Key="SidebarActiveShadowBrush" Color="#4D1E40AF"/>
 
     <!-- CornerRadius Constants -->
     <CornerRadius x:Key="RadiusSm">6</CornerRadius>
@@ -107,10 +107,10 @@
         <GradientStop Color="#FFF43F5E" Offset="1"/>
     </LinearGradientBrush>
 
-    <!-- Educational: #8B5CF6 → #6366F1 -->
+    <!-- Educational: #0284C7 → #1E40AF -->
     <LinearGradientBrush x:Key="EducationalGradientBrush" StartPoint="0,0.5" EndPoint="1,0.5">
-        <GradientStop Color="#FF8B5CF6" Offset="0"/>
-        <GradientStop Color="#FF6366F1" Offset="1"/>
+        <GradientStop Color="#FF0284C7" Offset="0"/>
+        <GradientStop Color="#FF1E40AF" Offset="1"/>
     </LinearGradientBrush>
 
     <!-- Automotive: #6B7280 → #475569 -->
@@ -120,15 +120,15 @@
     </LinearGradientBrush>
 
     <!-- Chart Colors -->
-    <SolidColorBrush x:Key="Chart1Brush" Color="#FF6366F1"/>
+    <SolidColorBrush x:Key="Chart1Brush" Color="#FF1E40AF"/>
     <SolidColorBrush x:Key="Chart2Brush" Color="#FF10B981"/>
     <SolidColorBrush x:Key="Chart3Brush" Color="#FFF59E0B"/>
     <SolidColorBrush x:Key="Chart4Brush" Color="#FFEF4444"/>
-    <SolidColorBrush x:Key="Chart5Brush" Color="#FF8B5CF6"/>
+    <SolidColorBrush x:Key="Chart5Brush" Color="#FF0EA5E9"/>
 
     <!-- Sidebar -->
     <SolidColorBrush x:Key="SidebarBgBrush" Color="#FFFFFFFF"/>
-    <SolidColorBrush x:Key="SidebarHoverBrush" Color="#FFF0F4FF"/>
+    <SolidColorBrush x:Key="SidebarHoverBrush" Color="#FFEBF5FF"/>
     <SolidColorBrush x:Key="SidebarTextBrush" Color="#FF64748B"/>
 
 </ResourceDictionary>

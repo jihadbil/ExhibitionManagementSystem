@@ -22,4 +22,6 @@ public class InvoiceDto : AuditDto
     public DateTime? DueDate { get; set; }
     public string Notes { get; set; } = string.Empty;
     public List<PaymentDto> Payments { get; set; } = [];
+    public List<InvoiceItemDto> Items { get; set; } = [];
 }
+

@@ -19,12 +19,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IPricingService _pricingService;
+        private readonly IFinancialService _financialService;
 
-        public ReservationService(IUnitOfWork unitOfWork, IMapper mapper, IPricingService pricingService)
+        public ReservationService(IUnitOfWork unitOfWork, IMapper mapper, IPricingService pricingService, IFinancialService financialService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _pricingService = pricingService;
+            _financialService = financialService;
         }
 
         public async Task<ServiceResult<PagedResultDto<BoothReservationSummaryDto>>> GetByExhibitionAsync(int tenantId, int exhibitionId, int page, int pageSize)
@@ -162,7 +164,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<BoothReservationDto>.Failure("فئة العارض غير صالحة", "INVALID_EXHIBITOR_CATEGORY");
             }
 
-            var priceResult = await _pricingService.CalculateBoothPriceAsync(tenantId, dto.ExhibitionID, boothType, exhibitorCategory, dto.RequestedAreaSqM);
+            var priceResult = await _pricingService.CalculateBoothPriceAsync(tenantId, dto.ExhibitionID, boothType, exhibitorCategory, dto.RequestedAreaSqM, dto.BoothID);
             if (!priceResult.IsSuccess)
             {
                 return ServiceResult<BoothReservationDto>.Failure(priceResult.ErrorMessage ?? "فشل حساب سعر الكشك", priceResult.ErrorCode ?? "PRICING_ERROR");
@@ -231,6 +233,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
                 await _unitOfWork.BoothReservations.AddAsync(reservation);
                 await _unitOfWork.SaveChangesAsync();
+
+                // توليد الفاتورة المبدئية تلقائياً مع بنودها التفصيلية
+                var invoiceResult = await _financialService.GenerateInvoiceForReservationAsync(tenantId, reservation.ReservationID);
+                if (!invoiceResult.IsSuccess)
+                {
+                    throw new Exception(invoiceResult.ErrorMessage ?? "فشل توليد الفاتورة التفصيلية للحجز");
+                }
+
                 await _unitOfWork.CommitTransactionAsync();
 
                 var fullReservation = await _unitOfWork.BoothReservations.AsQueryable()
@@ -302,6 +312,23 @@ namespace ExhibitionManagementSystem.Services.Implementations
                                 booth.Status = BoothStatus.Reserved;
                                 _unitOfWork.Booths.Update(booth);
                             }
+                        }
+                    }
+
+                    // تحديث حالة الفاتورة المقابلة بناءً على حالة الحجز الجديدة
+                    var invoice = await _unitOfWork.Invoices.AsQueryable()
+                        .FirstOrDefaultAsync(i => i.ReservationID == id);
+                    if (invoice != null)
+                    {
+                        if (newStatus == ReservationStatus.Cancelled)
+                        {
+                            invoice.Status = InvoiceStatus.Cancelled;
+                            _unitOfWork.Invoices.Update(invoice);
+                        }
+                        else if (newStatus == ReservationStatus.Confirmed && invoice.Status == InvoiceStatus.Draft)
+                        {
+                            invoice.Status = InvoiceStatus.Issued;
+                            _unitOfWork.Invoices.Update(invoice);
                         }
                     }
                 }
@@ -377,6 +404,15 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     }
                 }
 
+                // إلغاء الفاتورة المرافقة للحجز تلقائياً
+                var invoice = await _unitOfWork.Invoices.AsQueryable()
+                    .FirstOrDefaultAsync(i => i.ReservationID == id);
+                if (invoice != null)
+                {
+                    invoice.Status = InvoiceStatus.Cancelled;
+                    _unitOfWork.Invoices.Update(invoice);
+                }
+
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
                 return ServiceResult.Success();
@@ -419,6 +455,15 @@ namespace ExhibitionManagementSystem.Services.Implementations
                         booth.Status = BoothStatus.Reserved;
                         _unitOfWork.Booths.Update(booth);
                     }
+                }
+
+                // تحويل الفاتورة المبدئية إلى فاتورة صادرة مستحقة
+                var invoice = await _unitOfWork.Invoices.AsQueryable()
+                    .FirstOrDefaultAsync(i => i.ReservationID == id);
+                if (invoice != null && invoice.Status == InvoiceStatus.Draft)
+                {
+                    invoice.Status = InvoiceStatus.Issued;
+                    _unitOfWork.Invoices.Update(invoice);
                 }
 
                 await _unitOfWork.SaveChangesAsync();
@@ -479,6 +524,29 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 reservation.UpdatedAt = DateTime.UtcNow;
 
                 _unitOfWork.BoothReservations.Update(reservation);
+
+                // إضافة البند المقابل للخدمة المضافة حديثاً في الفاتورة وإعادة احتساب القيم
+                var invoice = await _unitOfWork.Invoices.AsQueryable()
+                    .Include(i => i.InvoiceItems)
+                    .FirstOrDefaultAsync(i => i.ReservationID == reservationId);
+                if (invoice != null)
+                {
+                    var invoiceItem = new InvoiceItem
+                    {
+                        InvoiceID = invoice.InvoiceID,
+                        ItemName = service.ServiceName,
+                        Quantity = dto.Quantity,
+                        UnitPrice = unitPrice,
+                        TotalPrice = totalPrice
+                    };
+                    invoice.InvoiceItems.Add(invoiceItem);
+
+                    invoice.SubTotal = invoice.InvoiceItems.Sum(item => item.TotalPrice);
+                    invoice.TaxAmount = invoice.SubTotal * (invoice.TaxRate / 100);
+                    invoice.TotalAmount = invoice.SubTotal + invoice.TaxAmount;
+                    _unitOfWork.Invoices.Update(invoice);
+                }
+
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -521,6 +589,32 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
                 reservation.ReservationServices.Remove(resService);
                 _unitOfWork.BoothReservations.Update(reservation);
+
+                // إزالة بند الفاتورة المقابل للخدمة المحذوفة وإعادة احتساب قيم الفاتورة
+                var service = await _unitOfWork.Services.GetByIdAsync(resService.ServiceID);
+                var serviceName = service?.ServiceName;
+                
+                var invoice = await _unitOfWork.Invoices.AsQueryable()
+                    .Include(i => i.InvoiceItems)
+                    .FirstOrDefaultAsync(i => i.ReservationID == reservationId);
+                if (invoice != null && serviceName != null)
+                {
+                    var invoiceItem = invoice.InvoiceItems.FirstOrDefault(item => 
+                        item.ItemName == serviceName && 
+                        item.Quantity == resService.Quantity && 
+                        item.UnitPrice == resService.UnitPrice);
+
+                    if (invoiceItem != null)
+                    {
+                        invoice.InvoiceItems.Remove(invoiceItem);
+
+                        invoice.SubTotal = invoice.InvoiceItems.Sum(item => item.TotalPrice);
+                        invoice.TaxAmount = invoice.SubTotal * (invoice.TaxRate / 100);
+                        invoice.TotalAmount = invoice.SubTotal + invoice.TaxAmount;
+                        _unitOfWork.Invoices.Update(invoice);
+                    }
+                }
+
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 

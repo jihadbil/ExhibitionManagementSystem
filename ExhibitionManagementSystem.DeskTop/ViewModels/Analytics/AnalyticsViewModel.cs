@@ -185,10 +185,33 @@ public partial class AnalyticsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ExportReport()
+    private async Task ExportReportAsync()
     {
-        if (SelectedExhibitionId == 0) return;
-        NotificationService.ShowSuccess($"تم حفظ تقرير المعرض بصيغة PDF في مجلد التنزيلات بنجاح ✓");
+        if (SelectedExhibitionId == 0)
+        {
+            NotificationService.ShowWarning("الرجاء اختيار معرض");
+            return;
+        }
+
+        await ExecuteSafeAsync(async () =>
+        {
+            var saveDialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "حفظ التقرير",
+                Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                FileName = $"ExhibitionReport_{SelectedExhibitionId}_{DateTime.Now:yyyyMMdd}.csv",
+                DefaultExt = ".csv"
+            };
+
+            if (saveDialog.ShowDialog() != true) return;
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("إجمالي الزوار,إجمالي العارضين,إجمالي الأجنحة,نسبة الإشغال (%),إجمالي الإيرادات,المصروفات,صافي الربح,العملة");
+            sb.AppendLine($"{TotalVisitors},{TotalExhibitors},{TotalBooths},{OccupancyRate:F1},{TotalRevenue},{TotalExpenses},{NetProfit},{CurrencyCode}");
+
+            await System.IO.File.WriteAllTextAsync(saveDialog.FileName, sb.ToString(), System.Text.Encoding.UTF8);
+            NotificationService.ShowSuccess($"تم حفظ التقرير في: {System.IO.Path.GetFileName(saveDialog.FileName)} ✓");
+        }, "خطأ أثناء تصدير التقرير");
     }
 
     private void ResetData()

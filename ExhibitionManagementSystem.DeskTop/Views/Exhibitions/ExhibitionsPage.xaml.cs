@@ -66,4 +66,9 @@ public partial class ExhibitionsPage : UserControl
             await ViewModel.DeleteExhibitionCommand.ExecuteAsync(exhibitionId);
         }
     }
+
+    private async void Card_StatusChanged(object sender, (int ExhibitionId, string Status) e)
+    {
+        await ViewModel.ChangeStatusCommand.ExecuteAsync((e.ExhibitionId, e.Status));
+    }
 }

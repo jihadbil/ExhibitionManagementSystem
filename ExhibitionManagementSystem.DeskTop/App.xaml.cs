@@ -3,22 +3,34 @@ using System.Windows;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Http;
-using ExhibitionManagementSystem.Models;
-using ExhibitionManagementSystem.DataAccess;
-using ExhibitionManagementSystem.DataAccess.Repositories.Interfaces;
-using ExhibitionManagementSystem.DataAccess.Repositories.Implementations;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using ExhibitionManagementSystem.Services.Interfaces;
-using ExhibitionManagementSystem.Services.Implementations;
-using ExhibitionManagementSystem.Services.Extensions;
-using ExhibitionManagementSystem.Models.DTOs.Mapping;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Base;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Auth;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Exhibitions;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Booths;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Reservations;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Financial;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Venues;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Halls;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Exhibitors;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Services;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Pricing;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Visitors;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Tickets;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Reports;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Dashboard;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Currency;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Admin;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Tenants;
 using ExhibitionManagementSystem.DeskTop.Services.Navigation;
 using ExhibitionManagementSystem.DeskTop.Services.Notifications;
 using ExhibitionManagementSystem.DeskTop.Services.Theme;
 using ExhibitionManagementSystem.DeskTop.Services.Session;
 using ExhibitionManagementSystem.DeskTop.ViewModels.Auth;
+using ExhibitionManagementSystem.DeskTop.ViewModels.Admin;
+using ExhibitionManagementSystem.DeskTop.ViewModels.Tenants;
 using ExhibitionManagementSystem.DeskTop.ViewModels.Dashboard;
 using ExhibitionManagementSystem.DeskTop.ViewModels.Exhibitions;
 using ExhibitionManagementSystem.DeskTop.ViewModels.Booths;
@@ -28,7 +40,13 @@ using ExhibitionManagementSystem.DeskTop.ViewModels.Tickets;
 using ExhibitionManagementSystem.DeskTop.ViewModels.Analytics;
 using ExhibitionManagementSystem.DeskTop.ViewModels.Settings;
 using ExhibitionManagementSystem.DeskTop.ViewModels.Venues;
+using ExhibitionManagementSystem.DeskTop.ViewModels.Reservations;
+using ExhibitionManagementSystem.DeskTop.ViewModels.Financial;
+using ExhibitionManagementSystem.DeskTop.ViewModels.Users;
+using ExhibitionManagementSystem.DeskTop.ViewModels.ServiceMgmt;
 using ExhibitionManagementSystem.DeskTop.Views.Auth;
+using ExhibitionManagementSystem.DeskTop.Views.Admin;
+using ExhibitionManagementSystem.DeskTop.Views.Tenants;
 using ExhibitionManagementSystem.DeskTop.Views.Shell;
 using ExhibitionManagementSystem.DeskTop.Views.Dashboard;
 using ExhibitionManagementSystem.DeskTop.Views.Exhibitions;
@@ -39,6 +57,17 @@ using ExhibitionManagementSystem.DeskTop.Views.Tickets;
 using ExhibitionManagementSystem.DeskTop.Views.Analytics;
 using ExhibitionManagementSystem.DeskTop.Views.Settings;
 using ExhibitionManagementSystem.DeskTop.Views.Venues;
+using ExhibitionManagementSystem.DeskTop.Views.Reservations;
+using ExhibitionManagementSystem.DeskTop.Views.Financial;
+using ExhibitionManagementSystem.DeskTop.Views.Users;
+using ExhibitionManagementSystem.DeskTop.Views.Services;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Badges;
+using ExhibitionManagementSystem.DeskTop.ApiClients.Sponsorship;
+using ExhibitionManagementSystem.DeskTop.Services.Printing;
+using ExhibitionManagementSystem.DeskTop.ViewModels.Badges;
+using ExhibitionManagementSystem.DeskTop.ViewModels.Sponsorship;
+using ExhibitionManagementSystem.DeskTop.Views.Badges;
+using ExhibitionManagementSystem.DeskTop.Views.Sponsorship;
 
 namespace ExhibitionManagementSystem.DeskTop;
 
@@ -68,20 +97,7 @@ public partial class App : Application
         Services = _host.Services;
         await _host.StartAsync();
 
-        // تنفيذ Migrations وتغذية البيانات تلقائياً (يُنشئ DB إن لم يكن موجوداً)
-        using (var scope = Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            await db.Database.MigrateAsync();
-            try
-            {
-                await ExhibitionManagementSystem.DataAccess.DataSeeder.SeedDataAsync(scope.ServiceProvider);
-            }
-            catch (Exception)
-            {
-                // Seeding failed or already seeded
-            }
-        }
+
 
         // ✅ دائماً يبدأ بـ LoginWindow
         var loginWindow = Services.GetRequiredService<LoginWindow>();
@@ -91,44 +107,56 @@ public partial class App : Application
     private static void ConfigureServices(IServiceCollection services, IConfiguration config)
     {
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 1. قاعدة البيانات و Identity
+        // 1. HttpClient & Refresh Token Handler
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(
-                config.GetConnectionString("DefaultConnection"),
-                sqlOptions => sqlOptions.MigrationsAssembly(
-                    "ExhibitionManagementSystem.DataAccess")));
+        var apiBaseUrl = config["ApiBaseUrl"] 
+            ?? throw new InvalidOperationException("ApiBaseUrl configuration is missing!");
 
-        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddTransient<TokenRefreshHandler>();
 
-        services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
+        services.AddHttpClient("ApiClient", client =>
         {
-            options.Password.RequireDigit = true;
-            options.Password.RequireLowercase = true;
-            options.Password.RequireUppercase = true;
-            options.Password.RequiredLength = 8;
+            client.BaseAddress = new Uri(apiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
         })
-        .AddEntityFrameworkStores<ApplicationDbContext>()
-        .AddDefaultTokenProviders();
+        .AddHttpMessageHandler<TokenRefreshHandler>();
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 2. Unit of Work & Repositories
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 3. Business Services & AutoMapper
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        services.AddDtoMapping();
-        services.AddServiceLayer();
-
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 4. Desktop Services
+        // 2. API Clients (Business Implementations)
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         services.AddSingleton<SessionService>();
+        
+        services.AddTransient<IAuthService, AuthApiClient>();
+        services.AddTransient<IExhibitionService, ExhibitionApiClient>();
+        services.AddTransient<IBoothService, BoothApiClient>();
+        services.AddTransient<IReservationService, ReservationApiClient>();
+        services.AddTransient<IFinancialService, FinancialApiClient>();
+        services.AddTransient<IInvoiceItemService, InvoiceItemApiClient>();
+        services.AddTransient<IVenueService, VenueApiClient>();
+
+        services.AddTransient<IHallService, HallApiClient>();
+        services.AddTransient<IExhibitorService, ExhibitorApiClient>();
+        services.AddTransient<IServiceManagementService, ServiceApiClient>();
+        services.AddTransient<IPricingService, PricingApiClient>();
+        services.AddTransient<IVisitorService, VisitorApiClient>();
+        services.AddTransient<ITicketService, TicketApiClient>();
+        services.AddTransient<IReportService, ReportApiClient>();
+        services.AddTransient<IDashboardService, DashboardApiClient>();
+        services.AddTransient<ICurrencyService, CurrencyApiClient>();
+        services.AddTransient<IAdminService, AdminApiClient>();
+        services.AddTransient<ITenantService, TenantsApiClient>();
+        services.AddTransient<IBadgeService, BadgeApiClient>();
+        services.AddTransient<ISponsorshipService, SponsorshipApiClient>();
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 3. Desktop Services
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<INotificationService, NotificationService>();
         services.AddSingleton<IThemeService, ThemeService>();
+        services.AddSingleton<BadgePrintService>();
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // 5. ViewModels (Transient — instance جديد لكل طلب)
@@ -139,7 +167,9 @@ public partial class App : Application
         services.AddTransient<ExhibitionFormViewModel>();
         services.AddTransient<BoothsViewModel>();
         services.AddTransient<BoothDesignerViewModel>();
+        services.AddTransient<NodifyBoothDesignerViewModel>();
         services.AddTransient<CompaniesViewModel>();
+        services.AddTransient<ExhibitorFormViewModel>();
         services.AddTransient<EventsViewModel>();
         services.AddTransient<TicketsViewModel>();
         services.AddTransient<AnalyticsViewModel>();
@@ -147,22 +177,48 @@ public partial class App : Application
         services.AddTransient<VenuesViewModel>();
         services.AddTransient<VenueFormViewModel>();
         services.AddTransient<HallFormViewModel>();
+        services.AddTransient<ReservationsViewModel>();
+        services.AddTransient<ReservationFormViewModel>();
+        services.AddTransient<InvoicesViewModel>();
+        services.AddTransient<InvoiceDetailViewModel>();
+        services.AddTransient<UsersViewModel>();
+        services.AddTransient<UserFormViewModel>();
+        services.AddTransient<ServicesViewModel>();
+        services.AddTransient<AdminViewModel>();
+        services.AddTransient<TenantsViewModel>();
+        services.AddTransient<BadgeDesignerViewModel>();
+        services.AddTransient<CheckInKioskViewModel>();
+        services.AddTransient<SponsorshipViewModel>();
+        services.AddTransient<SponsorFormViewModel>();
+        services.AddTransient<SponsorshipPackageFormViewModel>();
+        services.AddTransient<AdvertisingSpaceFormViewModel>();
+        services.AddTransient<SponsorshipContractFormViewModel>();
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // 6. Windows & Pages
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         services.AddTransient<LoginWindow>();
-        services.AddSingleton<MainShellWindow>(); // Singleton: نافذة واحدة طوال العمر
+        services.AddTransient<MainShellWindow>(); // Transient: إنشاء نافذة جديدة لكل تسجيل دخول
         services.AddTransient<DashboardPage>();
         services.AddTransient<ExhibitionsPage>();
         services.AddTransient<BoothsPage>();
         services.AddTransient<BoothDesignerPage>();
+        services.AddTransient<NodifyBoothDesignerPage>();
         services.AddTransient<CompaniesPage>();
         services.AddTransient<EventsPage>();
         services.AddTransient<TicketsPage>();
         services.AddTransient<AnalyticsPage>();
         services.AddTransient<SettingsPage>();
         services.AddTransient<VenuesPage>();
+        services.AddTransient<ReservationsPage>();
+        services.AddTransient<InvoicesPage>();
+        services.AddTransient<UsersPage>();
+        services.AddTransient<ServicesPage>();
+        services.AddTransient<AdminPage>();
+        services.AddTransient<TenantsPage>();
+        services.AddTransient<BadgeDesignerPage>();
+        services.AddTransient<CheckInKioskPage>();
+        services.AddTransient<SponsorshipPage>();
     }
 
     protected override async void OnExit(ExitEventArgs e)

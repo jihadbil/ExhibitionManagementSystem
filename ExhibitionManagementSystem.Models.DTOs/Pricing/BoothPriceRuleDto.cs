@@ -19,4 +19,5 @@ public class BoothPriceRuleDto : AuditDto
     public DateTime ValidFrom { get; set; }
     public DateTime? ValidTo { get; set; }
     public string Notes { get; set; } = string.Empty;
+    public string? RuleName { get; set; }
 }

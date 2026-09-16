@@ -39,6 +39,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         private IBoothPriceRuleRepository? _boothPriceRules;
         private IServicePriceRuleRepository? _servicePriceRules;
         private IInvoiceRepository? _invoices;
+        private IInvoiceItemRepository? _invoiceItems;
         private IPaymentRepository? _payments;
         private IVisitorRepository? _visitors;
         private ITicketRepository? _tickets;
@@ -49,6 +50,12 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         private IExchangeRateRepository? _exchangeRates;
         private IAuditLogRepository? _auditLogs;
         private IExpenseRepository? _expenses;
+        private IBadgeTemplateRepository? _badgeTemplates;
+        private ISponsorRepository? _sponsors;
+        private ISponsorshipPackageRepository? _sponsorshipPackages;
+        private ISponsorshipContractRepository? _sponsorshipContracts;
+        private IAdvertisingSpaceRepository? _advertisingSpaces;
+        private ISponsorAdAssignmentRepository? _sponsorAdAssignments;
 
         public UnitOfWork(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
         {
@@ -75,6 +82,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         public IBoothPriceRuleRepository BoothPriceRules => _boothPriceRules ??= new BoothPriceRuleRepository(_context);
         public IServicePriceRuleRepository ServicePriceRules => _servicePriceRules ??= new ServicePriceRuleRepository(_context);
         public IInvoiceRepository Invoices => _invoices ??= new InvoiceRepository(_context);
+        public IInvoiceItemRepository InvoiceItems => _invoiceItems ??= new InvoiceItemRepository(_context);
         public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context);
         public IVisitorRepository Visitors => _visitors ??= new VisitorRepository(_context);
         public ITicketRepository Tickets => _tickets ??= new TicketRepository(_context);
@@ -85,6 +93,12 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         public IExchangeRateRepository ExchangeRates => _exchangeRates ??= new ExchangeRateRepository(_context);
         public IAuditLogRepository AuditLogs => _auditLogs ??= new AuditLogRepository(_context);
         public IExpenseRepository Expenses => _expenses ??= new ExpenseRepository(_context);
+        public IBadgeTemplateRepository BadgeTemplates => _badgeTemplates ??= new BadgeTemplateRepository(_context);
+        public ISponsorRepository Sponsors => _sponsors ??= new SponsorRepository(_context);
+        public ISponsorshipPackageRepository SponsorshipPackages => _sponsorshipPackages ??= new SponsorshipPackageRepository(_context);
+        public ISponsorshipContractRepository SponsorshipContracts => _sponsorshipContracts ??= new SponsorshipContractRepository(_context);
+        public IAdvertisingSpaceRepository AdvertisingSpaces => _advertisingSpaces ??= new AdvertisingSpaceRepository(_context);
+        public ISponsorAdAssignmentRepository SponsorAdAssignments => _sponsorAdAssignments ??= new SponsorAdAssignmentRepository(_context);
 
         public async Task<int> SaveChangesAsync()
         {

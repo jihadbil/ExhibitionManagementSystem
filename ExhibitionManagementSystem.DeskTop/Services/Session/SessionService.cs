@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using ExhibitionManagementSystem.Models.DTOs.Auth;
 
@@ -14,6 +15,8 @@ public class SessionService
     public string Email { get; private set; } = string.Empty;
     public string TenantName { get; private set; } = string.Empty;
     public string AccessToken { get; private set; } = string.Empty;
+    public string RefreshToken { get; private set; } = string.Empty;
+    public DateTime TokenExpiresAt { get; private set; } = DateTime.MinValue;
     public IList<string> Roles { get; private set; } = [];
 
     public bool IsAuthenticated => !string.IsNullOrEmpty(UserId);
@@ -22,6 +25,8 @@ public class SessionService
     /// يتحقق إن كان المستخدم في دور "Admin"
     /// </summary>
     public bool IsAdmin => Roles.Contains("Admin");
+
+    public bool IsTokenExpired => DateTime.UtcNow >= TokenExpiresAt;
 
     /// <summary>
     /// يُعيّن بيانات الجلسة بعد تسجيل الدخول الناجح
@@ -34,7 +39,19 @@ public class SessionService
         Email = response.Email;
         TenantName = response.TenantName;
         AccessToken = response.AccessToken;
+        RefreshToken = response.RefreshToken;
+        TokenExpiresAt = response.ExpiresAt;
         Roles = response.Roles ?? [];
+    }
+
+    /// <summary>
+    /// تحديث توكنات الجلسة بعد التجديد الناجح
+    /// </summary>
+    public void UpdateTokens(string newAccessToken, string newRefreshToken, DateTime expiresAt)
+    {
+        AccessToken = newAccessToken;
+        RefreshToken = newRefreshToken;
+        TokenExpiresAt = expiresAt;
     }
 
     /// <summary>
@@ -48,6 +65,8 @@ public class SessionService
         Email = string.Empty;
         TenantName = string.Empty;
         AccessToken = string.Empty;
+        RefreshToken = string.Empty;
+        TokenExpiresAt = DateTime.MinValue;
         Roles = [];
     }
 }

@@ -113,6 +113,8 @@ public partial class EventsViewModel : ViewModelBase
         }, "خطأ في تحميل جدول الفعاليات");
     }
 
+    public Action? CloseAction { get; set; }
+
     [RelayCommand]
     private async Task AddScheduleAsync()
     {
@@ -160,6 +162,7 @@ public partial class EventsViewModel : ViewModelBase
                 NewSpeakerName = string.Empty;
                 NewDescription = string.Empty;
                 await LoadSchedulesAsync();
+                CloseAction?.Invoke();
             }
             else
             {

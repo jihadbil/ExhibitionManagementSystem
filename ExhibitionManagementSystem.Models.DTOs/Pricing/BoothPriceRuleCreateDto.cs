@@ -26,4 +26,7 @@ public class BoothPriceRuleCreateDto
 
     [StringLength(500)]
     public string Notes { get; set; } = string.Empty;
+
+    [StringLength(150)]
+    public string? RuleName { get; set; }
 }

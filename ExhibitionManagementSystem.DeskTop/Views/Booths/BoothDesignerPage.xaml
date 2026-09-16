@@ -3,10 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:conv="clr-namespace:ExhibitionManagementSystem.DeskTop.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1000"
              FlowDirection="RightToLeft">
     <UserControl.Resources>
+        <conv:ShapeToGeometryConverter x:Key="ShapeToGeometry"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        
         <!-- Style for Booth Borders based on Selection -->
         <Style x:Key="BoothBorderStyle" TargetType="Border">
             <Setter Property="BorderBrush" Value="#E2E8F0"/>
@@ -26,8 +30,101 @@
                         </Setter.Value>
                     </Setter>
                 </DataTrigger>
+                
+                <!-- Collision Highlight Trigger -->
+                <DataTrigger Binding="{Binding HasCollision}" Value="True">
+                    <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}"/>
+                    <Setter Property="BorderThickness" Value="3"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect Color="#EF4444" BlurRadius="12" ShadowDepth="0" Opacity="0.6"/>
+                        </Setter.Value>
+                    </Setter>
+                </DataTrigger>
             </Style.Triggers>
         </Style>
+
+        <!-- Grid Brush for CAD background lines -->
+        <DrawingBrush x:Key="GridBrush" TileMode="Tile" Viewport="0,0,100,100" ViewportUnits="Absolute">
+            <DrawingBrush.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing>
+                        <GeometryDrawing.Brush>
+                            <SolidColorBrush Color="White"/>
+                        </GeometryDrawing.Brush>
+                        <GeometryDrawing.Geometry>
+                            <RectangleGeometry Rect="0,0,100,100"/>
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                    
+                    <!-- Minor lines every 20px (1 meter) -->
+                    <GeometryDrawing>
+                        <GeometryDrawing.Pen>
+                            <Pen Brush="#F1F5F9" Thickness="0.5"/>
+                        </GeometryDrawing.Pen>
+                        <GeometryDrawing.Geometry>
+                            <GeometryGroup>
+                                <LineGeometry StartPoint="0,20" EndPoint="100,20"/>
+                                <LineGeometry StartPoint="0,40" EndPoint="100,40"/>
+                                <LineGeometry StartPoint="0,60" EndPoint="100,60"/>
+                                <LineGeometry StartPoint="0,80" EndPoint="100,80"/>
+                                <LineGeometry StartPoint="20,0" EndPoint="20,100"/>
+                                <LineGeometry StartPoint="40,0" EndPoint="40,100"/>
+                                <LineGeometry StartPoint="60,0" EndPoint="60,100"/>
+                                <LineGeometry StartPoint="80,0" EndPoint="80,100"/>
+                            </GeometryGroup>
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                    
+                    <!-- Major lines every 100px (5 meters) -->
+                    <GeometryDrawing>
+                        <GeometryDrawing.Pen>
+                            <Pen Brush="#E2E8F0" Thickness="1.2"/>
+                        </GeometryDrawing.Pen>
+                        <GeometryDrawing.Geometry>
+                            <GeometryGroup>
+                                <LineGeometry StartPoint="0,100" EndPoint="100,100"/>
+                                <LineGeometry StartPoint="100,0" EndPoint="100,100"/>
+                            </GeometryGroup>
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                </DrawingGroup>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+
+        <!-- Horizontal Ruler Brush -->
+        <DrawingBrush x:Key="HorizontalRulerBrush" TileMode="Tile" Viewport="0,0,100,20" ViewportUnits="Absolute">
+            <DrawingBrush.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Geometry="M0,0 L100,0 100,20 0,20 Z">
+                        <GeometryDrawing.Brush><SolidColorBrush Color="#F8FAFC"/></GeometryDrawing.Brush>
+                    </GeometryDrawing>
+                    <GeometryDrawing Geometry="M0,20 L100,20">
+                        <GeometryDrawing.Pen><Pen Brush="#E2E8F0" Thickness="1"/></GeometryDrawing.Pen>
+                    </GeometryDrawing>
+                    <GeometryDrawing Geometry="M0,12 L0,20 M20,15 L20,20 M40,15 L40,20 M60,15 L60,20 M80,15 L80,20">
+                        <GeometryDrawing.Pen><Pen Brush="#94A3B8" Thickness="1"/></GeometryDrawing.Pen>
+                    </GeometryDrawing>
+                </DrawingGroup>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+
+        <!-- Vertical Ruler Brush -->
+        <DrawingBrush x:Key="VerticalRulerBrush" TileMode="Tile" Viewport="0,0,20,100" ViewportUnits="Absolute">
+            <DrawingBrush.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Geometry="M0,0 L20,0 20,100 0,100 Z">
+                        <GeometryDrawing.Brush><SolidColorBrush Color="#F8FAFC"/></GeometryDrawing.Brush>
+                    </GeometryDrawing>
+                    <GeometryDrawing Geometry="M20,0 L20,100">
+                        <GeometryDrawing.Pen><Pen Brush="#E2E8F0" Thickness="1"/></GeometryDrawing.Pen>
+                    </GeometryDrawing>
+                    <GeometryDrawing Geometry="M12,0 L20,0 M15,20 L20,20 M15,40 L20,40 M15,60 L20,60 M15,80 L20,80">
+                        <GeometryDrawing.Pen><Pen Brush="#94A3B8" Thickness="1"/></GeometryDrawing.Pen>
+                    </GeometryDrawing>
+                </DrawingGroup>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
     </UserControl.Resources>
 
     <Grid>
@@ -37,9 +134,9 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Right Side: Properties & Controls Panel -->
         <Border Grid.Column="0" BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="0,0,1,0" Background="{StaticResource BgCardBrush}" Padding="20">
-            <DockPanel>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <DockPanel>
                 <!-- Back Button -->
                 <Button DockPanel.Dock="Top" 
                         Content="← العودة لقائمة الأجنحة" 
@@ -72,21 +169,74 @@
                               SelectedValue="{Binding SelectedHallId}"/>
                 </StackPanel>
 
-                <!-- Canvas Controls (Zoom, Auto Arrange) -->
+                <!-- Hall Dimensions Configuration -->
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,24">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedHallId}" Value="0">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="أبعاد الصالة الحالية" Style="{StaticResource H4Style}" Margin="0,0,0,12"/>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="العرض (م)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                            <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                     Text="{Binding HallWidthMeters, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="الارتفاع (م)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                            <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                     Text="{Binding HallHeightMeters, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </Grid>
+                    <Button Content="تحديث أبعاد الصالة 📐" Command="{Binding UpdateHallDimensionsCommand}" Style="{StaticResource SecondaryButtonStyle}" Height="36"/>
+                </StackPanel>
+
+                <!-- Canvas Controls (Zoom, Auto Arrange, Add, Grid Options) -->
                 <StackPanel DockPanel.Dock="Top" Margin="0,0,0,24">
                     <TextBlock Text="أدوات المخطط" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="6"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="6"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="6"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="6"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Content="➕" Command="{Binding ZoomInCommand}" ToolTip="تكبير المخطط" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="0" Padding="0" Height="36"/>
+                        <Button Content="➖" Command="{Binding ZoomOutCommand}" ToolTip="تصغير المخطط" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="2" Padding="0" Height="36"/>
+                        <Button Content="↕" Command="{Binding AutoArrangeCommand}" ToolTip="ترتيب الأجنحة تلقائياً" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="4" Padding="0" Height="36"/>
+                        <Button Content="↩" Command="{Binding UndoCommand}" ToolTip="تراجع" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="6" Padding="0" Height="36"/>
+                        <Button Content="↪" Command="{Binding RedoCommand}" ToolTip="إعادة" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="8" Padding="0" Height="36"/>
+                    </Grid>
+
+                    <!-- Add New Booth and Grid Settings -->
+                    <Button Content="➕ إنشاء جناح جديد" Command="{Binding AddNewBoothCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,0,12" Height="38"/>
+                    
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="8"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="8"/>
-                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-
-                        <Button Content="➕ تكبير" Command="{Binding ZoomInCommand}" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="0" Padding="0" Height="36"/>
-                        <Button Content="➖ تصغير" Command="{Binding ZoomOutCommand}" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="2" Padding="0" Height="36"/>
-                        <Button Content="↕ ترتيب تلقائي" Command="{Binding AutoArrangeCommand}" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="4" Padding="12,0" Height="36"/>
+                        <CheckBox Content="محاذاة للشبكة" IsChecked="{Binding IsSnapToGridEnabled}" Grid.Column="0" VerticalAlignment="Center"/>
+                        <CheckBox Content="إظهار الشبكة" IsChecked="{Binding IsGridVisible}" Grid.Column="1" VerticalAlignment="Center"/>
                     </Grid>
                 </StackPanel>
 
@@ -134,64 +284,360 @@
                             <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
                                       ItemsSource="{Binding Statuses}" 
                                       SelectedItem="{Binding SelectedBoothStatus}"
-                                      Margin="0,0,0,20"/>
+                                      Margin="0,0,0,12"/>
+
+                            <TextBlock Text="شكل الجناح" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                            <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                      ItemsSource="{Binding Shapes}" 
+                                      SelectedItem="{Binding SelectedBoothShape}"
+                                      Margin="0,0,0,12"/>
+
+                            <TextBlock Text="زاوية الدوران" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                            <Grid Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="50"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider Minimum="0" Maximum="360" TickFrequency="15" IsSnapToTickEnabled="False"
+                                        Value="{Binding SelectedBoothRotation, UpdateSourceTrigger=PropertyChanged}" 
+                                        VerticalAlignment="Center" Grid.Column="0"/>
+                                <TextBlock Text="{Binding SelectedBoothRotation, StringFormat={}{0:0}°}" 
+                                           Style="{StaticResource SmallStyle}" 
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Column="1"/>
+                            </Grid>
+
+                             <!-- Furniture Section -->
+                             <Border BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Margin="0,12,0,12" Padding="0,12,0,0">
+                                 <StackPanel>
+                                     <TextBlock Text="أثاث ومحتويات الجناح" Style="{StaticResource H4Style}" Margin="0,0,0,10"/>
+                                     
+                                     <!-- Add Furniture Buttons Grid -->
+                                     <Grid Margin="0,0,0,12">
+                                         <Grid.RowDefinitions>
+                                             <RowDefinition Height="Auto"/>
+                                             <RowDefinition Height="6"/>
+                                             <RowDefinition Height="Auto"/>
+                                         </Grid.RowDefinitions>
+                                         <Grid.ColumnDefinitions>
+                                             <ColumnDefinition Width="*"/>
+                                             <ColumnDefinition Width="6"/>
+                                             <ColumnDefinition Width="*"/>
+                                             <ColumnDefinition Width="6"/>
+                                             <ColumnDefinition Width="*"/>
+                                         </Grid.ColumnDefinitions>
+
+                                         <Button Content="🪑 كرسي" Command="{Binding AddFurnitureCommand}" CommandParameter="Chair" Style="{StaticResource SecondaryButtonStyle}" Grid.Row="0" Grid.Column="0" Height="30" Padding="0"/>
+                                         <Button Content="🪵 طاولة" Command="{Binding AddFurnitureCommand}" CommandParameter="Table" Style="{StaticResource SecondaryButtonStyle}" Grid.Row="0" Grid.Column="2" Height="30" Padding="0"/>
+                                         <Button Content="🧾 مكتب" Command="{Binding AddFurnitureCommand}" CommandParameter="Counter" Style="{StaticResource SecondaryButtonStyle}" Grid.Row="0" Grid.Column="4" Height="30" Padding="0"/>
+                                         
+                                         <Button Content="🪴 نبات" Command="{Binding AddFurnitureCommand}" CommandParameter="Plant" Style="{StaticResource SecondaryButtonStyle}" Grid.Row="2" Grid.Column="0" Height="30" Padding="0"/>
+                                         <Button Content="🛋️ كنبة" Command="{Binding AddFurnitureCommand}" CommandParameter="Sofa" Style="{StaticResource SecondaryButtonStyle}" Grid.Row="2" Grid.Column="2" Height="30" Padding="0"/>
+                                         <Button Content="📺 شاشة" Command="{Binding AddFurnitureCommand}" CommandParameter="TV" Style="{StaticResource SecondaryButtonStyle}" Grid.Row="2" Grid.Column="4" Height="30" Padding="0"/>
+                                     </Grid>
+
+                                     <!-- Selected Furniture controls -->
+                                     <StackPanel Visibility="{Binding SelectedFurniture, Converter={StaticResource NullToVisibility}}">
+                                         <TextBlock Text="تحرير الأثاث المحدّد" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                         <Grid Margin="0,0,0,8">
+                                             <Grid.ColumnDefinitions>
+                                                 <ColumnDefinition Width="*"/>
+                                                 <ColumnDefinition Width="10"/>
+                                                 <ColumnDefinition Width="Auto"/>
+                                             </Grid.ColumnDefinitions>
+                                             
+                                             <Slider Minimum="0" Maximum="360" Value="{Binding SelectedFurniture.RotationAngle, UpdateSourceTrigger=PropertyChanged}" Grid.Column="0" VerticalAlignment="Center"/>
+                                             <Button Content="🗑️ إزالة" Command="{Binding RemoveFurnitureCommand}" Style="{StaticResource DangerButtonStyle}" Grid.Column="2" Height="28" Width="60" Padding="0"/>
+                                         </Grid>
+                                     </StackPanel>
+                                 </StackPanel>
+                             </Border>
 
                             <Button Content="حفظ التغييرات ✓" 
                                     Style="{StaticResource PrimaryButtonStyle}" 
                                     Command="{Binding SaveBoothCommand}"
                                     Height="40"
                                     HorizontalAlignment="Stretch"/>
+
+                            <Button Content="🗑️ حذف هذا الجناح" 
+                                     Style="{StaticResource DangerButtonStyle}" 
+                                     Command="{Binding DeleteSelectedBoothCommand}"
+                                     Height="40"
+                                     Margin="0,8,0,0"
+                                     HorizontalAlignment="Stretch"/>
                         </StackPanel>
                     </Grid>
                 </Border>
             </DockPanel>
+            </ScrollViewer>
         </Border>
 
         <!-- Left Side: Interactive Canvas Workspace -->
-        <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#FFEBF0F5" FlowDirection="LeftToRight">
+        <ScrollViewer x:Name="CanvasScrollViewer" Grid.Column="1" 
+                      HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" 
+                      Background="#FFEBF0F5" FlowDirection="LeftToRight"
+                      PreviewMouseDown="CanvasScrollViewer_PreviewMouseDown"
+                      PreviewMouseMove="CanvasScrollViewer_PreviewMouseMove"
+                      PreviewMouseUp="CanvasScrollViewer_PreviewMouseUp"
+                      PreviewMouseWheel="CanvasScrollViewer_PreviewMouseWheel">
             <Border BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="1" Margin="40" Background="White" CornerRadius="8" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <!-- Outer canvas wrapper to handle Zoom scaling -->
-                <ItemsControl x:Name="DesignerCanvas" ItemsSource="{Binding CanvasBooths}" Width="1000" Height="800">
-                    <ItemsControl.LayoutTransform>
+                <!-- Grid layout for rulers and main canvas -->
+                <Grid>
+                    <Grid.LayoutTransform>
                         <ScaleTransform ScaleX="{Binding ScaleFactor}" ScaleY="{Binding ScaleFactor}"/>
-                    </ItemsControl.LayoutTransform>
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <Canvas Background="White" Width="1000" Height="800"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemContainerStyle>
-                        <Style TargetType="ContentPresenter">
-                            <Setter Property="Canvas.Left" Value="{Binding X, Mode=TwoWay}"/>
-                            <Setter Property="Canvas.Top" Value="{Binding Y, Mode=TwoWay}"/>
-                        </Style>
-                    </ItemsControl.ItemContainerStyle>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <!-- Booth rectangle graphic -->
-                            <Border Style="{StaticResource BoothBorderStyle}"
-                                    Width="{Binding Width}"
-                                    Height="{Binding Height}"
-                                    Background="{Binding Status, Converter={StaticResource StatusToColor}}"
-                                    CornerRadius="6"
-                                    Cursor="SizeAll"
-                                    MouseLeftButtonDown="Booth_MouseLeftButtonDown"
-                                    MouseMove="Booth_MouseMove"
-                                    MouseLeftButtonUp="Booth_MouseLeftButtonUp">
-                                <Grid>
-                                    <!-- Inside info: Number -->
-                                    <TextBlock Text="{Binding BoothNumber}"
-                                               FontFamily="{StaticResource WorkSansBold}"
-                                               FontWeight="Bold"
-                                               FontSize="14"
-                                               Foreground="White"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"/>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                    </Grid.LayoutTransform>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="20"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Corner Block -->
+                    <Border Grid.Row="0" Grid.Column="0" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,0,1,1"/>
+
+                    <!-- Horizontal Ruler -->
+                    <Border Grid.Row="0" Grid.Column="1" Height="20" Width="{Binding HallWidth}" Background="{StaticResource HorizontalRulerBrush}"/>
+
+                    <!-- Vertical Ruler -->
+                    <Border Grid.Row="1" Grid.Column="0" Width="20" Height="{Binding HallHeight}" Background="{StaticResource VerticalRulerBrush}"/>
+
+                    <!-- Hall Boundary Overlay (Dashed rectangle and background fill) -->
+                    <Rectangle Grid.Row="1" Grid.Column="1" Stroke="#3B82F6" StrokeThickness="3" StrokeDashArray="4,4" 
+                               Width="{Binding HallWidth}" 
+                               Height="{Binding HallHeight}" 
+                               Fill="#0A3B82F6" IsHitTestVisible="False"
+                               HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                    
+                    <!-- Hall Name Text -->
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding HallName}" 
+                               Foreground="#3B82F6" FontSize="20" FontFamily="{StaticResource WorkSansBold}" FontWeight="Bold" 
+                               Margin="20" Opacity="0.5" IsHitTestVisible="False"
+                               HorizontalAlignment="Left" VerticalAlignment="Top"/>
+
+                    <!-- Outer canvas wrapper -->
+                    <ItemsControl x:Name="DesignerCanvas" Grid.Row="1" Grid.Column="1" ItemsSource="{Binding CanvasBooths}" Width="{Binding HallWidth}" Height="{Binding HallHeight}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas Width="{Binding DataContext.HallWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" 
+                                        Height="{Binding DataContext.HallHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        MouseLeftButtonDown="Canvas_MouseLeftButtonDown">
+                                    <Canvas.Style>
+                                        <Style TargetType="Canvas">
+                                            <Setter Property="Background" Value="{StaticResource GridBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsGridVisible}" Value="False">
+                                                    <Setter Property="Background" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Canvas.Style>
+                                </Canvas>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Canvas.Left" Value="{Binding X, Mode=TwoWay}"/>
+                                <Setter Property="Canvas.Top" Value="{Binding Y, Mode=TwoWay}"/>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Outer Border container for handling Mouse interactions -->
+                                <Border Style="{StaticResource BoothBorderStyle}"
+                                        Width="{Binding Width}"
+                                        Height="{Binding Height}"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        BorderThickness="0"
+                                        Cursor="SizeAll"
+                                        RenderTransformOrigin="0.5,0.5"
+                                        MouseLeftButtonDown="Booth_MouseLeftButtonDown"
+                                        MouseMove="Booth_MouseMove"
+                                        MouseLeftButtonUp="Booth_MouseLeftButtonUp">
+                                    <Border.RenderTransform>
+                                        <RotateTransform Angle="{Binding RotationAngle}"/>
+                                    </Border.RenderTransform>
+                                    <Grid>
+                                        <!-- Custom Shape Path -->
+                                        <Path Fill="{Binding Status, Converter={StaticResource StatusToColor}}"
+                                              Stroke="#E2E8F0"
+                                              StrokeThickness="1.5">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="Stroke" Value="{StaticResource PrimaryDarkBrush}"/>
+                                                            <Setter Property="StrokeThickness" Value="3"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding HasCollision}" Value="True">
+                                                            <Setter Property="Stroke" Value="{StaticResource DangerBrush}"/>
+                                                            <Setter Property="StrokeThickness" Value="3"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                            <Path.Data>
+                                                <MultiBinding Converter="{StaticResource ShapeToGeometry}">
+                                                    <Binding Path="ShapeType"/>
+                                                    <Binding Path="Width"/>
+                                                    <Binding Path="Height"/>
+                                                </MultiBinding>
+                                            </Path.Data>
+                                        </Path>
+                                        
+                                        <!-- Inside info: Number -->
+                                        <TextBlock Text="{Binding BoothNumber}"
+                                                   FontFamily="{StaticResource WorkSansBold}"
+                                                   FontWeight="Bold"
+                                                   FontSize="14"
+                                                   Foreground="White"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   IsHitTestVisible="False"/>
+
+                                         <!-- FURNITURE ITEMS CONTROL -->
+                                         <ItemsControl ItemsSource="{Binding Furniture}" IsHitTestVisible="True" Margin="2">
+                                             <ItemsControl.ItemsPanel>
+                                                 <ItemsPanelTemplate>
+                                                     <Canvas Background="Transparent" ClipToBounds="True"/>
+                                                 </ItemsPanelTemplate>
+                                             </ItemsControl.ItemsPanel>
+                                             <ItemsControl.ItemContainerStyle>
+                                                 <Style TargetType="ContentPresenter">
+                                                     <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                                     <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                                 </Style>
+                                             </ItemsControl.ItemContainerStyle>
+                                             <ItemsControl.ItemTemplate>
+                                                 <DataTemplate>
+                                                     <Border Width="{Binding Width}" Height="{Binding Height}" Background="Transparent"
+                                                             RenderTransformOrigin="0.5,0.5" Cursor="Hand" ToolTip="{Binding Type}"
+                                                             MouseLeftButtonDown="Furniture_MouseLeftButtonDown"
+                                                             MouseMove="Furniture_MouseMove"
+                                                             MouseLeftButtonUp="Furniture_MouseLeftButtonUp">
+                                                         <Border.RenderTransform>
+                                                             <RotateTransform Angle="{Binding RotationAngle}"/>
+                                                         </Border.RenderTransform>
+                                                         <Grid>
+                                                             <ContentControl>
+                                                                 <ContentControl.Style>
+                                                                     <Style TargetType="ContentControl">
+                                                                         <Setter Property="ContentTemplate">
+                                                                             <Setter.Value>
+                                                                                 <DataTemplate>
+                                                                                     <Ellipse Fill="#E2E8F0" Stroke="#475569" StrokeThickness="1.5"/>
+                                                                                 </DataTemplate>
+                                                                             </Setter.Value>
+                                                                         </Setter>
+                                                                         <Style.Triggers>
+                                                                             <DataTrigger Binding="{Binding Type}" Value="Table">
+                                                                                 <Setter Property="ContentTemplate">
+                                                                                     <Setter.Value>
+                                                                                         <DataTemplate>
+                                                                                             <Grid>
+                                                                                                 <Rectangle Fill="#D97706" Stroke="#78350F" StrokeThickness="1.5" RadiusX="3" RadiusY="3"/>
+                                                                                                 <Ellipse Fill="#F59E0B" Margin="4"/>
+                                                                                             </Grid>
+                                                                                         </DataTemplate>
+                                                                                     </Setter.Value>
+                                                                                 </Setter>
+                                                                             </DataTrigger>
+                                                                             <DataTrigger Binding="{Binding Type}" Value="Counter">
+                                                                                 <Setter Property="ContentTemplate">
+                                                                                     <Setter.Value>
+                                                                                         <DataTemplate>
+                                                                                             <Grid>
+                                                                                                 <Rectangle Fill="#F1F5F9" Stroke="#475569" StrokeThickness="1.5" RadiusX="2" RadiusY="2"/>
+                                                                                                 <Rectangle Fill="#94A3B8" Height="4" VerticalAlignment="Top" RadiusX="1" RadiusY="1"/>
+                                                                                             </Grid>
+                                                                                         </DataTemplate>
+                                                                                     </Setter.Value>
+                                                                                 </Setter>
+                                                                             </DataTrigger>
+                                                                             <DataTrigger Binding="{Binding Type}" Value="Plant">
+                                                                                 <Setter Property="ContentTemplate">
+                                                                                     <Setter.Value>
+                                                                                         <DataTemplate>
+                                                                                             <Grid>
+                                                                                                 <Ellipse Fill="#BBF7D0" Stroke="#166534" StrokeThickness="1.5"/>
+                                                                                                 <Ellipse Fill="#15803D" Margin="4"/>
+                                                                                             </Grid>
+                                                                                         </DataTemplate>
+                                                                                     </Setter.Value>
+                                                                                 </Setter>
+                                                                             </DataTrigger>
+                                                                             <DataTrigger Binding="{Binding Type}" Value="Sofa">
+                                                                                 <Setter Property="ContentTemplate">
+                                                                                     <Setter.Value>
+                                                                                         <DataTemplate>
+                                                                                             <Grid>
+                                                                                                 <Rectangle Fill="#64748B" Stroke="#334155" StrokeThickness="1.5" RadiusX="4" RadiusY="4"/>
+                                                                                                 <Rectangle Fill="#475569" Width="4" HorizontalAlignment="Left" Margin="1,3,0,3"/>
+                                                                                                 <Rectangle Fill="#475569" Width="4" HorizontalAlignment="Right" Margin="0,3,1,3"/>
+                                                                                                 <Rectangle Fill="#475569" Height="4" VerticalAlignment="Top" Margin="4,1,4,0"/>
+                                                                                             </Grid>
+                                                                                         </DataTemplate>
+                                                                                     </Setter.Value>
+                                                                                 </Setter>
+                                                                             </DataTrigger>
+                                                                             <DataTrigger Binding="{Binding Type}" Value="TV">
+                                                                                 <Setter Property="ContentTemplate">
+                                                                                     <Setter.Value>
+                                                                                         <DataTemplate>
+                                                                                             <Grid>
+                                                                                                 <Rectangle Fill="#1E293B" Stroke="Black" StrokeThickness="1"/>
+                                                                                                 <Line X1="0" Y1="4" X2="40" Y2="4" Stroke="#64748B" StrokeThickness="1" StrokeDashArray="2,2"/>
+                                                                                             </Grid>
+                                                                                         </DataTemplate>
+                                                                                     </Setter.Value>
+                                                                                 </Setter>
+                                                                             </DataTrigger>
+                                                                         </Style.Triggers>
+                                                                     </Style>
+                                                                 </ContentControl.Style>
+                                                             </ContentControl>
+                                                             <Rectangle Stroke="#3B82F6" StrokeThickness="1.5" StrokeDashArray="2,2" Margin="-2" Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}"/>
+                                                         </Grid>
+                                                     </Border>
+                                                 </DataTemplate>
+                                             </ItemsControl.ItemTemplate>
+                                         </ItemsControl>
+
+                                        <!-- DIRECT CANVAS INTERACTION HANDLES (Only visible when Selected) -->
+                                        <Grid Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
+                                            <!-- Top-Left Corner Resizer -->
+                                            <Thumb Width="8" Height="8" Background="#3B82F6" BorderBrush="White" BorderThickness="1"
+                                                   HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-4,-4,0,0"
+                                                   Cursor="SizeNWSE" DragStarted="ResizeThumb_DragStarted" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted" Tag="TopLeft"/>
+                                                   
+                                            <!-- Top-Right Corner Resizer -->
+                                            <Thumb Width="8" Height="8" Background="#3B82F6" BorderBrush="White" BorderThickness="1"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-4,-4,0"
+                                                   Cursor="SizeNESW" DragStarted="ResizeThumb_DragStarted" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted" Tag="TopRight"/>
+                                                   
+                                            <!-- Bottom-Left Corner Resizer -->
+                                            <Thumb Width="8" Height="8" Background="#3B82F6" BorderBrush="White" BorderThickness="1"
+                                                   HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="-4,0,0,-4"
+                                                   Cursor="SizeNESW" DragStarted="ResizeThumb_DragStarted" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted" Tag="BottomLeft"/>
+                                                   
+                                            <!-- Bottom-Right Corner Resizer -->
+                                            <Thumb Width="8" Height="8" Background="#3B82F6" BorderBrush="White" BorderThickness="1"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-4,-4"
+                                                   Cursor="SizeNWSE" DragStarted="ResizeThumb_DragStarted" DragDelta="ResizeThumb_DragDelta" DragCompleted="ResizeThumb_DragCompleted" Tag="BottomRight"/>
+                                                   
+                                            <!-- Rotation Handle (Emerald green circle at the top-center) -->
+                                            <Thumb Width="12" Height="12" Background="#10B981" BorderBrush="White" BorderThickness="1"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-24,0,0"
+                                                   Cursor="Hand" DragStarted="RotateThumb_DragStarted" DragDelta="RotateThumb_DragDelta" DragCompleted="RotateThumb_DragCompleted"/>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
             </Border>
         </ScrollViewer>
     </Grid>

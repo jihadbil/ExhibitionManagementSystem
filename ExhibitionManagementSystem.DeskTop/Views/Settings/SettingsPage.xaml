@@ -18,9 +18,9 @@
         <TextBlock Grid.Row="0" Text="إعدادات الحساب والنظام" Style="{StaticResource H1Style}" Margin="0,0,0,24"/>
 
         <!-- Tabs -->
-        <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
+        <TabControl Grid.Row="1" Style="{StaticResource AppTabControlStyle}">
             <!-- TAB 1: User Profile -->
-            <TabItem Header="👤 معلومات الملف الشخصي" Height="36" Padding="16,0" FontFamily="{StaticResource WorkSansMedium}" FontSize="14" FontWeight="Medium">
+            <TabItem Header="معلومات الملف الشخصي" Style="{StaticResource AppTabItemStyle}">
                 <Grid Margin="0,20,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="500"/>
@@ -51,7 +51,7 @@
                                      Margin="0,0,0,16"/>
 
                             <!-- Tenant Name -->
-                            <TextBlock Text="اسم المنظمة / المعرض التابع له" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                            <TextBlock Text="اسم الشركة العارضة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
                             <TextBox Style="{StaticResource StandardTextBoxStyle}" 
                                      Text="{Binding TenantName}" 
                                      IsEnabled="False"
@@ -65,18 +65,51 @@
                                      Margin="0,0,0,24"/>
 
                             <!-- Save Button -->
-                            <Button Content="حفظ التغييرات ✓" 
-                                    Style="{StaticResource PrimaryButtonStyle}"
-                                    Command="{Binding SaveProfileCommand}"
-                                    Height="48"
-                                    HorizontalAlignment="Stretch"/>
+                            <Button Style="{StaticResource PrimaryButtonStyle}"
+                                     Command="{Binding SaveProfileCommand}"
+                                     Height="48"
+                                     HorizontalAlignment="Stretch">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="{StaticResource IconSave}" Width="14" Height="14" Stretch="Uniform" Fill="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="حفظ التغييرات" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Account Profile Preview Card -->
+                    <Border Grid.Column="1" Style="{StaticResource StandardCardStyle}"
+                            Padding="24" Margin="24,0,0,0" Background="White" VerticalAlignment="Top" HorizontalAlignment="Stretch" MaxWidth="360">
+                        <StackPanel HorizontalAlignment="Center">
+                            <!-- Avatar -->
+                            <Border Background="{StaticResource PrimaryGradientBrush}"
+                                    Width="80" Height="80" CornerRadius="40" Margin="0,16,0,16"
+                                    HorizontalAlignment="Center">
+                                <TextBlock Text="م" FontSize="32" FontWeight="Bold"
+                                           Foreground="White" HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <!-- Name -->
+                            <TextBlock Text="{Binding FullName}" Style="{StaticResource H3Style}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                            <!-- Role -->
+                            <TextBlock Text="{Binding UserRole}" Style="{StaticResource BodySecondaryStyle}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            
+                            <Separator Background="{StaticResource BorderMainBrush}" Margin="0,12" Height="1"/>
+                            
+                            <!-- Tenant -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                                <Path Data="{StaticResource IconCompany}" Width="14" Height="14" Stretch="Uniform" Fill="{StaticResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding TenantName}" Style="{StaticResource BodySecondaryStyle}" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
                 </Grid>
             </TabItem>
 
             <!-- TAB 2: Account Security -->
-            <TabItem Header="🔒 أمان الحساب وكلمة المرور" Height="36" Padding="16,0" FontFamily="{StaticResource WorkSansMedium}" FontSize="14" FontWeight="Medium">
+            <TabItem Header="أمان الحساب وكلمة المرور" Style="{StaticResource AppTabItemStyle}">
                 <Grid Margin="0,20,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="500"/>
@@ -100,11 +133,15 @@
                             <PasswordBox x:Name="ConfirmPasswordBox" Style="{StaticResource StandardPasswordBoxStyle}" Margin="0,0,0,24"/>
 
                             <!-- Save Password Button -->
-                            <Button Content="تحديث كلمة المرور 🔒" 
-                                    Style="{StaticResource PrimaryButtonStyle}"
-                                    Click="ChangePassword_Click"
-                                    Height="48"
-                                    HorizontalAlignment="Stretch"/>
+                            <Button Style="{StaticResource PrimaryButtonStyle}"
+                                     Click="ChangePassword_Click"
+                                     Height="48"
+                                     HorizontalAlignment="Stretch">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="{StaticResource IconAdmin}" Width="14" Height="14" Stretch="Uniform" Fill="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="تحديث كلمة المرور" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Border>
                 </Grid>

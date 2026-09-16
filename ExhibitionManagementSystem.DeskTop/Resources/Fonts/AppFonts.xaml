@@ -3,10 +3,10 @@
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
     <!-- Font Families -->
-    <FontFamily x:Key="WorkSansRegular">pack://application:,,,/Resources/Fonts/#Work Sans</FontFamily>
-    <FontFamily x:Key="WorkSansMedium">pack://application:,,,/Resources/Fonts/#Work Sans</FontFamily>
-    <FontFamily x:Key="WorkSansSemiBold">pack://application:,,,/Resources/Fonts/#Work Sans</FontFamily>
-    <FontFamily x:Key="WorkSansBold">pack://application:,,,/Resources/Fonts/#Work Sans</FontFamily>
+    <FontFamily x:Key="WorkSansRegular">pack://application:,,,/Resources/Fonts/#Work Sans, Segoe UI</FontFamily>
+    <FontFamily x:Key="WorkSansMedium">pack://application:,,,/Resources/Fonts/#Work Sans, Segoe UI Semibold</FontFamily>
+    <FontFamily x:Key="WorkSansSemiBold">pack://application:,,,/Resources/Fonts/#Work Sans, Segoe UI Semibold</FontFamily>
+    <FontFamily x:Key="WorkSansBold">pack://application:,,,/Resources/Fonts/#Work Sans, Segoe UI Bold</FontFamily>
 
     <!-- Font Sizes -->
     <sys:Double x:Key="FontSizeH1">32</sys:Double>

@@ -11,8 +11,6 @@
   <ItemGroup>
     <ProjectReference Include="..\ExhibitionManagementSystem.Models\ExhibitionManagementSystem.Models.csproj" />
     <ProjectReference Include="..\ExhibitionManagementSystem.Models.DTOs\ExhibitionManagementSystem.Models.DTOs.csproj" />
-    <ProjectReference Include="..\ExhibitionManagementSystem.Services\ExhibitionManagementSystem.Services.csproj" />
-    <ProjectReference Include="..\ExhibitionManagementSystem.DataAccess\ExhibitionManagementSystem.DataAccess.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,13 +18,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.8" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc4" />
+    <PackageReference Include="Nodify" Version="7.3.0" />
   </ItemGroup>
 
   <ItemGroup>

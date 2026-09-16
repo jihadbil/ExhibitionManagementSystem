@@ -27,22 +27,22 @@
                 <cards:StatCardControl Title="المعارض النشطة"
                     Value="{Binding ActiveExhibitions}"
                     TrendText="+2 هذا الشهر" TrendIsPositive="True"
-                    IconText="🏛️" Margin="0,0,12,0"
+                    IconGeometry="{StaticResource IconExhibition}" Margin="0,0,12,0"
                     IconBackground="{StaticResource InfoLightBrush}"/>
                 <cards:StatCardControl Title="الأجنحة المحجوزة"
                     Value="{Binding OccupiedBooths}"
                     TrendText="معدل ممتاز" TrendIsPositive="True"
-                    IconText="🏪" Margin="6,0"
+                    IconGeometry="{StaticResource IconBooth}" Margin="6,0"
                     IconBackground="{StaticResource SuccessLightBrush}"/>
                 <cards:StatCardControl Title="الشركات العارضة"
                     Value="{Binding TotalExhibitors}"
                     TrendText="شركاء النجاح" TrendIsPositive="True"
-                    IconText="🏢" Margin="6,0"
+                    IconGeometry="{StaticResource IconCompany}" Margin="6,0"
                     IconBackground="{StaticResource WarningLightBrush}"/>
                 <cards:StatCardControl Title="الزوار المسجلين"
                     Value="{Binding TotalVisitors}"
                     TrendText="نمو متزايد" TrendIsPositive="True"
-                    IconText="👥" Margin="12,0,0,0"
+                    IconGeometry="{StaticResource IconUsers}" Margin="12,0,0,0"
                     IconBackground="{StaticResource DangerLightBrush}"/>
             </UniformGrid>
 

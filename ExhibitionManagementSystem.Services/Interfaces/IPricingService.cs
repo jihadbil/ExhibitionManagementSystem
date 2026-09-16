@@ -13,7 +13,8 @@ namespace ExhibitionManagementSystem.Services.Interfaces
             int? exhibitionId, 
             BoothType boothType, 
             ExhibitorCategory category, 
-            decimal areaSqM);
+            decimal areaSqM,
+            int? boothId = null);
 
         Task<ServiceResult<decimal>> CalculateServicePriceAsync(
             int tenantId, 

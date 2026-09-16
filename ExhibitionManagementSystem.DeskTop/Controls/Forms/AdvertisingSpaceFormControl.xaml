@@ -1,0 +1,94 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Controls.Forms.AdvertisingSpaceFormControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="550" d:DesignWidth="450"
+             FlowDirection="RightToLeft">
+    <Border Background="White" CornerRadius="12" Padding="24">
+        <StackPanel>
+            <TextBlock Text="{Binding Title}" Style="{StaticResource H2Style}" Margin="0,0,0,16"/>
+
+            <!-- Space Code & Space Name -->
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="رمز المساحة *" Style="{StaticResource LabelStyle}" Margin="0,0,0,4"/>
+                    <TextBox Style="{StaticResource StandardTextBoxStyle}" Text="{Binding SpaceCode, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="اسم المساحة الإعلانية *" Style="{StaticResource LabelStyle}" Margin="0,0,0,4"/>
+                    <TextBox Style="{StaticResource StandardTextBoxStyle}" Text="{Binding SpaceName, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Type & Dimensions -->
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="نوع المساحة" Style="{StaticResource LabelStyle}" Margin="0,0,0,4"/>
+                    <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                              ItemsSource="{Binding SpaceTypes}" 
+                              SelectedItem="{Binding SpaceType}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="المقاسات / الأبعاد" Style="{StaticResource LabelStyle}" Margin="0,0,0,4"/>
+                    <TextBox Style="{StaticResource StandardTextBoxStyle}" Text="{Binding DimensionsDescription, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Price & Currency -->
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="100"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="السعر الأساسي *" Style="{StaticResource LabelStyle}" Margin="0,0,0,4"/>
+                    <TextBox Style="{StaticResource StandardTextBoxStyle}" Text="{Binding BasePrice, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="العملة" Style="{StaticResource LabelStyle}" Margin="0,0,0,4"/>
+                    <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                              ItemsSource="{Binding Currencies}" 
+                              SelectedItem="{Binding CurrencyCode}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Location Notes -->
+            <TextBlock Text="موقع المساحة وملاحظات العرض" Style="{StaticResource LabelStyle}" Margin="0,0,0,4"/>
+            <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                     Text="{Binding LocationNotes, UpdateSourceTrigger=PropertyChanged}" 
+                     Height="60" TextWrapping="Wrap" AcceptsReturn="True"
+                     Margin="0,0,0,12"/>
+
+            <!-- Photo URL -->
+            <TextBlock Text="رابط صورة المساحة المعاينة" Style="{StaticResource LabelStyle}" Margin="0,0,0,4"/>
+            <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                     Text="{Binding PhotoUrl, UpdateSourceTrigger=PropertyChanged}" 
+                     Margin="0,0,0,16"/>
+
+            <!-- Actions -->
+            <Button Content="حفظ المساحة الإعلانية" 
+                    Style="{StaticResource PrimaryButtonStyle}" 
+                    Command="{Binding SaveCommand}" 
+                    Height="40"/>
+        </StackPanel>
+    </Border>
+</UserControl>

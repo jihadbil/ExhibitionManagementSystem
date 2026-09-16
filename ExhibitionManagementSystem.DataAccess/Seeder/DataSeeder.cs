@@ -60,57 +60,6 @@ namespace ExhibitionManagementSystem.DataAccess
                 await context.SaveChangesAsync();
             }
 
-            // Seed Exchange Rates
-            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "USD" && r.ToCurrency == "LYD"))
-            {
-                context.ExchangeRates.Add(new ExchangeRate
-                {
-                    FromCurrency = "USD",
-                    ToCurrency = "LYD",
-                    Rate = 4.80m,
-                    RateDate = DateTime.UtcNow.Date,
-                    Source = "System Init",
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
-            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "LYD" && r.ToCurrency == "USD"))
-            {
-                context.ExchangeRates.Add(new ExchangeRate
-                {
-                    FromCurrency = "LYD",
-                    ToCurrency = "USD",
-                    Rate = 0.2083m,
-                    RateDate = DateTime.UtcNow.Date,
-                    Source = "System Init",
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
-            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "USD" && r.ToCurrency == "EUR"))
-            {
-                context.ExchangeRates.Add(new ExchangeRate
-                {
-                    FromCurrency = "USD",
-                    ToCurrency = "EUR",
-                    Rate = 0.92m,
-                    RateDate = DateTime.UtcNow.Date,
-                    Source = "System Init",
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
-            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "EUR" && r.ToCurrency == "USD"))
-            {
-                context.ExchangeRates.Add(new ExchangeRate
-                {
-                    FromCurrency = "EUR",
-                    ToCurrency = "USD",
-                    Rate = 1.087m,
-                    RateDate = DateTime.UtcNow.Date,
-                    Source = "System Init",
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
-            await context.SaveChangesAsync();
-
             // 2. Seed Tenant
             var defaultTenant = await context.Tenants.FirstOrDefaultAsync(t => t.CompanyName == "System Admin");
             if (defaultTenant == null)
@@ -168,6 +117,69 @@ namespace ExhibitionManagementSystem.DataAccess
                     await userManager.AddToRoleAsync(adminUser, adminRole);
                 }
             }
+
+            // Retrieve admin user ID for exchange rates seeding
+            var adminUserObj = await userManager.FindByEmailAsync(adminEmail);
+            if (adminUserObj == null)
+            {
+                throw new InvalidOperationException("Failed to find or create the default Admin User.");
+            }
+            string adminUserId = adminUserObj.Id;
+
+            // 5. Seed Exchange Rates
+            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "USD" && r.ToCurrency == "LYD"))
+            {
+                context.ExchangeRates.Add(new ExchangeRate
+                {
+                    FromCurrency = "USD",
+                    ToCurrency = "LYD",
+                    Rate = 4.80m,
+                    RateDate = DateTime.UtcNow.Date,
+                    Source = "System Init",
+                    CreatedByUserId = adminUserId,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "LYD" && r.ToCurrency == "USD"))
+            {
+                context.ExchangeRates.Add(new ExchangeRate
+                {
+                    FromCurrency = "LYD",
+                    ToCurrency = "USD",
+                    Rate = 0.2083m,
+                    RateDate = DateTime.UtcNow.Date,
+                    Source = "System Init",
+                    CreatedByUserId = adminUserId,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "USD" && r.ToCurrency == "EUR"))
+            {
+                context.ExchangeRates.Add(new ExchangeRate
+                {
+                    FromCurrency = "USD",
+                    ToCurrency = "EUR",
+                    Rate = 0.92m,
+                    RateDate = DateTime.UtcNow.Date,
+                    Source = "System Init",
+                    CreatedByUserId = adminUserId,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "EUR" && r.ToCurrency == "USD"))
+            {
+                context.ExchangeRates.Add(new ExchangeRate
+                {
+                    FromCurrency = "EUR",
+                    ToCurrency = "USD",
+                    Rate = 1.087m,
+                    RateDate = DateTime.UtcNow.Date,
+                    Source = "System Init",
+                    CreatedByUserId = adminUserId,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            await context.SaveChangesAsync();
         }
     }
 }

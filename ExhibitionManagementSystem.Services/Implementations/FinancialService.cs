@@ -35,6 +35,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     .ThenInclude(r => r.Exhibitor)
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
+                .Include(i => i.InvoiceItems)
                 .Where(i => i.TenantID == tenantId);
 
             var totalCount = await query.CountAsync();
@@ -64,6 +65,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
                     .ThenInclude(p => p.ReceivedByUser)
+                .Include(i => i.InvoiceItems)
                 .FirstOrDefaultAsync(i => i.InvoiceID == invoiceId && i.TenantID == tenantId);
 
             if (invoice == null)
@@ -82,6 +84,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     .ThenInclude(r => r.Exhibitor)
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
+                .Include(i => i.InvoiceItems)
                 .FirstOrDefaultAsync(i => i.ReservationID == reservationId && i.TenantID == tenantId);
 
             if (invoice == null)
@@ -100,6 +103,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     .ThenInclude(r => r.Exhibitor)
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
+                .Include(i => i.InvoiceItems)
                 .Where(i => i.TenantID == tenantId && 
                             i.Status != InvoiceStatus.Paid && 
                             i.Status != InvoiceStatus.Cancelled && 
@@ -114,16 +118,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
         {
             var reservation = await _unitOfWork.BoothReservations.AsQueryable()
                 .Include(r => r.Exhibitor)
+                .Include(r => r.Booth)
+                .Include(r => r.ReservationServices)
+                    .ThenInclude(rs => rs.Service)
                 .FirstOrDefaultAsync(r => r.ReservationID == reservationId);
 
             if (reservation == null || reservation.Exhibitor.TenantID != tenantId)
             {
                 return ServiceResult<InvoiceDto>.Failure("الحجز غير موجود", "RESERVATION_NOT_FOUND");
-            }
-
-            if (reservation.Status != ReservationStatus.Confirmed)
-            {
-                return ServiceResult<InvoiceDto>.Failure("لا يمكن توليد فاتورة لحجز غير مؤكد", "RESERVATION_NOT_CONFIRMED");
             }
 
             var existing = await _unitOfWork.Invoices.GetByReservationAsync(reservationId);
@@ -134,7 +136,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
             string invoiceNumber = await _unitOfWork.Invoices.GenerateNextInvoiceNumberAsync(tenantId);
             decimal taxRate = decimal.TryParse(_configuration["Financial:DefaultTaxRate"], out var cfgRate)
-                ? cfgRate : 15.0m;
+                ? cfgRate : 0.0m;
             decimal subTotal = reservation.TotalAmount;
             decimal taxAmount = subTotal * (taxRate / 100);
             decimal totalAmount = subTotal + taxAmount;
@@ -150,11 +152,44 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 TaxAmount = taxAmount,
                 TotalAmount = totalAmount,
                 CurrencyCode = reservation.CurrencyCode,
-                Status = InvoiceStatus.Issued,
+                Status = reservation.Status == ReservationStatus.Confirmed 
+                    ? InvoiceStatus.Issued 
+                    : InvoiceStatus.Draft,
                 DueDate = DateTime.UtcNow.AddDays(30), // Default due date is 30 days from now
                 Notes = $"Invoice for booth reservation #{reservationId}",
                 CreatedAt = DateTime.UtcNow
             };
+
+            // 1. توليد بند الجناح (Booth Rental Item)
+            var boothItemName = reservation.Booth != null 
+                ? $"حجز جناح - رقم {reservation.Booth.BoothNumber} ({reservation.BoothTypeSelected})"
+                : $"حجز جناح - نوع {reservation.BoothTypeSelected}";
+
+            var boothItem = new InvoiceItem
+            {
+                ItemName = boothItemName,
+                Quantity = 1,
+                UnitPrice = reservation.BoothAmount,
+                TotalPrice = reservation.BoothAmount
+            };
+            invoice.InvoiceItems.Add(boothItem);
+
+            // 2. توليد بنود الخدمات الإضافية (Services Items)
+            if (reservation.ReservationServices != null)
+            {
+                foreach (var rs in reservation.ReservationServices)
+                {
+                    var serviceName = rs.Service != null ? rs.Service.ServiceName : "خدمة إضافية";
+                    var serviceItem = new InvoiceItem
+                    {
+                        ItemName = serviceName,
+                        Quantity = rs.Quantity,
+                        UnitPrice = rs.UnitPrice,
+                        TotalPrice = rs.TotalPrice
+                    };
+                    invoice.InvoiceItems.Add(serviceItem);
+                }
+            }
 
             await _unitOfWork.Invoices.AddAsync(invoice);
             await _unitOfWork.SaveChangesAsync();
@@ -164,6 +199,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     .ThenInclude(r => r.Exhibitor)
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
+                .Include(i => i.InvoiceItems)
                 .FirstOrDefaultAsync(i => i.InvoiceID == invoice.InvoiceID);
 
             var dto = _mapper.Map<InvoiceDto>(fullInvoice ?? invoice);
@@ -200,6 +236,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     .ThenInclude(r => r.Exhibitor)
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
+                .Include(i => i.InvoiceItems)
                 .FirstOrDefaultAsync(i => i.InvoiceID == invoice.InvoiceID);
 
             var resultDto = _mapper.Map<InvoiceDto>(fullInvoice ?? invoice);

@@ -18,4 +18,5 @@ public class BoothCreateDto
     public decimal? RotationAngle { get; set; }
     public string? ShapeType { get; set; }
     public string ShapePolygonJSON { get; set; } = string.Empty;
+    public int? AssignedPriceRuleID { get; set; }
 }

@@ -6,22 +6,27 @@ namespace ExhibitionManagementSystem.Models.Enums;
 public enum BoothType
 {
     /// <summary>
-    /// مساحة فارغة دون تجهيزات.
+    /// جناح قياسي.
     /// </summary>
-    SpaceOnly = 1,
+    Standard = 1,
 
     /// <summary>
-    /// جناح مجهز مسبقًا.
+    /// جناح زاوية.
     /// </summary>
-    Equipped = 2,
+    Corner = 2,
 
     /// <summary>
-    /// جناح موحد وفق قالب ثابت.
+    /// جناح مميز.
     /// </summary>
-    Unified = 3,
+    Premium = 3,
 
     /// <summary>
-    /// جناح مخصص حسب طلب العارض.
+    /// جناح كبار الشخصيات.
     /// </summary>
-    Custom = 4
+    VIP = 4,
+
+    /// <summary>
+    /// جناح مخصص.
+    /// </summary>
+    Custom = 5
 }

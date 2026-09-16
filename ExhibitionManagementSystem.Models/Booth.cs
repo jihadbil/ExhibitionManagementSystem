@@ -124,4 +124,13 @@ public class Booth : IAuditableEntity, ISoftDeletable
     /// </summary>
     [ForeignKey(nameof(MergeID))] public virtual BoothMerge BoothMerge { get; set; }
 
+    /// <summary>
+    /// معرف قاعدة التسعير المخصصة المعينة للجناح يدوياً (اختياري).
+    /// </summary>
+    public int? AssignedPriceRuleID { get; set; }
+
+    /// <summary>
+    /// قاعدة التسعير المعينة للجناح يدوياً.
+    /// </summary>
+    [ForeignKey(nameof(AssignedPriceRuleID))] public virtual BoothPriceRule? AssignedPriceRule { get; set; }
 }

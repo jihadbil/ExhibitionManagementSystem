@@ -44,13 +44,23 @@ namespace ExhibitionManagementSystem.DataAccess
         public DbSet<PackageService> PackageServices { get; set; }
         public DbSet<ReservationService> ReservationServices { get; set; }
         public DbSet<Invoice> Invoices { get; set; }
+        public DbSet<InvoiceItem> InvoiceItems { get; set; }
         public DbSet<Payment> Payments { get; set; }
+
         public DbSet<FinancialReport> FinancialReports { get; set; }
         public DbSet<Visitor> Visitors { get; set; }
         public DbSet<Ticket> Tickets { get; set; }
         public DbSet<TicketScan> TicketScans { get; set; }
         public DbSet<VisitorRating> VisitorRatings { get; set; }
         public DbSet<Expense> Expenses { get; set; }
+
+        // New Badge and Sponsorship DbSets
+        public DbSet<BadgeTemplate> BadgeTemplates { get; set; }
+        public DbSet<Sponsor> Sponsors { get; set; }
+        public DbSet<SponsorshipPackage> SponsorshipPackages { get; set; }
+        public DbSet<SponsorshipContract> SponsorshipContracts { get; set; }
+        public DbSet<AdvertisingSpace> AdvertisingSpaces { get; set; }
+        public DbSet<SponsorAdAssignment> SponsorAdAssignments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -78,6 +88,13 @@ namespace ExhibitionManagementSystem.DataAccess
             builder.Entity<ScheduleRegistration>().Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
             builder.Entity<TenantSubscription>().Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
             builder.Entity<ServicePriceRule>().Property(e => e.ExhibitorCategory).HasConversion<string>().HasMaxLength(20);
+            
+            // Badge & Sponsorship Enums Conversions
+            builder.Entity<BadgeTemplate>().Property(e => e.TargetParticipantType).HasConversion<string>().HasMaxLength(30);
+            builder.Entity<BadgeTemplate>().Property(e => e.Orientation).HasConversion<string>().HasMaxLength(20);
+            builder.Entity<SponsorshipPackage>().Property(e => e.Level).HasConversion<string>().HasMaxLength(30);
+            builder.Entity<AdvertisingSpace>().Property(e => e.SpaceType).HasConversion<string>().HasMaxLength(50);
+            builder.Entity<SponsorshipContract>().Property(e => e.Status).HasConversion<string>().HasMaxLength(30);
 
             // 2. القيود والفهارس الفريدة (Unique Constraints) المذكورة في التوثيق
             builder.Entity<Tenant>().HasIndex(t => t.Subdomain).IsUnique();
@@ -111,7 +128,7 @@ namespace ExhibitionManagementSystem.DataAccess
             // إيقاف الحذف التعاقبي (Cascade Delete) في بعض الجداول المهمة مالياً
             builder.Entity<Invoice>()
                 .HasOne(i => i.Reservation)
-                .WithOne()
+                .WithOne(r => r.Invoice)
                 .HasForeignKey<Invoice>(i => i.ReservationID)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -276,6 +293,123 @@ namespace ExhibitionManagementSystem.DataAccess
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Expense>().HasIndex(e => new { e.ExhibitionID, e.IsDeleted });
+
+            // Badge & Sponsorship Indexes & Unique Constraints
+            builder.Entity<BadgeTemplate>().HasIndex(b => new { b.TenantID, b.ExhibitionID, b.TargetParticipantType });
+            builder.Entity<Sponsor>().HasIndex(s => new { s.TenantID, s.IsDeleted });
+            builder.Entity<SponsorshipPackage>().HasIndex(p => new { p.ExhibitionID, p.IsDeleted });
+            builder.Entity<SponsorshipContract>().HasIndex(c => new { c.TenantID, c.ContractNumber }).IsUnique();
+            builder.Entity<AdvertisingSpace>().HasIndex(a => new { a.ExhibitionID, a.SpaceCode }).IsUnique();
+            builder.Entity<SponsorAdAssignment>().HasIndex(sa => new { sa.ContractID, sa.SpaceID });
+
+            // Badge & Sponsorship FK Configurations
+            builder.Entity<BadgeTemplate>()
+                .HasOne(b => b.Tenant)
+                .WithMany()
+                .HasForeignKey(b => b.TenantID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<BadgeTemplate>()
+                .HasOne(b => b.Exhibition)
+                .WithMany()
+                .HasForeignKey(b => b.ExhibitionID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Sponsor>()
+                .HasOne(s => s.Tenant)
+                .WithMany()
+                .HasForeignKey(s => s.TenantID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SponsorshipPackage>()
+                .HasOne(p => p.Tenant)
+                .WithMany()
+                .HasForeignKey(p => p.TenantID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SponsorshipPackage>()
+                .HasOne(p => p.Exhibition)
+                .WithMany()
+                .HasForeignKey(p => p.ExhibitionID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SponsorshipPackage>()
+                .HasOne(p => p.Currency)
+                .WithMany()
+                .HasForeignKey(p => p.CurrencyCode)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SponsorshipContract>()
+                .HasOne(c => c.Tenant)
+                .WithMany()
+                .HasForeignKey(c => c.TenantID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SponsorshipContract>()
+                .HasOne(c => c.Exhibition)
+                .WithMany()
+                .HasForeignKey(c => c.ExhibitionID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SponsorshipContract>()
+                .HasOne(c => c.Sponsor)
+                .WithMany(s => s.Contracts)
+                .HasForeignKey(c => c.SponsorID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SponsorshipContract>()
+                .HasOne(c => c.Package)
+                .WithMany(p => p.Contracts)
+                .HasForeignKey(c => c.PackageID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SponsorshipContract>()
+                .HasOne(c => c.Currency)
+                .WithMany()
+                .HasForeignKey(c => c.CurrencyCode)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AdvertisingSpace>()
+                .HasOne(a => a.Tenant)
+                .WithMany()
+                .HasForeignKey(a => a.TenantID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AdvertisingSpace>()
+                .HasOne(a => a.Exhibition)
+                .WithMany()
+                .HasForeignKey(a => a.ExhibitionID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AdvertisingSpace>()
+                .HasOne(a => a.Venue)
+                .WithMany()
+                .HasForeignKey(a => a.VenueID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AdvertisingSpace>()
+                .HasOne(a => a.Hall)
+                .WithMany()
+                .HasForeignKey(a => a.HallID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AdvertisingSpace>()
+                .HasOne(a => a.Currency)
+                .WithMany()
+                .HasForeignKey(a => a.CurrencyCode)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SponsorAdAssignment>()
+                .HasOne(sa => sa.Contract)
+                .WithMany(c => c.AdAssignments)
+                .HasForeignKey(sa => sa.ContractID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<SponsorAdAssignment>()
+                .HasOne(sa => sa.Space)
+                .WithMany(s => s.AdAssignments)
+                .HasForeignKey(sa => sa.SpaceID)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Global Cascade Delete Disable for Custom Models to prevent SQL Server multiple cascade path errors
             var cascadeFKs = builder.Model.GetEntityTypes()

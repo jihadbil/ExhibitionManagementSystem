@@ -1,0 +1,709 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Views.Booths.NodifyBoothDesignerPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:nodify="clr-namespace:Nodify;assembly=Nodify"
+             xmlns:conv="clr-namespace:ExhibitionManagementSystem.DeskTop.Converters"
+             xmlns:local="clr-namespace:ExhibitionManagementSystem.DeskTop.ViewModels.Booths"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1000"
+             FlowDirection="RightToLeft">
+    
+    <UserControl.Resources>
+        <conv:HalfValueConverter x:Key="HalfConverter"/>
+        <conv:StatusAndCollisionToColorConverter x:Key="StatusAndCollisionToColor"/>
+        <conv:SelectionAndCollisionToBorderConverter x:Key="SelectionAndCollisionToBorder"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
+        <conv:StatusToColorConverter x:Key="StatusToColor"/>
+        <conv:ShapeToGeometryConverter x:Key="ShapeToGeometry"/>
+        <conv:NullToVisibilityConverter x:Key="InverseNullToVisibility" Inverse="True"/>
+
+        <!-- Custom Minimap Viewport Style -->
+        <Style x:Key="MinimapViewportStyle" TargetType="Rectangle">
+            <Setter Property="Stroke" Value="#6366F1"/>
+            <Setter Property="StrokeThickness" Value="2"/>
+            <Setter Property="Fill" Value="#1A6366F1"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <!-- Properties Panel (Right side in RTL) -->
+            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Right Side: Properties & Filters -->
+        <Border Grid.Column="0" BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="0,0,1,0" Background="{StaticResource BgCardBrush}" Padding="20">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                <DockPanel>
+                    <!-- Back Button -->
+                    <Button DockPanel.Dock="Top" 
+                            Content="← العودة لقائمة الأجنحة" 
+                            Style="{StaticResource LinkButtonStyle}" 
+                            Command="{Binding GoBackCommand}"
+                            HorizontalAlignment="Right"
+                            Margin="0,0,0,24"/>
+
+                    <!-- Header -->
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,24">
+                        <TextBlock Text="مصمم الأجنحة المطور" Style="{StaticResource H2Style}"/>
+                        <TextBlock Text="اسحب الأجنحة على المخطط اللانهائي لتغيير موضعها" Style="{StaticResource SmallStyle}" Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <!-- Filters -->
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,24">
+                        <TextBlock Text="المعرض" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                        <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                  ItemsSource="{Binding Exhibitions}" 
+                                  SelectedValuePath="ExhibitionID" 
+                                  DisplayMemberPath="Name" 
+                                  SelectedValue="{Binding SelectedExhibitionId}"
+                                  Margin="0,0,0,12"/>
+
+                        <TextBlock Text="الصالة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                        <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                  ItemsSource="{Binding AvailableHalls}" 
+                                  SelectedValuePath="HallID" 
+                                  DisplayMemberPath="HallName" 
+                                  SelectedValue="{Binding SelectedHallId}"/>
+                    </StackPanel>
+
+                    <!-- Hall Dimensions Configuration -->
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,24">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedHallId}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="أبعاد الصالة الحالية" Style="{StaticResource H4Style}" Margin="0,0,0,12"/>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="العرض (م)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                         Text="{Binding HallWidthMeters, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="الارتفاع (م)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                         Text="{Binding HallHeightMeters, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                        </Grid>
+                        <Button Content="تحديث أبعاد الصالة 📐" Command="{Binding UpdateHallDimensionsCommand}" Style="{StaticResource SecondaryButtonStyle}" Height="36"/>
+                    </StackPanel>
+
+                    <!-- Background Blueprint Card -->
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,24">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedHallId}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="مخطط الخلفية المعماري" Style="{StaticResource H4Style}" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Content="📁 رفع صورة مخطط" Command="{Binding UploadBackgroundImageCommand}" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="0" Height="36"/>
+                            <Button Content="🗑️" Command="{Binding RemoveBackgroundImageCommand}" ToolTip="إزالة المخطط" Style="{StaticResource DangerButtonStyle}" Grid.Column="2" Width="36" Height="36" Padding="0"/>
+                        </Grid>
+                        <TextBlock Text="يظهر مخطط الخلفية شفافاً خلف الأجنحة للمساعدة في الرصف الدقيق." Style="{StaticResource BodySecondaryStyle}" FontSize="10" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <!-- Canvas Controls (Zoom, Reset, Auto Arrange, Add) -->
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,24">
+                        <TextBlock Text="أدوات المخطط المطور" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="2*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Button Content="➕" Command="{Binding ZoomInCommand}" ToolTip="تكبير المخطط" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="0" Padding="0" Height="36"/>
+                            <Button Content="➖" Command="{Binding ZoomOutCommand}" ToolTip="تصغير المخطط" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="2" Padding="0" Height="36"/>
+                            <Button Content="🔄" Command="{Binding ResetZoomCommand}" ToolTip="إعادة ضبط الرؤية" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="4" Padding="0" Height="36"/>
+                            <Button Content="ترتيب تلقائي ↕" Command="{Binding AutoArrangeCommand}" ToolTip="ترتيب الأجنحة تلقائياً" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="6" Padding="0" Height="36"/>
+                        </Grid>
+
+                        <!-- Undo / Redo & Export Buttons -->
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="2*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Content="↩ تراجع" Command="{Binding UndoCommand}" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="0" Height="36"/>
+                            <Button Content="↪ إعادة" Command="{Binding RedoCommand}" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="2" Height="36"/>
+                            <Button Content="📷 تصدير المخطط" Command="{Binding ExportAsImageCommand}" CommandParameter="{Binding ElementName=BoothEditor}" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="4" Height="36" Padding="4,0" FontSize="11" FontWeight="Bold"/>
+                        </Grid>
+
+                        <Button Content="➕ إنشاء جناح جديد" Command="{Binding AddNewBoothCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,0,12" Height="38"/>
+                    </StackPanel>
+
+                    <!-- Bulk Actions & Alignment Panel -->
+                    <Border Padding="16" Background="{StaticResource BgSecondaryBrush}" BorderThickness="0" CornerRadius="12" Margin="0,0,0,16">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMultiSelected}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel>
+                            <TextBlock Text="🛠️ إجراءات التحديد الجماعي" Style="{StaticResource H4Style}" Margin="0,0,0,16"/>
+                            
+                            <!-- Alignment Tools -->
+                            <TextBlock Text="أدوات المحاذاة الهندسية" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Content="⬅ محاذاة يسار" Command="{Binding AlignSelectedLeftCommand}" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="0" Height="34"/>
+                                <Button Content="⬆ محاذاة أعلى" Command="{Binding AlignSelectedTopCommand}" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="2" Height="34"/>
+                            </Grid>
+                            
+                            <!-- Bulk Status Change -->
+                            <TextBlock Text="تغيير الحالة للأجنحة المحددة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Content="متاح" Command="{Binding BulkChangeStatusCommand}" CommandParameter="Available" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="0" Height="32" Padding="0" Foreground="#10B981" FontWeight="Bold"/>
+                                <Button Content="محجوز" Command="{Binding BulkChangeStatusCommand}" CommandParameter="Reserved" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="2" Height="32" Padding="0" Foreground="#3B82F6" FontWeight="Bold"/>
+                                <Button Content="مراجعة" Command="{Binding BulkChangeStatusCommand}" CommandParameter="PendingReview" Style="{StaticResource SecondaryButtonStyle}" Grid.Column="4" Height="32" Padding="0" Foreground="#F59E0B" FontWeight="Bold"/>
+                            </Grid>
+                            
+                            <!-- Bulk Delete -->
+                            <Button Content="🗑️ حذف الأجنحة المحددة جماعياً" Command="{Binding DeleteSelectedNodesCommand}" Style="{StaticResource DangerButtonStyle}" Height="36"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Selected Booth Properties Panel -->
+                    <Border Padding="16" Background="{StaticResource BgSecondaryBrush}" BorderThickness="0" CornerRadius="12" VerticalAlignment="Stretch">
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource StandardCardStyle}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMultiSelected}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <!-- No Selection Placeholder -->
+                            <TextBlock Text="الرجاء اختيار جناح من المخطط لتعديله" 
+                                       Style="{StaticResource BodySecondaryStyle}" 
+                                       HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Center"
+                                       Visibility="{Binding SelectedNode, Converter={StaticResource InverseNullToVisibility}}"/>
+
+                            <!-- Property Fields -->
+                            <StackPanel Visibility="{Binding SelectedNode, Converter={StaticResource NullToVisibility}}">
+                                <TextBlock Text="خصائص الجناح المحدّد" Style="{StaticResource H4Style}" Margin="0,0,0,16"/>
+
+                                <TextBlock Text="رقم الجناح" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                         Text="{Binding EditBoothNumber, UpdateSourceTrigger=PropertyChanged}" 
+                                         Margin="0,0,0,12"/>
+
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="العرض (م)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                                 Text="{Binding EditWidth, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="الارتفاع (م)" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                        <TextBox Style="{StaticResource StandardTextBoxStyle}" 
+                                                 Text="{Binding EditHeight, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="حالة الجناح" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                          ItemsSource="{Binding Statuses}" 
+                                          SelectedItem="{Binding EditStatus}"
+                                          Margin="0,0,0,12"/>
+
+                                <TextBlock Text="شكل الجناح" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                          ItemsSource="{Binding Shapes}" 
+                                          SelectedItem="{Binding EditShapeType}"
+                                          Margin="0,0,0,12"/>
+
+                                <TextBlock Text="زاوية الدوران" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                                <Grid Margin="0,0,0,20">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="50"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider Minimum="0" Maximum="360" TickFrequency="15" IsSnapToTickEnabled="False"
+                                            Value="{Binding EditRotation, UpdateSourceTrigger=PropertyChanged}" 
+                                            VerticalAlignment="Center" Grid.Column="0"/>
+                                    <TextBlock Text="{Binding EditRotation, StringFormat={}{0:0}°}" 
+                                               Style="{StaticResource SmallStyle}" 
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Column="1"/>
+                                </Grid>
+
+                                <CheckBox Content="جناح مميز VIP ⭐️" 
+                                          IsChecked="{Binding EditIsVIP}" 
+                                          Foreground="#FBBF24" 
+                                          FontWeight="Bold" 
+                                          Margin="0,0,0,16"/>
+
+                                <Button Content="حفظ التغييرات ✓" 
+                                        Style="{StaticResource PrimaryButtonStyle}" 
+                                        Command="{Binding SaveSelectedBoothCommand}"
+                                        Height="40"
+                                        HorizontalAlignment="Stretch"/>
+
+                                <Button Content="🗑️ حذف هذا الجناح" 
+                                        Style="{StaticResource DangerButtonStyle}" 
+                                        Command="{Binding DeleteSelectedBoothCommand}"
+                                        Height="40"
+                                        Margin="0,8,0,0"
+                                        HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Exhibitor Allocation Card -->
+                    <Border Padding="16" Background="{StaticResource BgSecondaryBrush}" BorderThickness="0" CornerRadius="12" Margin="0,16,0,0">
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource StandardCardStyle}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding SelectedNode, Converter={StaticResource NullToVisibility}}" Value="Visible"/>
+                                            <Condition Binding="{Binding IsMultiSelected}" Value="False"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel>
+                            <TextBlock Text="💼 تخصيص وحجز العارضين" Style="{StaticResource H4Style}" Margin="0,0,0,16"/>
+                            
+                            <TextBlock Text="اختر العارض من القائمة" Style="{StaticResource LabelStyle}" Margin="0,0,0,6"/>
+                            <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                      ItemsSource="{Binding UnassignedExhibitors}" 
+                                      SelectedItem="{Binding SelectedExhibitor}"
+                                      DisplayMemberPath="CompanyName"
+                                      Margin="0,0,0,16"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Content="خصّص الجناح ✍️" Command="{Binding AllocateExhibitorCommand}" Style="{StaticResource PrimaryButtonStyle}" Grid.Column="0" Height="36"/>
+                                <Button Content="إلغاء التخصيص 🔓" Command="{Binding DeallocateExhibitorCommand}" Style="{StaticResource DangerButtonStyle}" Grid.Column="2" Height="36"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </DockPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Left Side: Interactive Canvas Workspace (NodifyEditor) -->
+        <!-- Nodify defaults use FlowDirection=LeftToRight for proper rendering of standard coordinate system -->
+        <Grid Grid.Column="1" Background="#FFEBF0F5" FlowDirection="LeftToRight">
+            <nodify:NodifyEditor x:Name="BoothEditor" 
+                                 ItemsSource="{Binding BoothNodes}"
+                                 SelectedItem="{Binding SelectedNode, Mode=TwoWay}"
+                                 ViewportZoom="{Binding ViewportZoom, Mode=TwoWay}"
+                                 ViewportLocation="{Binding ViewportLocation, Mode=TwoWay}"
+                                 Background="#0E1E38"
+                                 GridCellSize="20"
+                                 EnableRealtimeSelection="True"
+                                 PreviewMouseLeftButtonUp="BoothEditor_PreviewMouseLeftButtonUp"
+                                 MouseMove="BoothEditor_MouseMove">
+                
+                <nodify:NodifyEditor.Resources>
+                    <SolidColorBrush x:Key="GridBrush" Color="#2A4365" Opacity="0.5"/>
+                </nodify:NodifyEditor.Resources>
+                
+                <nodify:NodifyEditor.ItemTemplate>
+                    <DataTemplate DataType="{x:Type local:BoothNodeViewModel}">
+                        <!-- Interactive node content with CAD floorplanner styling (Supports LShape, Triangle, etc.) -->
+                        <Grid Width="{Binding Width}"
+                              Height="{Binding Height}"
+                              Cursor="SizeAll"
+                              PreviewMouseLeftButtonDown="Node_PreviewMouseLeftButtonDown">
+                            
+                            <!-- Rotation applied to the entire Grid wrapper so everything rotates together -->
+                            <Grid.RenderTransform>
+                                <RotateTransform Angle="{Binding RotationAngle}">
+                                    <RotateTransform.CenterX>
+                                        <Binding Path="Width" Converter="{StaticResource HalfConverter}"/>
+                                    </RotateTransform.CenterX>
+                                    <RotateTransform.CenterY>
+                                        <Binding Path="Height" Converter="{StaticResource HalfConverter}"/>
+                                    </RotateTransform.CenterY>
+                                </RotateTransform>
+                            </Grid.RenderTransform>
+
+                            <!-- Custom CAD Path shape -->
+                            <Path Stretch="Fill"
+                                  StrokeThickness="2">
+                                <Path.Fill>
+                                    <MultiBinding Converter="{StaticResource StatusAndCollisionToColor}">
+                                        <Binding Path="Status"/>
+                                        <Binding Path="HasCollision"/>
+                                    </MultiBinding>
+                                </Path.Fill>
+                                <Path.Stroke>
+                                    <MultiBinding Converter="{StaticResource SelectionAndCollisionToBorder}">
+                                        <Binding Path="IsSelected"/>
+                                        <Binding Path="HasCollision"/>
+                                    </MultiBinding>
+                                </Path.Stroke>
+                                <Path.Data>
+                                    <MultiBinding Converter="{StaticResource ShapeToGeometry}">
+                                        <Binding Path="ShapeType"/>
+                                        <Binding Path="Width"/>
+                                        <Binding Path="Height"/>
+                                    </MultiBinding>
+                                </Path.Data>
+                            </Path>
+
+                            <!-- Status LED Dot Indicator (top-right) -->
+                            <Ellipse Width="8" Height="8" 
+                                     Fill="{Binding Status, Converter={StaticResource StatusToColor}}" 
+                                     HorizontalAlignment="Right" VerticalAlignment="Top" 
+                                     Margin="8" IsHitTestVisible="False"/>
+
+                            <!-- Golden VIP Border Overlay -->
+                            <Border BorderBrush="#FBBF24" BorderThickness="3.5" CornerRadius="4" Margin="-2" IsHitTestVisible="False">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsVIP}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+
+                            <!-- VIP Star Badge (bottom-left) -->
+                            <Border Width="18" Height="18" CornerRadius="9" Background="#EEFBBF24" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6" IsHitTestVisible="False">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsVIP}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock Text="⭐" FontSize="11" Foreground="#0E1E38" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,0,0"/>
+                            </Border>
+
+                            <!-- Collision Warning Indicator (top-left) -->
+                            <TextBlock Text="⚠️" FontSize="14" Margin="8" 
+                                       HorizontalAlignment="Left" VerticalAlignment="Top" 
+                                       IsHitTestVisible="False">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasCollision}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <!-- Labels in the center -->
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                <!-- Booth Number (Dark Slate) -->
+                                <TextBlock Text="{Binding BoothNumber}"
+                                           FontFamily="{StaticResource WorkSansBold}"
+                                           FontWeight="Bold"
+                                           FontSize="13"
+                                           Foreground="#1E293B"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center"/>
+                                <!-- Shape/Size info (Medium Slate) -->
+                                <TextBlock Text="{Binding ShapeType}"
+                                           FontSize="9"
+                                           Foreground="#64748B"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center"
+                                           Margin="0,1,0,0"/>
+                                 <TextBlock FontSize="8"
+                                            Foreground="#475569"
+                                            HorizontalAlignment="Center"
+                                            TextAlignment="Center">
+                                     <Run Text="{Binding WidthMeters, StringFormat={}{0:0.0}م, Mode=OneWay}"/>
+                                     <Run Text=" × "/>
+                                     <Run Text="{Binding HeightMeters, StringFormat={}{0:0.0}م, Mode=OneWay}"/>
+                                 </TextBlock>
+                             </StackPanel>
+
+                            <!-- Direct Resize Thumb (bottom-right corner) -->
+                            <Thumb Width="12" Height="12" 
+                                   HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                   Margin="0,0,-6,-6"
+                                   Cursor="SizeNWSE"
+                                   DragStarted="ResizeThumb_DragStarted"
+                                   DragDelta="ResizeThumb_DragDelta"
+                                   DragCompleted="ResizeThumb_DragCompleted">
+                                <Thumb.Style>
+                                    <Style TargetType="Thumb">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Thumb">
+                                                    <Ellipse Fill="#4F46E5" Stroke="White" StrokeThickness="1.5"/>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Thumb.Style>
+                            </Thumb>
+
+                            <!-- Direct Rotate Thumb (top-center) -->
+                            <Thumb Width="12" Height="24" 
+                                   HorizontalAlignment="Center" VerticalAlignment="Top"
+                                   Margin="0,-24,0,0"
+                                   Cursor="Hand"
+                                   DragStarted="RotateThumb_DragStarted"
+                                   DragDelta="RotateThumb_DragDelta"
+                                   DragCompleted="RotateThumb_DragCompleted">
+                                <Thumb.Style>
+                                    <Style TargetType="Thumb">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Thumb">
+                                                    <Grid>
+                                                        <!-- Line connecting to node border -->
+                                                        <Line X1="6" Y1="12" X2="6" Y2="24" Stroke="#4F46E5" StrokeThickness="1.5"/>
+                                                        <Ellipse Fill="#10B981" Stroke="White" StrokeThickness="1.5" Width="10" Height="10" VerticalAlignment="Top"/>
+                                                    </Grid>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Thumb.Style>
+                            </Thumb>
+                        </Grid>
+                    </DataTemplate>
+                </nodify:NodifyEditor.ItemTemplate>
+
+                <!-- Decorator container styling for nodes -->
+                <nodify:NodifyEditor.ItemContainerStyle>
+                    <Style TargetType="{x:Type nodify:ItemContainer}">
+                        <Setter Property="Location" Value="{Binding Location, Mode=TwoWay}"/>
+                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                    </Style>
+                </nodify:NodifyEditor.ItemContainerStyle>
+
+                <nodify:NodifyEditor.DecoratorTemplate>
+                    <DataTemplate>
+                        <Canvas IsHitTestVisible="False">
+                            <!-- Background Blueprint Image Overlay -->
+                            <Image Source="{Binding DataContext.BackgroundImagePath, RelativeSource={RelativeSource AncestorType=nodify:NodifyEditor}}" 
+                                   Opacity="0.3"
+                                   Width="{Binding DataContext.HallWidth, RelativeSource={RelativeSource AncestorType=nodify:NodifyEditor}}" 
+                                   Height="{Binding DataContext.HallHeight, RelativeSource={RelativeSource AncestorType=nodify:NodifyEditor}}" 
+                                   Stretch="Fill"
+                                   Canvas.Left="0" Canvas.Top="0"/>
+
+                            <!-- Hall Boundary representation -->
+                            <Rectangle Stroke="#3B82F6" StrokeThickness="3" StrokeDashArray="4,4" 
+                                       Width="{Binding DataContext.HallWidth, RelativeSource={RelativeSource AncestorType=nodify:NodifyEditor}}" 
+                                       Height="{Binding DataContext.HallHeight, RelativeSource={RelativeSource AncestorType=nodify:NodifyEditor}}" 
+                                       Fill="#053B82F6"
+                                       Canvas.Left="0" Canvas.Top="0"/>
+                            
+                            <!-- Hall Name Text -->
+                            <TextBlock Text="{Binding DataContext.HallName, RelativeSource={RelativeSource AncestorType=nodify:NodifyEditor}}" 
+                                       Foreground="#3B82F6" FontSize="20" FontWeight="Bold" 
+                                       Canvas.Left="20" Canvas.Top="20" Opacity="0.5"/>
+                        </Canvas>
+                    </DataTemplate>
+                </nodify:NodifyEditor.DecoratorTemplate>
+            </nodify:NodifyEditor>
+
+            <!-- Floating Occupancy Stats Dashboard Card (top-left) -->
+            <Border HorizontalAlignment="Left" VerticalAlignment="Top"
+                    Margin="24" Padding="16" Width="240"
+                    Background="#EE1E293B" CornerRadius="12" BorderThickness="1.5" BorderBrush="#334155"
+                    Visibility="{Binding SelectedHallId, Converter={StaticResource NullToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="📊 إحصائيات إشغال الصالة" FontFamily="{StaticResource WorkSansBold}" FontWeight="Bold" FontSize="13" Foreground="White" Margin="0,0,0,12"/>
+                    
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="إجمالي الأجنحة:" Foreground="#94A3B8" FontSize="11" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding TotalBoothsCount}" Foreground="White" FontSize="11" FontWeight="Bold" HorizontalAlignment="Right"/>
+                    </Grid>
+                    
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="المساحة المحجوزة:" Foreground="#94A3B8" FontSize="11" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding TotalReservedArea, StringFormat={}{0} م²}" Foreground="#38BDF8" FontSize="11" FontWeight="Bold" HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="المساحة المتاحة:" Foreground="#94A3B8" FontSize="11" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding TotalAvailableArea, StringFormat={}{0} م²}" Foreground="#34D399" FontSize="11" FontWeight="Bold" HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Separator Background="#334155" Margin="0,4,0,8"/>
+
+                    <Grid>
+                        <TextBlock Text="نسبة إشغال الصالة:" Foreground="#94A3B8" FontSize="11" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding OccupancyPercentage}" Foreground="#FBBF24" FontSize="12" FontWeight="Bold"/>
+                            <TextBlock Text="%" Foreground="#FBBF24" FontSize="12" FontWeight="Bold"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Floating Color Legend Card (bottom-left, above coordinates) -->
+            <Border HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                    Margin="24,0,0,68" Padding="12" Width="180"
+                    Background="#DD1E293B" CornerRadius="8" BorderThickness="1" BorderBrush="#334155"
+                    Visibility="{Binding SelectedHallId, Converter={StaticResource NullToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="🎨 مفتاح الألوان" FontWeight="Bold" FontSize="11" Foreground="White" Margin="0,0,0,8"/>
+                    
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <Ellipse Width="8" Height="8" Fill="#10B981" Margin="0,0,8,0"/>
+                        <TextBlock Text="جناح متاح" Foreground="#E2E8F0" FontSize="10"/>
+                    </StackPanel>
+                    
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <Ellipse Width="8" Height="8" Fill="#3B82F6" Margin="0,0,8,0"/>
+                        <TextBlock Text="جناح محجوز" Foreground="#E2E8F0" FontSize="10"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="8" Height="8" Fill="#F59E0B" Margin="0,0,8,0"/>
+                        <TextBlock Text="قيد المراجعة" Foreground="#E2E8F0" FontSize="10"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Cursor coordinates footer (bottom-left) -->
+            <Border HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                    Margin="24" Padding="12,8"
+                    Background="#DD1E293B" CornerRadius="6" BorderThickness="1" BorderBrush="#2A4365"
+                    Visibility="{Binding SelectedHallId, Converter={StaticResource NullToVisibility}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="📏 موقع المؤشر: " Foreground="#94A3B8" FontSize="11" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding CursorCoordinateString}" Foreground="#38BDF8" FontSize="11" FontWeight="Bold"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Floating Compass North Indicator Rose (top-right) -->
+            <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Margin="24" Padding="8" Width="64" Height="64"
+                    Background="#DD1E293B" CornerRadius="32" BorderThickness="1" BorderBrush="#334155"
+                    Visibility="{Binding SelectedHallId, Converter={StaticResource NullToVisibility}}"
+                    ToolTip="اتجاه الشمال المعماري">
+                <Grid>
+                    <!-- Compass dial background lines -->
+                    <Line X1="24" Y1="4" X2="24" Y2="44" Stroke="#475569" StrokeThickness="1" StrokeDashArray="2,2"/>
+                    <Line X1="4" Y1="24" X2="44" Y2="24" Stroke="#475569" StrokeThickness="1" StrokeDashArray="2,2"/>
+                    
+                    <!-- North Arrow (Red) -->
+                    <Path Data="M24,4 L29,24 L24,20 Z" Fill="#EF4444" Stroke="#EF4444" StrokeThickness="0.5"/>
+                    <!-- South Arrow (Slate) -->
+                    <Path Data="M24,44 L29,24 L24,28 Z" Fill="#94A3B8" Stroke="#94A3B8" StrokeThickness="0.5"/>
+                    <!-- East Arrow (Slate) -->
+                    <Path Data="M44,24 L24,29 L28,24 Z" Fill="#64748B" Stroke="#64748B" StrokeThickness="0.5"/>
+                    <!-- West Arrow (Slate) -->
+                    <Path Data="M4,24 L24,29 L20,24 Z" Fill="#64748B" Stroke="#64748B" StrokeThickness="0.5"/>
+                    
+                    <!-- Text N for North -->
+                    <TextBlock Text="N" Foreground="#EF4444" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-4,0,0"/>
+                    <TextBlock Text="S" Foreground="#94A3B8" FontSize="8" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-4"/>
+                </Grid>
+            </Border>
+
+            <!-- Minimap using VisualBrush of BoothEditor -->
+            <Border Width="220" Height="140"
+                    VerticalAlignment="Bottom"
+                    HorizontalAlignment="Right"
+                    Margin="0,0,24,24"
+                    Background="#DD1E293B"
+                    BorderBrush="#3B82F6"
+                    BorderThickness="2"
+                    CornerRadius="8"
+                    Opacity="0.85"
+                    IsHitTestVisible="False">
+                <Rectangle Margin="5">
+                    <Rectangle.Fill>
+                        <VisualBrush Visual="{Binding ElementName=BoothEditor}"/>
+                    </Rectangle.Fill>
+                </Rectangle>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

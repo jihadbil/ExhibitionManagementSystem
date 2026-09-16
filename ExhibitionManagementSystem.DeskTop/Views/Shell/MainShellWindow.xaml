@@ -9,7 +9,8 @@
         FlowDirection="RightToLeft"
         Loaded="MainShellWindow_Loaded"
         WindowStartupLocation="CenterScreen"
-        MinHeight="700" MinWidth="1100">
+        Width="1440" Height="900"
+        MinWidth="1200" MinHeight="768">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="256"/>
@@ -22,7 +23,7 @@
         <!-- Content Area -->
         <DockPanel Grid.Column="1">
             <nav:TopBarControl DockPanel.Dock="Top" x:Name="TopBar" Height="64"/>
-            <Frame x:Name="MainFrame" NavigationUIVisibility="Hidden"/>
+            <Frame x:Name="MainFrame" NavigationUIVisibility="Hidden" Navigated="MainFrame_Navigated"/>
         </DockPanel>
 
         <!-- Toast Overlay -->

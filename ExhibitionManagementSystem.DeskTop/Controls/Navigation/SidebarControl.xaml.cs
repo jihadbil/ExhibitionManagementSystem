@@ -19,6 +19,14 @@ using ExhibitionManagementSystem.DeskTop.Views.Analytics;
 using ExhibitionManagementSystem.DeskTop.Views.Settings;
 using ExhibitionManagementSystem.DeskTop.Views.Auth;
 using ExhibitionManagementSystem.DeskTop.Views.Venues;
+using ExhibitionManagementSystem.DeskTop.Views.Reservations;
+using ExhibitionManagementSystem.DeskTop.Views.Financial;
+using ExhibitionManagementSystem.DeskTop.Views.Users;
+using ExhibitionManagementSystem.DeskTop.Views.Services;
+using ExhibitionManagementSystem.DeskTop.Views.Admin;
+using ExhibitionManagementSystem.DeskTop.Views.Tenants;
+using ExhibitionManagementSystem.DeskTop.Views.Badges;
+using ExhibitionManagementSystem.DeskTop.Views.Sponsorship;
 
 namespace ExhibitionManagementSystem.DeskTop.Controls.Navigation;
 
@@ -27,7 +35,7 @@ public partial class SidebarControl : UserControl
     private INavigationService _navigationService = null!;
     private SessionService _sessionService = null!;
 
-    public ObservableCollection<NavItemModel> NavItems { get; } = [];
+    public ObservableCollection<NavCategoryModel> Categories { get; } = [];
 
     public SidebarControl()
     {
@@ -46,27 +54,71 @@ public partial class SidebarControl : UserControl
 
         _navigationService.Navigated += OnNavigated;
 
-        // Initialize Nav Items
-        var items = new List<NavItemModel>
+        // Initialize Nav Categories and Items
+        var categories = new List<NavCategoryModel>
         {
-            new() { Label = "لوحة التحكم",    Icon = "⊞", Route = "Dashboard" },
-            new() { Label = "المعارض",         Icon = "🏛", Route = "Exhibitions" },
-            new() { Label = "المواقع والقاعات", Icon = "📍", Route = "Venues" },
-            new() { Label = "الأجنحة",         Icon = "🏪", Route = "Booths" },
-            new() { Label = "الشركات العارضة", Icon = "🏢", Route = "Companies" },
-            new() { Label = "الفعاليات",       Icon = "📅", Route = "Events" },
-            new() { Label = "التذاكر والزوار", Icon = "🎟", Route = "Tickets" },
-            new() { Label = "التحليلات",       Icon = "📊", Route = "Analytics" },
-            new() { Label = "الإعدادات",       Icon = "⚙", Route = "Settings" }
+            new()
+            {
+                Name = "العامة والتحليلات",
+                Items = new ObservableCollection<NavItemModel>
+                {
+                    new() { Label = "لوحة التحكم",    Icon = "IconDashboard", Route = "Dashboard" },
+                    new() { Label = "التحليلات",       Icon = "IconAnalytics", Route = "Analytics" }
+                }
+            },
+            new()
+            {
+                Name = "إدارة المعارض",
+                Items = new ObservableCollection<NavItemModel>
+                {
+                    new() { Label = "المعارض",         Icon = "IconExhibition", Route = "Exhibitions" },
+                    new() { Label = "الفعاليات",       Icon = "IconCalendar", Route = "Events" },
+                    new() { Label = "المواقع والقاعات", Icon = "IconLocation", Route = "Venues" },
+                    new() { Label = "الأجنحة",         Icon = "IconBooth", Route = "Booths" },
+                    new() { Label = "مصمم الشارات",    Icon = "IconBadge", Route = "BadgeDesigner" },
+                    new() { Label = "كشك الاستقبال",   Icon = "IconKiosk", Route = "CheckInKiosk" }
+                }
+            },
+            new()
+            {
+                Name = "المبيعات والحجوزات",
+                Items = new ObservableCollection<NavItemModel>
+                {
+                    new() { Label = "الحجوزات",        Icon = "IconReservation", Route = "Reservations" },
+                    new() { Label = "الفواتير",        Icon = "IconInvoice", Route = "Invoices" },
+                    new() { Label = "الخدمات والتسعير", Icon = "IconServices", Route = "Services" },
+                    new() { Label = "التذاكر والزوار", Icon = "IconTicket", Route = "Tickets" }
+                }
+            },
+            new()
+            {
+                Name = "العارضون والشركاء",
+                Items = new ObservableCollection<NavItemModel>
+                {
+                    new() { Label = "الشركات العارضة", Icon = "IconCompany", Route = "Companies" },
+                    new() { Label = "الرعاة والإعلانات", Icon = "IconSponsor", Route = "Sponsorship" }
+                }
+            },
+            new()
+            {
+                Name = "إدارة النظام",
+                Items = new ObservableCollection<NavItemModel>
+                {
+                    new() { Label = "المستخدمون والأدوار", Icon = "IconUsers", Route = "Users" },
+                    new() { Label = "ملف الشركة", Icon = "IconTenants", Route = "Tenants" },
+                    new() { Label = "إدارة النظام",     Icon = "IconAdmin", Route = "Admin"   },
+                    new() { Label = "الإعدادات",       Icon = "IconSettings", Route = "Settings" }
+                }
+            }
         };
 
-        NavItems.Clear();
-        foreach (var item in items)
+        Categories.Clear();
+        foreach (var category in categories)
         {
-            NavItems.Add(item);
+            Categories.Add(category);
         }
 
-        NavItemsList.ItemsSource = NavItems;
+        NavItemsList.ItemsSource = Categories;
 
         // Set initial highlight based on current route
         UpdateActiveRoute(_navigationService.CurrentRoute);
@@ -79,9 +131,29 @@ public partial class SidebarControl : UserControl
 
     private void UpdateActiveRoute(string route)
     {
-        foreach (var item in NavItems)
+        foreach (var category in Categories)
         {
-            item.IsActive = (item.Route == route);
+            bool hasActive = false;
+            foreach (var item in category.Items)
+            {
+                item.IsActive = (item.Route == route);
+                if (item.IsActive)
+                {
+                    hasActive = true;
+                }
+            }
+            if (hasActive)
+            {
+                category.IsExpanded = true;
+            }
+        }
+    }
+
+    private void CategoryHeader_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement element && element.DataContext is NavCategoryModel category)
+        {
+            category.IsExpanded = !category.IsExpanded;
         }
     }
 
@@ -109,14 +181,41 @@ public partial class SidebarControl : UserControl
             case "Booths":
                 _navigationService.NavigateTo<BoothsPage>();
                 break;
+            case "BadgeDesigner":
+                _navigationService.NavigateTo<BadgeDesignerPage>();
+                break;
+            case "CheckInKiosk":
+                _navigationService.NavigateTo<CheckInKioskPage>();
+                break;
+            case "Sponsorship":
+                _navigationService.NavigateTo<SponsorshipPage>();
+                break;
+            case "Reservations":
+                _navigationService.NavigateTo<ReservationsPage>();
+                break;
+            case "Invoices":
+                _navigationService.NavigateTo<InvoicesPage>();
+                break;
             case "Companies":
                 _navigationService.NavigateTo<CompaniesPage>();
                 break;
             case "Events":
                 _navigationService.NavigateTo<EventsPage>();
                 break;
+            case "Users":
+                _navigationService.NavigateTo<UsersPage>();
+                break;
+            case "Services":
+                _navigationService.NavigateTo<ServicesPage>();
+                break;
             case "Tickets":
                 _navigationService.NavigateTo<TicketsPage>();
+                break;
+            case "Tenants":
+                _navigationService.NavigateTo<TenantsPage>();
+                break;
+            case "Admin":
+                _navigationService.NavigateTo<AdminPage>();
                 break;
             case "Analytics":
                 _navigationService.NavigateTo<AnalyticsPage>();
@@ -139,6 +238,15 @@ public partial class SidebarControl : UserControl
         var parentWindow = Window.GetWindow(this);
         parentWindow?.Close();
     }
+}
+
+public partial class NavCategoryModel : ObservableObject
+{
+    public string Name { get; set; } = string.Empty;
+    public ObservableCollection<NavItemModel> Items { get; set; } = [];
+
+    [ObservableProperty]
+    private bool _isExpanded;
 }
 
 public partial class NavItemModel : ObservableObject

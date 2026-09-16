@@ -1,0 +1,214 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Views.Services.ServicesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:badges="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Badges"
+             mc:Ignorable="d" 
+             d:DesignHeight="750" d:DesignWidth="1100"
+             FlowDirection="RightToLeft">
+    <Grid Margin="32">
+        <Grid.RowDefinitions>
+            <!-- Header -->
+            <RowDefinition Height="Auto"/>
+            <!-- Content Area -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Text="إدارة الخدمات والتسعير والباقات" Style="{StaticResource H1Style}" Grid.Row="0" Margin="0,0,0,24"/>
+
+        <!-- TabControl -->
+        <TabControl Grid.Row="1" Style="{StaticResource AppTabControlStyle}">
+            
+            <!-- Tab 1: Services -->
+            <TabItem Header="الخدمات الإضافية" Style="{StaticResource AppTabItemStyle}">
+                <Grid Margin="0,20,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: Services List -->
+                    <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}" Padding="20">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Grid Grid.Row="0" Margin="0,0,0,16">
+                                <TextBlock Text="قائمة الخدمات الإضافية" Style="{StaticResource H2Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                <Button Content="+ إضافة خدمة" 
+                                        Style="{StaticResource PrimaryButtonStyle}" 
+                                        Click="AddService_Click"
+                                        VerticalAlignment="Center" 
+                                        HorizontalAlignment="Left"
+                                        Width="140" Height="36"/>
+                            </Grid>
+                            
+                            <DataGrid Grid.Row="1" 
+                                      ItemsSource="{Binding Services}"
+                                      Style="{StaticResource AppDataGridStyle}"
+                                      ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
+                                      RowStyle="{StaticResource AppDataGridRowStyle}"
+                                      CellStyle="{StaticResource AppDataGridCellStyle}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="اسم الخدمة" Binding="{Binding ServiceName}" Width="2*"/>
+                                    <DataGridTextColumn Header="الوصف" Binding="{Binding Description}" Width="3*"/>
+                                    <DataGridTextColumn Header="السعر الافتراضي" Binding="{Binding DefaultPrice, StringFormat=N2}" Width="*"/>
+                                    <DataGridTextColumn Header="الوحدة" Binding="{Binding Unit}" Width="*"/>
+                                    
+                                    <DataGridTemplateColumn Header="الحالة" Width="*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <badges:StatusBadgeControl Status="{Binding IsActive}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
+                                    <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                 <Button Style="{StaticResource SmallDangerButtonStyle}"
+                                                         Command="{Binding DataContext.DeactivateServiceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                         CommandParameter="{Binding ServiceID}"
+                                                         IsEnabled="{Binding IsActive}">
+                                                     <StackPanel Orientation="Horizontal">
+                                                         <Path Data="{StaticResource IconCancel}" Width="10" Height="10" Stretch="Uniform" Fill="White" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                         <TextBlock Text="تعطيل" FontSize="11" VerticalAlignment="Center"/>
+                                                     </StackPanel>
+                                                 </Button>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- Tab 2: Booth Pricing Rules -->
+            <TabItem Header="تسعير الأجنحة" Style="{StaticResource AppTabItemStyle}">
+                <Grid Margin="0,20,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: Rules List -->
+                    <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}" Padding="20">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,8">
+                                <TextBlock Text="قواعد تسعير الأجنحة" Style="{StaticResource H2Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                <Button Content="+ إضافة قاعدة تسعير" 
+                                        Style="{StaticResource PrimaryButtonStyle}" 
+                                        Click="AddPriceRule_Click"
+                                        VerticalAlignment="Center" 
+                                        HorizontalAlignment="Left"
+                                        Width="165" Height="36"/>
+                            </Grid>
+                            
+                            <!-- Filter Bar -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16" Grid.Row="1">
+                                <TextBlock Text="تصفية حسب المعرض: " Style="{StaticResource LabelStyle}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                                          ItemsSource="{Binding Exhibitions}"
+                                          DisplayMemberPath="Name"
+                                          SelectedValuePath="ExhibitionID"
+                                          SelectedValue="{Binding SelectedExhibitionIdForPricing}"
+                                          Width="250"/>
+                                <Button Content="كل المعارض (قاعدة عامة)" 
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Click="ClearPricingExhibition_Click"
+                                        Width="180" Height="48" Margin="12,0,0,0"/>
+                            </StackPanel>
+
+                            <DataGrid Grid.Row="2" 
+                                      ItemsSource="{Binding BoothPriceRules}"
+                                      Style="{StaticResource AppDataGridStyle}"
+                                      ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
+                                      RowStyle="{StaticResource AppDataGridRowStyle}"
+                                      CellStyle="{StaticResource AppDataGridCellStyle}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="اسم القاعدة" Binding="{Binding RuleName}" Width="1.5*"/>
+                                    <DataGridTextColumn Header="نوع الجناح" Binding="{Binding BoothType}" Width="*"/>
+                                    <DataGridTextColumn Header="فئة العارض" Binding="{Binding ExhibitorCategory}" Width="*"/>
+                                    <DataGridTextColumn Header="السعر / م²" Binding="{Binding PricePerSqM, StringFormat=N2}" Width="*"/>
+                                    <DataGridTextColumn Header="المعرض المرتبط" Binding="{Binding ExhibitionName, TargetNullValue='قاعدة عامة'}" Width="2*"/>
+                                    <DataGridTextColumn Header="العملة" Binding="{Binding CurrencyCode}" Width="Auto"/>
+                                    
+                                    <DataGridTemplateColumn Header="الإجراءات" Width="Auto">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="حذف ❌" 
+                                                        Style="{StaticResource DangerButtonStyle}"
+                                                        Command="{Binding DataContext.DeletePriceRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding RuleID}"
+                                                        Padding="8,2" Height="26"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- Tab 3: Packages -->
+            <TabItem Header="الباقات" Style="{StaticResource AppTabItemStyle}">
+                <Grid Margin="0,20,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: Packages List -->
+                    <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}" Padding="20">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,16">
+                                <TextBlock Text="الباقات المتاحة" Style="{StaticResource H2Style}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                <Button Content="+ إضافة باقة" 
+                                        Style="{StaticResource PrimaryButtonStyle}" 
+                                        Click="AddPackage_Click"
+                                        VerticalAlignment="Center" 
+                                        HorizontalAlignment="Left"
+                                        Width="140" Height="36"/>
+                            </Grid>
+
+                            <DataGrid Grid.Row="1" 
+                                      ItemsSource="{Binding Packages}"
+                                      Style="{StaticResource AppDataGridStyle}"
+                                      ColumnHeaderStyle="{StaticResource AppDataGridColumnHeaderStyle}"
+                                      RowStyle="{StaticResource AppDataGridRowStyle}"
+                                      CellStyle="{StaticResource AppDataGridCellStyle}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="اسم الباقة" Binding="{Binding PackageName}" Width="2*"/>
+                                    <DataGridTextColumn Header="الوصف" Binding="{Binding Description}" Width="3*"/>
+                                    <DataGridTextColumn Header="السعر الإجمالي" Binding="{Binding TotalPrice, StringFormat=N2}" Width="*"/>
+                                    <DataGridTextColumn Header="العملة" Binding="{Binding CurrencyCode}" Width="Auto"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>

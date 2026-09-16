@@ -15,4 +15,37 @@ public partial class TicketsPage : UserControl
 
         Loaded += async (s, e) => await ViewModel.OnNavigatedToAsync();
     }
+
+    private void RegisterVisitor_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        var formControl = new Controls.Forms.VisitorFormControl { DataContext = ViewModel };
+        var dialog = new Controls.Dialogs.FormDialog(formControl, "تسجيل زائر جديد")
+        {
+            Owner = System.Windows.Window.GetWindow(this)
+        };
+        ViewModel.CloseVisitorAction = () => dialog.Close();
+        dialog.ShowDialog();
+    }
+
+    private void IssueTicket_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        var formControl = new Controls.Forms.IssueTicketFormControl { DataContext = ViewModel };
+        var dialog = new Controls.Dialogs.FormDialog(formControl, "إصدار تذكرة جديدة")
+        {
+            Owner = System.Windows.Window.GetWindow(this)
+        };
+        ViewModel.CloseIssueTicketAction = () => dialog.Close();
+        dialog.ShowDialog();
+    }
+
+    private void ScanTicket_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        var formControl = new Controls.Forms.ScanTicketFormControl { DataContext = ViewModel };
+        var dialog = new Controls.Dialogs.FormDialog(formControl, "تحقق ومسح تذكرة")
+        {
+            Owner = System.Windows.Window.GetWindow(this)
+        };
+        ViewModel.CloseScanTicketAction = () => dialog.Close();
+        dialog.ShowDialog();
+    }
 }

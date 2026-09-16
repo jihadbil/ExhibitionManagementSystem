@@ -6,6 +6,7 @@ using ExhibitionManagementSystem.Services.Common;
 using ExhibitionManagementSystem.DeskTop.Services.Session;
 using ExhibitionManagementSystem.DeskTop.Services.Notifications;
 using ExhibitionManagementSystem.DeskTop.Views.Shell;
+using ExhibitionManagementSystem.DeskTop.Views.Auth;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
 
@@ -76,8 +77,15 @@ public partial class LoginViewModel : ObservableObject
                 var shellWindow = App.Services.GetRequiredService<MainShellWindow>();
                 shellWindow.Show();
 
-                // إغلاق نافذة Login الحالية
-                App.Current.Windows[0]?.Close(); 
+                // إغلاق نافذة Login الحالية بشكل آمن
+                foreach (System.Windows.Window window in System.Windows.Application.Current.Windows)
+                {
+                    if (window is LoginWindow)
+                    {
+                        window.Close();
+                        break;
+                    }
+                }
             }
             else
             {

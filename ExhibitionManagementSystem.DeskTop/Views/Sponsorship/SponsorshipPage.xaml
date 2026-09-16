@@ -1,0 +1,304 @@
+<UserControl x:Class="ExhibitionManagementSystem.DeskTop.Views.Sponsorship.SponsorshipPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="900" d:DesignWidth="1200"
+             FlowDirection="RightToLeft">
+    <Grid Margin="32">
+        <Grid.RowDefinitions>
+            <!-- Header (Title + Exhibition Selector + Actions) -->
+            <RowDefinition Height="Auto"/>
+            <!-- Statistics KPI Cards -->
+            <RowDefinition Height="Auto"/>
+            <!-- TabControl Content -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header Area -->
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="إدارة الرعاة والمساحات الإعلانية" Style="{StaticResource H1Style}"/>
+                <TextBlock Text="تخصيص باقات الرعاية وإدارة المساحات الإعلانية وعقود وتخصيصات الشركات الراعية" 
+                           Style="{StaticResource BodyMutedStyle}" Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Exhibition Selector -->
+                <StackPanel Margin="0,0,16,0">
+                    <TextBlock Text="المعرض المحدد" Style="{StaticResource LabelStyle}" Margin="0,0,0,2"/>
+                    <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
+                              ItemsSource="{Binding Exhibitions}" 
+                              SelectedValuePath="ExhibitionID" 
+                              DisplayMemberPath="Name" 
+                              SelectedValue="{Binding SelectedExhibitionId}" 
+                              Width="200"/>
+                </StackPanel>
+
+                <!-- Actions Menu -->
+                <Button Content="+ راعي جديد" 
+                        Style="{StaticResource OutlineButtonStyle}" 
+                        Click="AddSponsor_Click"
+                        Width="120" Height="40" Margin="0,18,8,0"/>
+                <Button Content="+ باقة رعاية" 
+                        Style="{StaticResource OutlineButtonStyle}" 
+                        Click="AddPackage_Click"
+                        Width="120" Height="40" Margin="0,18,8,0"/>
+                <Button Content="+ مساحة إعلانية" 
+                        Style="{StaticResource OutlineButtonStyle}" 
+                        Click="AddSpace_Click"
+                        Width="130" Height="40" Margin="0,18,8,0"/>
+                <Button Content="+ توثيق عقد" 
+                        Style="{StaticResource PrimaryButtonStyle}" 
+                        Click="AddContract_Click"
+                        Width="120" Height="40" Margin="0,18,0,0"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- KPI Summary Cards -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Total Sponsors -->
+            <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="إجمالي الرعاة المعتمدين" Style="{StaticResource BodyMutedStyle}"/>
+                    <TextBlock Text="{Binding TotalSponsorsCount}" Style="{StaticResource MetricLargeStyle}" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Sponsorship Revenue -->
+            <Border Grid.Column="2" Style="{StaticResource StandardCardStyle}" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="عوائد عقود الرعاية الموثقة" Style="{StaticResource BodyMutedStyle}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding TotalSponsorshipRevenue, StringFormat='{}{0:N0}'}" Style="{StaticResource MetricLargeStyle}" Foreground="#059669"/>
+                        <TextBlock Text=" د.ل" FontSize="14" FontWeight="Bold" Foreground="#059669" VerticalAlignment="Bottom" Margin="4,0,0,4"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Total Advertising Spaces -->
+            <Border Grid.Column="4" Style="{StaticResource StandardCardStyle}" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="إجمالي المساحات الإعلانية" Style="{StaticResource BodyMutedStyle}"/>
+                    <TextBlock Text="{Binding TotalSpacesCount}" Style="{StaticResource MetricLargeStyle}" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Available / Occupied -->
+            <Border Grid.Column="6" Style="{StaticResource StandardCardStyle}" Padding="20">
+                <StackPanel>
+                    <TextBlock Text="المساحات الشاغرة / المحجوزة" Style="{StaticResource BodyMutedStyle}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding AvailableSpacesCount}" Style="{StaticResource MetricLargeStyle}" Foreground="{StaticResource PrimaryBrush}"/>
+                        <TextBlock Text=" شاغرة / " FontSize="14" Foreground="#64748B" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding OccupiedSpacesCount}" FontSize="18" FontWeight="Bold" Foreground="#DC2626" VerticalAlignment="Center"/>
+                        <TextBlock Text=" محجوزة" FontSize="14" Foreground="#64748B" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Main TabControl -->
+        <TabControl Grid.Row="2" Background="Transparent" BorderThickness="0">
+            <!-- TAB 1: SPONSORS & PACKAGES -->
+            <TabItem Header="💼 الرعاة وباقات الرعاية" FontSize="14" FontWeight="SemiBold">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,16,0,0">
+                    <StackPanel>
+                        <!-- Sponsorship Packages Section -->
+                        <Border Style="{StaticResource StandardCardStyle}" Padding="20" Margin="0,0,0,20">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,16">
+                                    <TextBlock Text="باقات ومستويات الرعاية (Sponsorship Packages)" Style="{StaticResource H3Style}" VerticalAlignment="Center"/>
+                                    <Button Content="+ باقة جديدة" Style="{StaticResource OutlineButtonStyle}" Click="AddPackage_Click" HorizontalAlignment="Left" Width="120" Height="32"/>
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{Binding Packages}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Width="260" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1.5" CornerRadius="12" Padding="16" Margin="0,0,16,16">
+                                                <StackPanel>
+                                                    <!-- Level Badge & Price -->
+                                                    <Grid Margin="0,0,0,8">
+                                                        <Border Background="{StaticResource PrimaryBrush}" CornerRadius="6" Padding="8,4" HorizontalAlignment="Right">
+                                                            <TextBlock Text="{Binding LevelName}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                                        </Border>
+                                                        <TextBlock Text="{Binding Price, StringFormat='{}{0:N0} د.ل'}" FontSize="16" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Left"/>
+                                                    </Grid>
+
+                                                    <TextBlock Text="{Binding PackageName}" FontSize="15" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,4"/>
+                                                    <TextBlock Text="{Binding EntitlementsDescription}" FontSize="11" Foreground="#64748B" TextWrapping="Wrap" MaxHeight="60" Margin="0,0,0,8"/>
+
+                                                    <Grid Margin="0,8,0,0">
+                                                        <TextBlock Text="{Binding AllocatedSponsorsCount, StringFormat='المحجوز: {0}'}" FontSize="11" Foreground="#475569" VerticalAlignment="Center"/>
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                                            <Button Content="تعديل" Style="{StaticResource OutlineButtonStyle}" Click="EditPackage_Click" Tag="{Binding}" Height="28" Width="55" Margin="0,0,6,0"/>
+                                                            <Button Content="حذف" Style="{StaticResource DangerButtonStyle}" Command="{Binding DataContext.DeletePackageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding PackageID}" Height="28" Width="50"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Sponsors Directory -->
+                        <Border Style="{StaticResource StandardCardStyle}" Padding="20">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,16">
+                                    <TextBlock Text="دليل الشركات الراعية (Sponsors Directory)" Style="{StaticResource H3Style}" VerticalAlignment="Center"/>
+                                    <Button Content="+ إضافة راعي" Style="{StaticResource OutlineButtonStyle}" Click="AddSponsor_Click" HorizontalAlignment="Left" Width="120" Height="32"/>
+                                </Grid>
+
+                                <DataGrid ItemsSource="{Binding Sponsors}" 
+                                          AutoGenerateColumns="False" 
+                                          IsReadOnly="True" 
+                                          CanUserAddRows="False"
+                                          BorderThickness="0"
+                                          GridLinesVisibility="Horizontal"
+                                          HorizontalGridLinesBrush="#E2E8F0"
+                                          Background="Transparent"
+                                          RowHeight="46">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="الشركة الراعية" Binding="{Binding CompanyName}" Width="2.5*"/>
+                                        <DataGridTextColumn Header="مسؤول التواصل" Binding="{Binding ContactPerson}" Width="2*"/>
+                                        <DataGridTextColumn Header="الهاتف" Binding="{Binding Phone}" Width="1.5*"/>
+                                        <DataGridTextColumn Header="البريد الإلكتروني" Binding="{Binding Email}" Width="2*"/>
+                                        <DataGridTextColumn Header="عدد العقود" Binding="{Binding TotalContractsCount}" Width="1*"/>
+                                        <DataGridTemplateColumn Header="إجراءات" Width="140">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                        <Button Content="تعديل" Style="{StaticResource OutlineButtonStyle}" Click="EditSponsor_Click" Tag="{Binding}" Height="28" Width="55" Margin="0,0,6,0"/>
+                                                        <Button Content="حذف" Style="{StaticResource DangerButtonStyle}" Command="{Binding DataContext.DeleteSponsorCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding SponsorID}" Height="28" Width="50"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- TAB 2: ADVERTISING SPACES -->
+            <TabItem Header="📢 المساحات الإعلانية" FontSize="14" FontWeight="SemiBold">
+                <Border Style="{StaticResource StandardCardStyle}" Padding="20" Margin="0,16,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,16">
+                            <TextBlock Text="مساحات وشاشات العرض واللافتات المعلقة" Style="{StaticResource H3Style}" VerticalAlignment="Center"/>
+                            <Button Content="+ إضافة مساحة" Style="{StaticResource OutlineButtonStyle}" Click="AddSpace_Click" HorizontalAlignment="Left" Width="130" Height="32"/>
+                        </Grid>
+
+                        <DataGrid Grid.Row="1" 
+                                  ItemsSource="{Binding AdvertisingSpaces}" 
+                                  AutoGenerateColumns="False" 
+                                  IsReadOnly="True" 
+                                  CanUserAddRows="False"
+                                  BorderThickness="0"
+                                  GridLinesVisibility="Horizontal"
+                                  HorizontalGridLinesBrush="#E2E8F0"
+                                  Background="Transparent"
+                                  RowHeight="46">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="الرمز" Binding="{Binding SpaceCode}" Width="1*"/>
+                                <DataGridTextColumn Header="اسم المساحة" Binding="{Binding SpaceName}" Width="2*"/>
+                                <DataGridTextColumn Header="النوع" Binding="{Binding SpaceTypeName}" Width="1.5*"/>
+                                <DataGridTextColumn Header="الأبعاد / المقاس" Binding="{Binding DimensionsDescription}" Width="1.5*"/>
+                                <DataGridTextColumn Header="السعر الأساسي" Binding="{Binding BasePrice, StringFormat='{}{0:N0} د.ل'}" Width="1.5*"/>
+                                <DataGridTemplateColumn Header="الحالة" Width="1.2*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{Binding IsAvailable, Converter={StaticResource BoolToStatusBrushConverter}}" CornerRadius="4" Padding="6,2" HorizontalAlignment="Center">
+                                                <TextBlock Text="{Binding IsAvailable, Converter={StaticResource BoolToAvailabilityTextConverter}}" FontSize="11" FontWeight="Bold" Foreground="White"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="الراعي الحالي" Binding="{Binding CurrentSponsorName}" Width="2*"/>
+                                <DataGridTemplateColumn Header="إجراءات" Width="140">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                <Button Content="تعديل" Style="{StaticResource OutlineButtonStyle}" Click="EditSpace_Click" Tag="{Binding}" Height="28" Width="55" Margin="0,0,6,0"/>
+                                                <Button Content="حذف" Style="{StaticResource DangerButtonStyle}" Command="{Binding DataContext.DeleteSpaceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding SpaceID}" Height="28" Width="50"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+            </TabItem>
+
+            <!-- TAB 3: CONTRACTS & ALLOCATIONS -->
+            <TabItem Header="📜 عقود الرعاية والتخصيصات" FontSize="14" FontWeight="SemiBold">
+                <Border Style="{StaticResource StandardCardStyle}" Padding="20" Margin="0,16,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,16">
+                            <TextBlock Text="سجل عقود الرعاية والاتفاقيات المبرمة" Style="{StaticResource H3Style}" VerticalAlignment="Center"/>
+                            <Button Content="+ توثيق عقد رعاية" Style="{StaticResource PrimaryButtonStyle}" Click="AddContract_Click" HorizontalAlignment="Left" Width="150" Height="34"/>
+                        </Grid>
+
+                        <DataGrid Grid.Row="1" 
+                                  ItemsSource="{Binding Contracts}" 
+                                  AutoGenerateColumns="False" 
+                                  IsReadOnly="True" 
+                                  CanUserAddRows="False"
+                                  BorderThickness="0"
+                                  GridLinesVisibility="Horizontal"
+                                  HorizontalGridLinesBrush="#E2E8F0"
+                                  Background="Transparent"
+                                  RowHeight="48">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="رقم العقد" Binding="{Binding ContractNumber}" Width="1.5*"/>
+                                <DataGridTextColumn Header="الشركة الراعية" Binding="{Binding SponsorCompanyName}" Width="2*"/>
+                                <DataGridTextColumn Header="الباقة المعتمدة" Binding="{Binding PackageName}" Width="1.5*"/>
+                                <DataGridTextColumn Header="إجمالي المبلغ" Binding="{Binding TotalAmount, StringFormat='{}{0:N0} د.ل'}" Width="1.5*"/>
+                                <DataGridTextColumn Header="حالة العقد" Binding="{Binding StatusName}" Width="1.2*"/>
+                                <DataGridTextColumn Header="تاريخ التوقيع" Binding="{Binding SignedDate, StringFormat='{}{0:dd/MM/yyyy}'}" Width="1.2*"/>
+                                <DataGridTextColumn Header="استحقاق السداد" Binding="{Binding PaymentDueDate, StringFormat='{}{0:dd/MM/yyyy}'}" Width="1.2*"/>
+                                <DataGridTextColumn Header="المساحات الإعلانية المخصصة" Binding="{Binding AdAssignments.Count, StringFormat='{}{0} مساحات'}" Width="1.8*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</UserControl>

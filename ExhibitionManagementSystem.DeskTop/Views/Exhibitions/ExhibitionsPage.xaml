@@ -4,6 +4,9 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:cards="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Cards"
+             xmlns:feedback="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Feedback"
+             xmlns:nav="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Navigation"
+             xmlns:forms="clr-namespace:ExhibitionManagementSystem.DeskTop.Controls.Forms"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="900"
              FlowDirection="RightToLeft">
@@ -32,87 +35,58 @@
 
         <!-- Search Area -->
         <Border Grid.Row="1" Style="{StaticResource StandardCardStyle}" Padding="16" Margin="0,0,0,24">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="12"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <TextBox Style="{StaticResource StandardTextBoxStyle}" 
-                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
-                         Grid.Column="0"
-                         VerticalContentAlignment="Center"
-                         Tag="ابحث عن معرض بالاسم..."/>
-
-                <Button Style="{StaticResource PrimaryButtonStyle}" 
-                        Command="{Binding LoadExhibitionsCommand}"
-                        Content="🔍 بحث" 
-                        Grid.Column="2"
-                        Width="120" Height="48"/>
-            </Grid>
+            <forms:SearchBarControl SearchText="{Binding SearchQuery}"
+                                    PlaceholderText="ابحث عن معرض بالاسم..."
+                                    SearchCommand="{Binding LoadExhibitionsCommand}"/>
         </Border>
 
-        <!-- Cards Grid -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,20">
-            <ItemsControl ItemsSource="{Binding Exhibitions}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid Columns="3" VerticalAlignment="Top"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <cards:ExhibitionCardControl 
-                            ExhibitionId="{Binding ExhibitionID}"
-                            ExhibitionName="{Binding Name}"
-                            Type="{Binding Type}"
-                            StartDate="{Binding StartDate}"
-                            EndDate="{Binding EndDate}"
-                            VenueName="{Binding VenueName}"
-                            Status="{Binding Status}"
-                            EditRequested="Card_EditRequested"
-                            DeleteRequested="Card_DeleteRequested"
-                            Margin="8"/>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+        <!-- Cards Grid & Empty State -->
+        <Grid Grid.Row="2" Margin="0,0,0,20">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Visibility="{Binding Exhibitions.Count, Converter={StaticResource InverseCountToVisibility}}">
+                <ItemsControl ItemsSource="{Binding Exhibitions}" Grid.Row="1" Margin="-8">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <cards:ExhibitionCardControl 
+                                ExhibitionId="{Binding ExhibitionID}"
+                                ExhibitionName="{Binding Name}"
+                                Type="{Binding Type}"
+                                StartDate="{Binding StartDate}"
+                                EndDate="{Binding EndDate}"
+                                VenueName="{Binding VenueName}"
+                                Status="{Binding Status}"
+                                EditRequested="Card_EditRequested"
+                                DeleteRequested="Card_DeleteRequested"
+                                StatusChanged="Card_StatusChanged"
+                                Margin="8"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <feedback:EmptyStateControl 
+                Visibility="{Binding Exhibitions.Count, Converter={StaticResource CountToVisibility}}"
+                IconGeometry="{StaticResource IconExhibition}"
+                Title="لا توجد معارض حالياً"
+                Description="لم يتم تسجيل أي معرض بعد في النظام. اضغط على زر 'معرض جديد' للبدء في إضافة معرض."/>
+        </Grid>
 
         <!-- Pagination Footer -->
-        <Grid Grid.Row="3" VerticalAlignment="Bottom">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Backwards -->
-            <Button Style="{StaticResource SecondaryButtonStyle}" 
-                    Command="{Binding PrevPageCommand}"
-                    Content="الصفحة السابقة" 
-                    Grid.Column="0"
-                    HorizontalAlignment="Right"
-                    Width="140"/>
-
-            <!-- Status Indicator -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="24,0">
-                <TextBlock Text="الصفحة " Style="{StaticResource BodySecondaryStyle}"/>
-                <TextBlock Text="{Binding CurrentPage}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
-                <TextBlock Text=" من " Style="{StaticResource BodySecondaryStyle}"/>
-                <TextBlock Text="{Binding TotalPages}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
-                <TextBlock Text=" (الإجمالي: " Style="{StaticResource BodySecondaryStyle}"/>
-                <TextBlock Text="{Binding TotalCount}" Style="{StaticResource BodyStyle}" FontWeight="Bold"/>
-                <TextBlock Text=" معارض)" Style="{StaticResource BodySecondaryStyle}"/>
-            </StackPanel>
-
-            <!-- Forwards -->
-            <Button Style="{StaticResource SecondaryButtonStyle}" 
-                    Command="{Binding NextPageCommand}"
-                    Content="الصفحة التالية" 
-                    Grid.Column="2"
-                    HorizontalAlignment="Left"
-                    Width="140"/>
-        </Grid>
+        <nav:PaginationControl Grid.Row="3"
+                               CurrentPage="{Binding CurrentPage}"
+                               TotalPages="{Binding TotalPages}"
+                               TotalCount="{Binding TotalCount}"
+                               UnitLabel="معارض"
+                               PrevCommand="{Binding PrevPageCommand}"
+                               NextCommand="{Binding NextPageCommand}"/>
+        <!-- Loading Overlay -->
+        <feedback:LoadingOverlayControl Grid.Row="0" Grid.RowSpan="4"
+                                         IsLoading="{Binding IsBusy}"
+                                         Message="جاري تحميل المعارض..."/>
     </Grid>
 </UserControl>

@@ -84,6 +84,24 @@ public partial class ExhibitionsViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task ChangeStatusAsync((int exhibitionId, string newStatus) param)
+    {
+        await ExecuteSafeAsync(async () =>
+        {
+            var result = await _exhibitionService.ChangeStatusAsync(Session.TenantId, param.exhibitionId, param.newStatus);
+            if (result.IsSuccess)
+            {
+                NotificationService.ShowSuccess($"تم تغيير حالة المعرض إلى {param.newStatus} ✓");
+                await LoadExhibitionsAsync();
+            }
+            else
+            {
+                NotificationService.ShowError(result.ErrorMessage ?? "فشل تغيير الحالة");
+            }
+        }, "خطأ أثناء تغيير الحالة");
+    }
+
+    [RelayCommand]
     private async Task NextPageAsync()
     {
         if (CurrentPage < TotalPages)

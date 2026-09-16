@@ -37,7 +37,33 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock x:Name="EmojiText" Grid.Column="0" Text="🏛️" FontSize="24" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Path x:Name="TypeIcon" Grid.Column="0" Width="24" Height="24" Stretch="Uniform" Fill="{StaticResource PrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <Path.Style>
+                            <Style TargetType="Path">
+                                <Setter Property="Data" Value="{StaticResource IconExhibition}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Type, ElementName=Root}" Value="Tech">
+                                        <Setter Property="Data" Value="{StaticResource IconTech}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Type, ElementName=Root}" Value="Medical">
+                                        <Setter Property="Data" Value="{StaticResource IconMedical}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Type, ElementName=Root}" Value="Industrial">
+                                        <Setter Property="Data" Value="{StaticResource IconIndustrial}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Type, ElementName=Root}" Value="Commercial">
+                                        <Setter Property="Data" Value="{StaticResource IconCommercial}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Type, ElementName=Root}" Value="Educational">
+                                        <Setter Property="Data" Value="{StaticResource IconEducational}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Type, ElementName=Root}" Value="Automotive">
+                                        <Setter Property="Data" Value="{StaticResource IconAutomotive}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Path.Style>
+                    </Path>
                     <TextBlock Text="{Binding ExhibitionName, ElementName=Root}"
                                FontFamily="{StaticResource WorkSansBold}"
                                FontSize="16"
@@ -53,7 +79,7 @@
                 <!-- Details (Date & Venue) -->
                 <StackPanel Grid.Row="1" Margin="0,0,0,16">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="📅" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconCalendar}" Width="14" Height="14" Stretch="Uniform" Fill="{StaticResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock FontFamily="{StaticResource WorkSansRegular}" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center">
                             <TextBlock.Text>
                                 <MultiBinding Converter="{StaticResource DateRangeConverter}">
@@ -65,7 +91,7 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="📍" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconLocation}" Width="14" Height="14" Stretch="Uniform" Fill="{StaticResource TextSecondaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding VenueName, ElementName=Root}"
                                    FontFamily="{StaticResource WorkSansRegular}"
                                    FontSize="13"
@@ -87,25 +113,35 @@
             <Border Grid.Row="2" Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource BorderMainBrush}" BorderThickness="0,1,0,0" Padding="12">
                 <Grid>
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <Button Content="تعديل"
-                            Style="{StaticResource SecondaryButtonStyle}"
-                            Padding="16,6"
-                            Height="32"
-                            Grid.Column="0"
-                            HorizontalAlignment="Right"
-                            Click="Edit_Click"
-                            Margin="0,0,8,0"/>
                     <Button Content="حذف"
                             Style="{StaticResource DangerButtonStyle}"
-                            Padding="16,6"
+                            Padding="12,6"
                             Height="32"
                             Grid.Column="0"
-                            HorizontalAlignment="Left"
                             Click="Delete_Click"/>
+
+                    <ComboBox Width="110" Height="32" Margin="8,0"
+                              x:Name="StatusCombo"
+                              Grid.Column="1"
+                              SelectionChanged="StatusCombo_SelectionChanged"
+                              VerticalAlignment="Center">
+                        <ComboBoxItem Content="Upcoming" Tag="Upcoming"/>
+                        <ComboBoxItem Content="Open" Tag="Open"/>
+                        <ComboBoxItem Content="Closed" Tag="Closed"/>
+                        <ComboBoxItem Content="Cancelled" Tag="Cancelled"/>
+                    </ComboBox>
+
+                    <Button Content="تعديل"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Padding="12,6"
+                            Height="32"
+                            Grid.Column="2"
+                            Click="Edit_Click"/>
                 </Grid>
             </Border>
         </Grid>

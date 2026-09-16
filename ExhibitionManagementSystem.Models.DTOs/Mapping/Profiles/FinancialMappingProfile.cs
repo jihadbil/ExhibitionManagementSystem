@@ -14,7 +14,9 @@ public class FinancialMappingProfile : Profile
             .ForMember(dest => dest.ExhibitorName, opt => opt.MapFrom(src => src.Reservation != null && src.Reservation.Exhibitor != null ? src.Reservation.Exhibitor.CompanyName : string.Empty))
             .ForMember(dest => dest.CurrencySymbol, opt => opt.MapFrom(src => src.Currency != null ? src.Currency.Symbol : string.Empty))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
-            .ForMember(dest => dest.Payments, opt => opt.MapFrom(src => src.Payments));
+            .ForMember(dest => dest.Payments, opt => opt.MapFrom(src => src.Payments))
+            .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.InvoiceItems));
+
 
         CreateMap<InvoiceCreateDto, Invoice>()
             .ForMember(dest => dest.InvoiceID, opt => opt.Ignore())
@@ -23,6 +25,9 @@ public class FinancialMappingProfile : Profile
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => InvoiceStatus.Draft))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.DeletedByUserId, opt => opt.Ignore())
             .ForMember(dest => dest.Tenant, opt => opt.Ignore())
             .ForMember(dest => dest.Reservation, opt => opt.Ignore())
             .ForMember(dest => dest.Currency, opt => opt.Ignore())
@@ -42,11 +47,24 @@ public class FinancialMappingProfile : Profile
             .ForMember(dest => dest.Method, opt => opt.MapFrom(src => Enum.Parse<PaymentMethod>(src.Method, true)))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.ReceivedByUserId, opt => opt.Ignore())
             .ForMember(dest => dest.Invoice, opt => opt.Ignore())
             .ForMember(dest => dest.Currency, opt => opt.Ignore())
             .ForMember(dest => dest.ReceivedByUser, opt => opt.Ignore());
 
         CreateMap<FinancialReport, FinancialReportDto>()
             .ForMember(dest => dest.ExhibitionName, opt => opt.MapFrom(src => src.Exhibition != null ? src.Exhibition.Name : string.Empty));
+
+        CreateMap<InvoiceItem, InvoiceItemDto>();
+        CreateMap<InvoiceItemCreateDto, InvoiceItem>()
+            .ForMember(dest => dest.InvoiceItemID, opt => opt.Ignore())
+            .ForMember(dest => dest.InvoiceID, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.Quantity * src.UnitPrice))
+            .ForMember(dest => dest.Invoice, opt => opt.Ignore());
+        CreateMap<InvoiceItemUpdateDto, InvoiceItem>()
+            .ForMember(dest => dest.InvoiceID, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.Quantity * src.UnitPrice))
+            .ForMember(dest => dest.Invoice, opt => opt.Ignore());
     }
 }
+

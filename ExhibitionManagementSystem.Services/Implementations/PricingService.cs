@@ -29,15 +29,30 @@ namespace ExhibitionManagementSystem.Services.Implementations
             int? exhibitionId, 
             BoothType boothType, 
             ExhibitorCategory category, 
-            decimal areaSqM)
+            decimal areaSqM,
+            int? boothId = null)
         {
-            var rule = await _unitOfWork.BoothPriceRules.GetApplicableRuleAsync(
-                tenantId, 
-                exhibitionId, 
-                boothType, 
-                category, 
-                areaSqM, 
-                DateTime.UtcNow);
+            BoothPriceRule? rule = null;
+
+            if (boothId.HasValue && boothId.Value > 0)
+            {
+                var booth = await _unitOfWork.Booths.GetByIdAsync(boothId.Value);
+                if (booth != null && booth.AssignedPriceRuleID.HasValue)
+                {
+                    rule = await _unitOfWork.BoothPriceRules.GetByIdAsync(booth.AssignedPriceRuleID.Value);
+                }
+            }
+
+            if (rule == null)
+            {
+                rule = await _unitOfWork.BoothPriceRules.GetApplicableRuleAsync(
+                    tenantId, 
+                    exhibitionId, 
+                    boothType, 
+                    category, 
+                    areaSqM, 
+                    DateTime.UtcNow);
+            }
 
             if (rule == null)
             {

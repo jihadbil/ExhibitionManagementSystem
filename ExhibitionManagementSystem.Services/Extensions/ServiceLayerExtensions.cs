@@ -18,12 +18,16 @@ namespace ExhibitionManagementSystem.Services.Extensions
             services.AddScoped<IPricingService, PricingService>();
             services.AddScoped<IReservationService, ReservationService>();
             services.AddScoped<IFinancialService, FinancialService>();
+            services.AddScoped<IInvoiceItemService, InvoiceItemService>();
             services.AddScoped<IVisitorService, VisitorService>();
+
             services.AddScoped<ITicketService, TicketService>();
             services.AddScoped<ICurrencyService, CurrencyService>();
             services.AddScoped<IServiceManagementService, ServiceManagementService>();
             services.AddScoped<IReportService, ReportService>();
             services.AddScoped<IAdminService, AdminService>();
+            services.AddScoped<IBadgeService, BadgeService>();
+            services.AddScoped<ISponsorshipService, SponsorshipService>();
 
             return services;
         }
