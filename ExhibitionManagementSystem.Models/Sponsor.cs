@@ -9,7 +9,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل شركة أو جهة راعية للمعارض والفعاليات.
 /// </summary>
-public class Sponsor : IAuditableEntity, ISoftDeletable
+public class Sponsor : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     [Key]
     public int SponsorID { get; set; }

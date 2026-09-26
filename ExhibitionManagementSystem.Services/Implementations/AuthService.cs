@@ -4,16 +4,20 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using ExhibitionManagementSystem.Services.Security;
 using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
+using ExhibitionManagementSystem.DataAccess;
 using ExhibitionManagementSystem.DataAccess.Repositories.Interfaces;
 using ExhibitionManagementSystem.Models;
 using ExhibitionManagementSystem.Models.DTOs.Auth;
 using ExhibitionManagementSystem.Models.DTOs.Common;
+using ExhibitionManagementSystem.Models.Security;
 using ExhibitionManagementSystem.Services.Common;
 using ExhibitionManagementSystem.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -28,6 +32,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
         private readonly IConfiguration _configuration;
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ApplicationDbContext _dbContext;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
@@ -35,7 +41,9 @@ namespace ExhibitionManagementSystem.Services.Implementations
             RoleManager<ApplicationRole> roleManager,
             IConfiguration configuration,
             IMapper mapper,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            ApplicationDbContext dbContext,
+            IHttpContextAccessor httpContextAccessor)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -43,26 +51,26 @@ namespace ExhibitionManagementSystem.Services.Implementations
             _configuration = configuration;
             _mapper = mapper;
             _unitOfWork = unitOfWork;
+            _dbContext = dbContext;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         // Login & Registration
         public async Task<ServiceResult<LoginResponseDto>> LoginAsync(LoginRequestDto dto)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
-            if (user == null)
+            if (user == null || !user.IsActive)
             {
-                return ServiceResult<LoginResponseDto>.Failure("المستخدم غير موجود", "USER_NOT_FOUND");
+                return InvalidLogin();
             }
 
-            if (!user.IsActive)
-            {
-                return ServiceResult<LoginResponseDto>.Failure("الحساب غير نشط", "USER_INACTIVE");
-            }
-
-            var passwordResult = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: false);
+            var passwordResult = await _signInManager.CheckPasswordSignInAsync(
+                user,
+                dto.Password,
+                lockoutOnFailure: true);
             if (!passwordResult.Succeeded)
             {
-                return ServiceResult<LoginResponseDto>.Failure("كلمة المرور غير صحيحة", "INVALID_CREDENTIALS");
+                return InvalidLogin();
             }
 
             var roles = await _userManager.GetRolesAsync(user);
@@ -76,18 +84,30 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var accessToken = GenerateJwtToken(user, roles);
             var refreshToken = GenerateRefreshToken();
 
-            var refreshExpiryDays = int.Parse(_configuration["JwtSettings:RefreshTokenExpiryDays"] ?? "7");
-            user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(refreshExpiryDays);
+            var refreshExpiryDays = int.Parse(GetRequiredJwtSetting("RefreshTokenExpiryDays"));
             user.LastLogin = DateTime.UtcNow;
 
-            await _userManager.UpdateAsync(user);
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                return ServiceResult<LoginResponseDto>.Failure(
+                    "تعذر إكمال تسجيل الدخول",
+                    "LOGIN_UPDATE_FAILED");
+            }
+
+            _dbContext.RefreshSessions.Add(CreateRefreshSession(
+                user.Id,
+                user.TenantID,
+                refreshToken,
+                DateTime.UtcNow.AddDays(refreshExpiryDays)));
+            await _dbContext.SaveChangesAsync();
 
             var response = new LoginResponseDto
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(double.Parse(_configuration["JwtSettings:AccessTokenExpiryMinutes"] ?? "60")),
+                ExpiresAt = DateTime.UtcNow.AddMinutes(
+                    double.Parse(GetRequiredJwtSetting("AccessTokenExpiryMinutes"))),
                 UserId = user.Id,
                 FullName = user.FullName,
                 Email = user.Email ?? string.Empty,
@@ -100,54 +120,6 @@ namespace ExhibitionManagementSystem.Services.Implementations
             return ServiceResult<LoginResponseDto>.Success(response);
         }
 
-        public async Task<ServiceResult<UserManagementDto>> RegisterAsync(RegisterRequestDto dto)
-        {
-            var existingUser = await _userManager.FindByEmailAsync(dto.Email);
-            if (existingUser != null)
-            {
-                return ServiceResult<UserManagementDto>.Failure("البريد الإلكتروني مستخدم بالفعل", "EMAIL_ALREADY_EXISTS");
-            }
-
-            var tenant = await _unitOfWork.Tenants.GetByIdAsync(dto.TenantID);
-            if (tenant == null)
-            {
-                return ServiceResult<UserManagementDto>.Failure("المستأجر غير موجود", "TENANT_NOT_FOUND");
-            }
-
-            var user = new ApplicationUser
-            {
-                UserName = dto.Email,
-                Email = dto.Email,
-                FullName = dto.FullName,
-                TenantID = dto.TenantID,
-                IsActive = true
-            };
-
-            var createResult = await _userManager.CreateAsync(user, dto.Password);
-            if (!createResult.Succeeded)
-            {
-                var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
-                return ServiceResult<UserManagementDto>.Failure($"فشل إنشاء الحساب: {errors}", "REGISTRATION_FAILED");
-            }
-
-            if (!string.IsNullOrEmpty(dto.InitialRole))
-            {
-                var roleExists = await _roleManager.RoleExistsAsync(dto.InitialRole);
-                if (!roleExists)
-                {
-                    var newRole = new ApplicationRole { Name = dto.InitialRole, TenantID = dto.TenantID };
-                    await _roleManager.CreateAsync(newRole);
-                }
-                await _userManager.AddToRoleAsync(user, dto.InitialRole);
-            }
-
-            var roles = await _userManager.GetRolesAsync(user);
-            var userDto = _mapper.Map<UserManagementDto>(user);
-            userDto.Roles = roles.ToList();
-
-            return ServiceResult<UserManagementDto>.Success(userDto);
-        }
-
         public async Task<ServiceResult> LogoutAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
@@ -156,9 +128,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult.Failure("المستخدم غير موجود", "USER_NOT_FOUND");
             }
 
-            user.RefreshToken = null;
-            user.RefreshTokenExpiry = null;
-            await _userManager.UpdateAsync(user);
+            await RevokeAllSessionsAsync(user.Id, "Logout");
 
             return ServiceResult.Success();
         }
@@ -166,13 +136,15 @@ namespace ExhibitionManagementSystem.Services.Implementations
         // JWT & Refresh Token Management
         public async Task<ServiceResult<RefreshTokenResponseDto>> RefreshTokenAsync(RefreshTokenRequestDto dto)
         {
-            var secretKey = _configuration["JwtSettings:SecretKey"] ?? "SuperSecretKeyForExhibitionManagementSystemSecurity2026DefaultFallback";
+            var secretKey = GetRequiredJwtSetting("SecretKey");
             var tokenValidationParameters = new TokenValidationParameters
             {
-                ValidateAudience = false,
-                ValidateIssuer = false,
+                ValidateAudience = true,
+                ValidateIssuer = true,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+                ValidIssuer = GetRequiredJwtSetting("Issuer"),
+                ValidAudience = GetRequiredJwtSetting("Audience"),
                 ValidateLifetime = false
             };
 
@@ -193,27 +165,72 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
 
             var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
+            var tenantClaim = principal.FindFirst("TenantId")?.Value;
+            if (string.IsNullOrEmpty(userId) ||
+                !int.TryParse(tenantClaim, out var tenantId) ||
+                tenantId <= 0)
             {
-                return ServiceResult<RefreshTokenResponseDto>.Failure("رمز الوصول لا يحتوي على معرف مستخدم", "INVALID_ACCESS_TOKEN");
+                return ServiceResult<RefreshTokenResponseDto>.Failure("رمز الوصول لا يحتوي على بيانات مستخدم صالحة", "INVALID_ACCESS_TOKEN");
             }
 
             var user = await _userManager.FindByIdAsync(userId);
-            if (user == null || user.RefreshToken != dto.RefreshToken || user.RefreshTokenExpiry <= DateTime.UtcNow)
+            if (user == null || !user.IsActive || user.TenantID != tenantId)
             {
                 return ServiceResult<RefreshTokenResponseDto>.Failure("رمز التحديث غير صالح أو منتهي الصلاحية", "INVALID_REFRESH_TOKEN");
+            }
+
+            var tokenHash = RefreshTokenProtector.Hash(dto.RefreshToken);
+            var session = await _dbContext.RefreshSessions
+                .SingleOrDefaultAsync(candidate =>
+                    candidate.UserId == userId &&
+                    candidate.TenantID == tenantId &&
+                    candidate.TokenHash == tokenHash);
+
+            if (session == null || session.ExpiresAt <= DateTime.UtcNow)
+            {
+                return ServiceResult<RefreshTokenResponseDto>.Failure("رمز التحديث غير صالح أو منتهي الصلاحية", "INVALID_REFRESH_TOKEN");
+            }
+
+            if (session.RevokedAt.HasValue)
+            {
+                await RevokeAllSessionsAsync(userId, "Refresh token reuse detected");
+                return ServiceResult<RefreshTokenResponseDto>.Failure(
+                    "تم اكتشاف إعادة استخدام رمز تحديث؛ أُغلقت جميع الجلسات",
+                    "REFRESH_TOKEN_REUSE_DETECTED");
             }
 
             var roles = await _userManager.GetRolesAsync(user);
             var newAccessToken = GenerateJwtToken(user, roles);
             var newRefreshToken = GenerateRefreshToken();
 
-            var refreshExpiryDays = int.Parse(_configuration["JwtSettings:RefreshTokenExpiryDays"] ?? "7");
-            user.RefreshToken = newRefreshToken;
-            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(refreshExpiryDays);
-            await _userManager.UpdateAsync(user);
+            var refreshExpiryDays = int.Parse(GetRequiredJwtSetting("RefreshTokenExpiryDays"));
+            var replacement = CreateRefreshSession(
+                user.Id,
+                user.TenantID,
+                newRefreshToken,
+                DateTime.UtcNow.AddDays(refreshExpiryDays));
 
-            var expiresAt = DateTime.UtcNow.AddMinutes(double.Parse(_configuration["JwtSettings:AccessTokenExpiryMinutes"] ?? "60"));
+            session.LastUsedAt = DateTime.UtcNow;
+            session.RevokedAt = DateTime.UtcNow;
+            session.RevocationReason = "Rotated";
+            session.ReplacedBySessionID = replacement.RefreshSessionID;
+            _dbContext.RefreshSessions.Add(replacement);
+
+            try
+            {
+                await _dbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _dbContext.ChangeTracker.Clear();
+                await RevokeAllSessionsAsync(userId, "Concurrent refresh detected");
+                return ServiceResult<RefreshTokenResponseDto>.Failure(
+                    "تم اكتشاف محاولة تحديث متزامنة؛ أُغلقت جميع الجلسات",
+                    "REFRESH_TOKEN_REUSE_DETECTED");
+            }
+
+            var expiresAt = DateTime.UtcNow.AddMinutes(
+                double.Parse(GetRequiredJwtSetting("AccessTokenExpiryMinutes")));
 
             return ServiceResult<RefreshTokenResponseDto>.Success(new RefreshTokenResponseDto
             {
@@ -231,9 +248,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult.Failure("المستخدم غير موجود", "USER_NOT_FOUND");
             }
 
-            user.RefreshToken = null;
-            user.RefreshTokenExpiry = null;
-            await _userManager.UpdateAsync(user);
+            await RevokeAllSessionsAsync(user.Id, "Revoked by user");
 
             return ServiceResult.Success();
         }
@@ -253,6 +268,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 return ServiceResult.Failure(errors, "PASSWORD_CHANGE_FAILED");
             }
+
+            await RevokeAllSessionsAsync(user.Id, "Password changed");
 
             return ServiceResult.Success();
         }
@@ -283,6 +300,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 return ServiceResult.Failure(errors, "PASSWORD_RESET_FAILED");
             }
+
+            await RevokeAllSessionsAsync(user.Id, "Password reset");
 
             return ServiceResult.Success();
         }
@@ -364,9 +383,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
             return ServiceResult<PagedResultDto<UserManagementDto>>.Success(result);
         }
 
-        public async Task<ServiceResult<UserManagementDto>> GetUserByIdAsync(string userId)
+        public async Task<ServiceResult<UserManagementDto>> GetUserByIdAsync(int tenantId, string userId)
         {
-            var user = await _userManager.FindByIdAsync(userId);
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.Id == userId && u.TenantID == tenantId);
             if (user == null)
             {
                 return ServiceResult<UserManagementDto>.Failure("المستخدم غير موجود", "USER_NOT_FOUND");
@@ -407,13 +427,24 @@ namespace ExhibitionManagementSystem.Services.Implementations
             {
                 foreach (var role in dto.Roles)
                 {
-                    var roleExists = await _roleManager.RoleExistsAsync(role);
-                    if (!roleExists)
+                    if (!SystemRoles.TenantAssignable.Contains(role))
                     {
-                        var newRole = new ApplicationRole { Name = role, TenantID = tenantId };
-                        await _roleManager.CreateAsync(newRole);
+                        await _userManager.DeleteAsync(user);
+                        return ServiceResult<UserManagementDto>.Failure(
+                            "لا يمكن منح دور إدارة المنصة من هذا المسار",
+                            "UNAUTHORIZED");
                     }
-                    await _userManager.AddToRoleAsync(user, role);
+
+                    var tenantRole = await FindTenantRoleAsync(tenantId, role);
+                    if (tenantRole?.Name == null)
+                    {
+                        await _userManager.DeleteAsync(user);
+                        return ServiceResult<UserManagementDto>.Failure(
+                            "الدور المحدد غير موجود لهذا المستأجر",
+                            "ROLE_NOT_FOUND");
+                    }
+
+                    await _userManager.AddToRoleAsync(user, tenantRole.Name);
                 }
             }
 
@@ -424,12 +455,31 @@ namespace ExhibitionManagementSystem.Services.Implementations
             return ServiceResult<UserManagementDto>.Success(userDto);
         }
 
-        public async Task<ServiceResult> UpdateUserStatusAsync(string userId, bool isActive)
+        public async Task<ServiceResult> UpdateUserStatusAsync(
+            int tenantId,
+            string actorUserId,
+            string userId,
+            bool isActive)
         {
-            var user = await _userManager.FindByIdAsync(userId);
+            if (actorUserId == userId)
+            {
+                return ServiceResult.Failure(
+                    "لا يمكن للمستخدم تغيير حالة حسابه من هذا المسار",
+                    "SELF_MANAGEMENT_FORBIDDEN");
+            }
+
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.Id == userId && u.TenantID == tenantId);
             if (user == null)
             {
                 return ServiceResult.Failure("المستخدم غير موجود", "USER_NOT_FOUND");
+            }
+
+            if (!isActive && await IsLastTenantAdminAsync(tenantId, user))
+            {
+                return ServiceResult.Failure(
+                    "لا يمكن تعطيل آخر مدير للمستأجر",
+                    "LAST_TENANT_ADMIN");
             }
 
             user.IsActive = isActive;
@@ -443,12 +493,30 @@ namespace ExhibitionManagementSystem.Services.Implementations
             return ServiceResult.Success();
         }
 
-        public async Task<ServiceResult> DeleteUserAsync(string userId)
+        public async Task<ServiceResult> DeleteUserAsync(
+            int tenantId,
+            string actorUserId,
+            string userId)
         {
-            var user = await _userManager.FindByIdAsync(userId);
+            if (actorUserId == userId)
+            {
+                return ServiceResult.Failure(
+                    "لا يمكن للمستخدم حذف حسابه من هذا المسار",
+                    "SELF_MANAGEMENT_FORBIDDEN");
+            }
+
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.Id == userId && u.TenantID == tenantId);
             if (user == null)
             {
                 return ServiceResult.Failure("المستخدم غير موجود", "USER_NOT_FOUND");
+            }
+
+            if (await IsLastTenantAdminAsync(tenantId, user))
+            {
+                return ServiceResult.Failure(
+                    "لا يمكن حذف آخر مدير للمستأجر",
+                    "LAST_TENANT_ADMIN");
             }
 
             var result = await _userManager.DeleteAsync(user);
@@ -464,40 +532,48 @@ namespace ExhibitionManagementSystem.Services.Implementations
         // Role Management
         public async Task<ServiceResult<IList<RoleDto>>> GetRolesAsync(int tenantId)
         {
+            _ = tenantId;
+            var assignableRoleNames = SystemRoles.TenantAssignable.ToArray();
             var roles = await _roleManager.Roles
-                .Where(r => r.TenantID == tenantId)
+                .Where(role => role.Name != null &&
+                    assignableRoleNames.Contains(role.Name))
                 .ToListAsync();
 
             var dtos = _mapper.Map<IList<RoleDto>>(roles);
             return ServiceResult<IList<RoleDto>>.Success(dtos);
         }
 
-        public async Task<ServiceResult> AssignRoleAsync(AssignRoleDto dto)
+        public async Task<ServiceResult> AssignRoleAsync(int tenantId, AssignRoleDto dto)
         {
-            var user = await _userManager.FindByIdAsync(dto.UserId);
+            if (!SystemRoles.TenantAssignable.Contains(dto.RoleName))
+            {
+                return ServiceResult.Failure(
+                    "لا يمكن منح دور إدارة المنصة من هذا المسار",
+                    "UNAUTHORIZED");
+            }
+
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.Id == dto.UserId && u.TenantID == tenantId);
             if (user == null)
             {
                 return ServiceResult.Failure("المستخدم غير موجود", "USER_NOT_FOUND");
             }
 
-            var roleExists = await _roleManager.RoleExistsAsync(dto.RoleName);
-            if (!roleExists)
+            var tenantRole = await FindTenantRoleAsync(tenantId, dto.RoleName);
+            if (tenantRole?.Name == null)
             {
-                var newRole = new ApplicationRole { Name = dto.RoleName, TenantID = user.TenantID };
-                var createRoleResult = await _roleManager.CreateAsync(newRole);
-                if (!createRoleResult.Succeeded)
-                {
-                    return ServiceResult.Failure("فشل إنشاء الدور المحدد", "ROLE_CREATION_FAILED");
-                }
+                return ServiceResult.Failure(
+                    "الدور المحدد غير موجود لهذا المستأجر",
+                    "ROLE_NOT_FOUND");
             }
 
-            var isInRole = await _userManager.IsInRoleAsync(user, dto.RoleName);
+            var isInRole = await _userManager.IsInRoleAsync(user, tenantRole.Name);
             if (isInRole)
             {
                 return ServiceResult.Failure("المستخدم يمتلك هذا الدور بالفعل", "ROLE_ALREADY_ASSIGNED");
             }
 
-            var result = await _userManager.AddToRoleAsync(user, dto.RoleName);
+            var result = await _userManager.AddToRoleAsync(user, tenantRole.Name);
             if (!result.Succeeded)
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
@@ -507,21 +583,46 @@ namespace ExhibitionManagementSystem.Services.Implementations
             return ServiceResult.Success();
         }
 
-        public async Task<ServiceResult> RemoveRoleAsync(string userId, string roleName)
+        public async Task<ServiceResult> RemoveRoleAsync(int tenantId, string userId, string roleName)
         {
-            var user = await _userManager.FindByIdAsync(userId);
+            if (!SystemRoles.TenantAssignable.Contains(roleName))
+            {
+                return ServiceResult.Failure(
+                    "لا يمكن تعديل دور إدارة المنصة من هذا المسار",
+                    "UNAUTHORIZED");
+            }
+
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.Id == userId && u.TenantID == tenantId);
             if (user == null)
             {
                 return ServiceResult.Failure("المستخدم غير موجود", "USER_NOT_FOUND");
             }
 
-            var isInRole = await _userManager.IsInRoleAsync(user, roleName);
+            var tenantRole = await FindTenantRoleAsync(tenantId, roleName);
+            if (tenantRole?.Name == null)
+            {
+                return ServiceResult.Failure(
+                    "الدور المحدد غير موجود لهذا المستأجر",
+                    "ROLE_NOT_FOUND");
+            }
+
+            if ((string.Equals(tenantRole.Name, SystemRoles.Admin, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(tenantRole.Name, SystemRoles.TenantAdmin, StringComparison.OrdinalIgnoreCase)) &&
+                await IsLastTenantAdminAsync(tenantId, user))
+            {
+                return ServiceResult.Failure(
+                    "لا يمكن إزالة دور آخر مدير للمستأجر",
+                    "LAST_TENANT_ADMIN");
+            }
+
+            var isInRole = await _userManager.IsInRoleAsync(user, tenantRole.Name);
             if (!isInRole)
             {
                 return ServiceResult.Failure("المستخدم لا يمتلك هذا الدور", "ROLE_NOT_ASSIGNED");
             }
 
-            var result = await _userManager.RemoveFromRoleAsync(user, roleName);
+            var result = await _userManager.RemoveFromRoleAsync(user, tenantRole.Name);
             if (!result.Succeeded)
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
@@ -532,9 +633,38 @@ namespace ExhibitionManagementSystem.Services.Implementations
         }
 
         // Helpers
+        private Task<ApplicationRole?> FindTenantRoleAsync(int tenantId, string roleName)
+        {
+            _ = tenantId;
+            var normalizedRoleName = _roleManager.NormalizeKey(roleName);
+            return _roleManager.Roles.FirstOrDefaultAsync(
+                role => role.NormalizedName == normalizedRoleName);
+        }
+
+        private async Task<bool> IsLastTenantAdminAsync(
+            int tenantId,
+            ApplicationUser user)
+        {
+            var isTenantAdmin = await _userManager.IsInRoleAsync(user, SystemRoles.Admin) ||
+                                await _userManager.IsInRoleAsync(user, SystemRoles.TenantAdmin);
+            if (!isTenantAdmin)
+            {
+                return false;
+            }
+
+            var legacyAdmins = await _userManager.GetUsersInRoleAsync(SystemRoles.Admin);
+            var tenantAdmins = await _userManager.GetUsersInRoleAsync(SystemRoles.TenantAdmin);
+            return legacyAdmins
+                .Concat(tenantAdmins)
+                .Where(admin => admin.TenantID == tenantId && admin.IsActive)
+                .Select(admin => admin.Id)
+                .Distinct(StringComparer.Ordinal)
+                .Count() <= 1;
+        }
+
         private string GenerateJwtToken(ApplicationUser user, IList<string> roles)
         {
-            var secretKey = _configuration["JwtSettings:SecretKey"] ?? "SuperSecretKeyForExhibitionManagementSystemSecurity2026DefaultFallback";
+            var secretKey = GetRequiredJwtSetting("SecretKey");
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(secretKey);
 
@@ -554,14 +684,32 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(double.Parse(_configuration["JwtSettings:AccessTokenExpiryMinutes"] ?? "60")),
-                Issuer = _configuration["JwtSettings:Issuer"],
-                Audience = _configuration["JwtSettings:Audience"],
+                Expires = DateTime.UtcNow.AddMinutes(
+                    double.Parse(GetRequiredJwtSetting("AccessTokenExpiryMinutes"))),
+                Issuer = GetRequiredJwtSetting("Issuer"),
+                Audience = GetRequiredJwtSetting("Audience"),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+        }
+
+        private ServiceResult<LoginResponseDto> InvalidLogin() =>
+            ServiceResult<LoginResponseDto>.Failure(
+                "بيانات تسجيل الدخول غير صحيحة",
+                "INVALID_CREDENTIALS");
+
+        private string GetRequiredJwtSetting(string name)
+        {
+            var value = _configuration[$"JwtSettings:{name}"];
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException(
+                    $"Required JWT setting 'JwtSettings:{name}' is missing.");
+            }
+
+            return value;
         }
 
         private string GenerateRefreshToken()
@@ -571,5 +719,58 @@ namespace ExhibitionManagementSystem.Services.Implementations
             rng.GetBytes(randomNumber);
             return Convert.ToBase64String(randomNumber);
         }
+
+        private RefreshSession CreateRefreshSession(
+            string userId,
+            int tenantId,
+            string rawToken,
+            DateTime expiresAt)
+        {
+            var request = _httpContextAccessor.HttpContext?.Request;
+            var userAgent = request?.Headers.UserAgent.ToString();
+
+            return new RefreshSession
+            {
+                UserId = userId,
+                TenantID = tenantId,
+                TokenHash = RefreshTokenProtector.Hash(rawToken),
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = expiresAt,
+                CreatedByIp = Truncate(
+                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                    50),
+                DeviceDescription = Truncate(userAgent, 256)
+            };
+        }
+
+        private async Task RevokeAllSessionsAsync(string userId, string reason)
+        {
+            var now = DateTime.UtcNow;
+            var sessions = await _dbContext.RefreshSessions
+                .Where(session =>
+                    session.UserId == userId &&
+                    session.RevokedAt == null &&
+                    session.ExpiresAt > now)
+                .ToListAsync();
+
+            foreach (var session in sessions)
+            {
+                session.RevokedAt = now;
+                session.LastUsedAt = now;
+                session.RevocationReason = Truncate(reason, 100);
+            }
+
+            if (sessions.Count > 0)
+            {
+                await _dbContext.SaveChangesAsync();
+            }
+        }
+
+        private static string? Truncate(string? value, int maxLength) =>
+            string.IsNullOrWhiteSpace(value)
+                ? null
+                : value.Length <= maxLength
+                    ? value
+                    : value[..maxLength];
     }
 }

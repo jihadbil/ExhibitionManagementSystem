@@ -34,8 +34,18 @@ public abstract class BaseApiController : ControllerBase
             "EMAIL_ALREADY_EXISTS" or "SUBDOMAIN_ALREADY_EXISTS" or
             "ROLE_ALREADY_ASSIGNED" or "DUPLICATE_RATING" =>
                 Conflict(new { result.ErrorMessage, result.ErrorCode }),
-            "UNAUTHORIZED" =>
-                Unauthorized(new { result.ErrorMessage }),
+            "UNAUTHORIZED" or "SELF_MANAGEMENT_FORBIDDEN" =>
+                StatusCode(StatusCodes.Status403Forbidden, new { result.ErrorMessage }),
+            "LAST_TENANT_ADMIN" =>
+                Conflict(new { result.ErrorMessage, result.ErrorCode }),
+            "RESERVATION_CONFLICT" or "PAYMENT_CONFLICT" or "TICKET_SCAN_CONFLICT" or "INVOICE_NUMBER_CONFLICT" or
+            "CREDIT_NOTE_CONFLICT" or "SPACE_ASSIGNMENT_CONFLICT" or "INVOICE_IMMUTABLE" or
+            "TENANT_PROVISIONING_CONFLICT" or "INVITATION_ALREADY_USED" =>
+                Conflict(new { result.ErrorMessage, result.ErrorCode }),
+            "INVITATION_EXPIRED" =>
+                StatusCode(StatusCodes.Status410Gone, new { result.ErrorMessage, result.ErrorCode }),
+            "TENANT_CREATED_INVITATION_DELIVERY_FAILED" or "INVITATION_DELIVERY_FAILED" =>
+                StatusCode(StatusCodes.Status503ServiceUnavailable, new { result.ErrorMessage, result.ErrorCode }),
             _ =>
                 BadRequest(new { result.ErrorMessage, result.ErrorCode })
         };
@@ -50,8 +60,18 @@ public abstract class BaseApiController : ControllerBase
         {
             var c when c != null && c.EndsWith("_NOT_FOUND") =>
                 NotFound(new { result.ErrorMessage, result.ErrorCode }),
-            "UNAUTHORIZED" =>
-                Unauthorized(new { result.ErrorMessage }),
+            "UNAUTHORIZED" or "SELF_MANAGEMENT_FORBIDDEN" =>
+                StatusCode(StatusCodes.Status403Forbidden, new { result.ErrorMessage }),
+            "LAST_TENANT_ADMIN" =>
+                Conflict(new { result.ErrorMessage, result.ErrorCode }),
+            "RESERVATION_CONFLICT" or "PAYMENT_CONFLICT" or "TICKET_SCAN_CONFLICT" or "INVOICE_NUMBER_CONFLICT" or
+            "CREDIT_NOTE_CONFLICT" or "INVOICE_IMMUTABLE" or
+            "TENANT_PROVISIONING_CONFLICT" or "INVITATION_ALREADY_USED" =>
+                Conflict(new { result.ErrorMessage, result.ErrorCode }),
+            "INVITATION_EXPIRED" =>
+                StatusCode(StatusCodes.Status410Gone, new { result.ErrorMessage, result.ErrorCode }),
+            "TENANT_CREATED_INVITATION_DELIVERY_FAILED" or "INVITATION_DELIVERY_FAILED" =>
+                StatusCode(StatusCodes.Status503ServiceUnavailable, new { result.ErrorMessage, result.ErrorCode }),
             _ =>
                 BadRequest(new { result.ErrorMessage, result.ErrorCode })
         };

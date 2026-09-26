@@ -11,13 +11,18 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل حجز جناح أو مساحة لعارض داخل معرض.
 /// </summary>
-public class BoothReservation : IAuditableEntity, ISoftDeletable
+public class BoothReservation : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
 
     /// <summary>
     /// المعرف الفريد للحجز.
     /// </summary>
     [Key] public int ReservationID { get; set; }
+
+    /// <summary>
+    /// معرف المستأجر المالك للحجز. يُخزّن مباشرة لفرض العزل دون الاعتماد على العلاقات.
+    /// </summary>
+    public int TenantID { get; set; }
 
     /// <summary>
     /// معرف العارض صاحب الحجز.
@@ -77,7 +82,7 @@ public class BoothReservation : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// رمز عملة الحجز.
     /// </summary>
-    [Required, StringLength(3)] public string CurrencyCode { get; set; }
+    [Required, StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>
     /// سعر الصرف المستخدم عند تحويل قيمة الحجز إلى العملة الأساسية.
@@ -102,12 +107,12 @@ public class BoothReservation : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// ملاحظات لوجستية مرتبطة بتجهيز الجناح أو متطلبات العارض.
     /// </summary>
-    public string LogisticNotes { get; set; }
+    public string LogisticNotes { get; set; } = string.Empty;
 
     /// <summary>
     /// معرف المستخدم الذي أنشأ الحجز.
     /// </summary>
-    [StringLength(450)] public string CreatedByUserId { get; set; }
+    [StringLength(450)] public string CreatedByUserId { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ إنشاء سجل الحجز.
@@ -135,39 +140,50 @@ public class BoothReservation : IAuditableEntity, ISoftDeletable
     public string? DeletedByUserId { get; set; }
 
     /// <summary>
+    /// رمز تزامن يمنع الكتابة فوق حجز تغير منذ قراءته.
+    /// </summary>
+    [Timestamp]
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+    /// <summary>
+    /// المستأجر المالك للحجز.
+    /// </summary>
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
+
+    /// <summary>
     /// العارض صاحب الحجز.
     /// </summary>
-    [ForeignKey(nameof(ExhibitorID))] public virtual Exhibitor Exhibitor { get; set; }
+    [ForeignKey(nameof(ExhibitorID))] public virtual Exhibitor Exhibitor { get; set; } = null!;
 
     /// <summary>
     /// الجناح المرتبط بالحجز عند وجود جناح فردي.
     /// </summary>
-    [ForeignKey(nameof(BoothID))] public virtual Booth Booth { get; set; }
+    [ForeignKey(nameof(BoothID))] public virtual Booth Booth { get; set; } = null!;
 
     /// <summary>
     /// المعرض المرتبط بالحجز.
     /// </summary>
-    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; }
+    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; } = null!;
 
     /// <summary>
     /// عملية الدمج المرتبطة بالحجز عند حجز جناح مدمج.
     /// </summary>
-    [ForeignKey(nameof(MergeID))] public virtual BoothMerge BoothMerge { get; set; }
+    [ForeignKey(nameof(MergeID))] public virtual BoothMerge BoothMerge { get; set; } = null!;
 
     /// <summary>
     /// العملة المستخدمة في الحجز.
     /// </summary>
-    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
 
     /// <summary>
     /// المستخدم الذي أنشأ الحجز.
     /// </summary>
-    [ForeignKey(nameof(CreatedByUserId))] public virtual ApplicationUser CreatedByUser { get; set; }
+    [ForeignKey(nameof(CreatedByUserId))] public virtual ApplicationUser CreatedByUser { get; set; } = null!;
 
     /// <summary>
     /// الفاتورة الناتجة عن الحجز.
     /// </summary>
-    public virtual Invoice Invoice { get; set; }
+    public virtual Invoice Invoice { get; set; } = null!;
 
     /// <summary>
     /// الخدمات الإضافية المطلوبة ضمن الحجز.

@@ -16,6 +16,8 @@ public class InvoiceDto : AuditDto
     public decimal TaxRate { get; set; }
     public decimal TaxAmount { get; set; }
     public decimal TotalAmount { get; set; }
+    public decimal AdjustedTotalAmount { get; set; }
+    public decimal RefundedAmount { get; set; }
     public string CurrencyCode { get; set; } = string.Empty;
     public string CurrencySymbol { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
@@ -23,5 +25,5 @@ public class InvoiceDto : AuditDto
     public string Notes { get; set; } = string.Empty;
     public List<PaymentDto> Payments { get; set; } = [];
     public List<InvoiceItemDto> Items { get; set; } = [];
+    public List<CreditNoteDto> CreditNotes { get; set; } = [];
 }
-

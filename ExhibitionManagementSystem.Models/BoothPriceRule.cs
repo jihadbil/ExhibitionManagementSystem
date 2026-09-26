@@ -11,7 +11,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل قاعدة تسعير لمساحة الأجنحة حسب المعرض أو الفئة أو نوع الجناح.
 /// </summary>
-public class BoothPriceRule : IAuditableEntity, ISoftDeletable
+public class BoothPriceRule : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     /// <summary>
     /// المعرف الفريد لقاعدة تسعير الجناح.
@@ -41,7 +41,7 @@ public class BoothPriceRule : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// فئة المنتج التي يمكن استخدامها لتخصيص السعر.
     /// </summary>
-    [StringLength(100)] public string ProductCategory { get; set; }
+    [StringLength(100)] public string ProductCategory { get; set; } = string.Empty;
 
     /// <summary>
     /// اسم قاعدة التسعير.
@@ -56,7 +56,7 @@ public class BoothPriceRule : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// رمز العملة المستخدمة في السعر.
     /// </summary>
-    [Required, StringLength(3)] public string CurrencyCode { get; set; }
+    [Required, StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>
     /// الحد الأدنى للمساحة التي تطبق عليها القاعدة.
@@ -81,7 +81,7 @@ public class BoothPriceRule : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// ملاحظات إضافية حول قاعدة التسعير.
     /// </summary>
-    [StringLength(500)] public string Notes { get; set; }
+    [StringLength(500)] public string Notes { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ إنشاء قاعدة التسعير.
@@ -111,16 +111,16 @@ public class BoothPriceRule : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// المستأجر المرتبط بقاعدة التسعير.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>
     /// المعرض المرتبط بقاعدة التسعير.
     /// </summary>
-    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; }
+    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; } = null!;
 
     /// <summary>
     /// العملة المرتبطة بقاعدة التسعير.
     /// </summary>
-    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
 
 }

@@ -1,15 +1,17 @@
 using ExhibitionManagementSystem.Controllers.Base;
 using ExhibitionManagementSystem.Models.DTOs.Admin;
+using ExhibitionManagementSystem.Security;
 using ExhibitionManagementSystem.Models.DTOs.Common;
 using ExhibitionManagementSystem.Models.DTOs.Tenant;
 using ExhibitionManagementSystem.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ExhibitionManagementSystem.Controllers.Admin;
 
 [Route("api/[controller]")]
-[Authorize(Policy = "SuperAdminOnly")]
+[Authorize(Policy = AuthorizationPolicies.SuperAdminOnly)]
 public class TenantsController : BaseApiController
 {
     private readonly ITenantService _tenantService;
@@ -40,7 +42,7 @@ public class TenantsController : BaseApiController
     public async Task<ActionResult<TenantDto>> Create(
         [FromBody] TenantCreateDto dto)
     {
-        var result = await _tenantService.CreateAsync(dto);
+        var result = await _tenantService.CreateAsync(dto, UserId);
         if (!result.IsSuccess) return ToActionResult(result);
         return CreatedAtAction(nameof(GetById),
             new { tenantId = result.Data!.TenantID }, result.Data);
@@ -70,6 +72,25 @@ public class TenantsController : BaseApiController
         int tenantId)
     {
         var result = await _tenantService.GetActiveSubscriptionAsync(tenantId);
+        return ToActionResult(result);
+    }
+
+    // POST /api/tenants/invitations/accept
+    [AllowAnonymous]
+    [EnableRateLimiting("authentication")]
+    [HttpPost("invitations/accept")]
+    public async Task<IActionResult> AcceptInvitation(
+        [FromBody] TenantInvitationAcceptDto dto)
+    {
+        var result = await _tenantService.AcceptInvitationAsync(dto);
+        return ToActionResult(result);
+    }
+
+    // POST /api/tenants/{tenantId}/invitations/resend
+    [HttpPost("{tenantId:int}/invitations/resend")]
+    public async Task<IActionResult> ResendInvitation(int tenantId)
+    {
+        var result = await _tenantService.ResendInvitationAsync(tenantId, UserId);
         return ToActionResult(result);
     }
 }

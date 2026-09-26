@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using ExhibitionManagementSystem.Models;
 using ExhibitionManagementSystem.Models.Enums;
 using ExhibitionManagementSystem.DataAccess.Repositories.Interfaces;
+using ExhibitionManagementSystem.DataAccess.Repositories;
+using System.Data;
 
 namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 {
@@ -48,25 +51,54 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         public async Task<string> GenerateNextInvoiceNumberAsync(int tenantId)
         {
             var year = DateTime.UtcNow.Year;
-            var prefix = $"INV-{tenantId:D4}-{year}-";
-
-            var lastInvoiceNumber = await _dbSet.AsNoTracking()
-                .Where(i => i.TenantID == tenantId && i.InvoiceNumber.StartsWith(prefix))
-                .OrderByDescending(i => i.InvoiceNumber)
-                .Select(i => i.InvoiceNumber)
-                .FirstOrDefaultAsync();
-
-            int nextSeq = 1;
-            if (!string.IsNullOrEmpty(lastInvoiceNumber))
+            var connection = _context.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+            if (shouldClose)
             {
-                var parts = lastInvoiceNumber.Split('-');
-                if (parts.Length == 4 && int.TryParse(parts[3], out int lastSeq))
-                {
-                    nextSeq = lastSeq + 1;
-                }
+                await connection.OpenAsync();
             }
 
-            return $"{prefix}{nextSeq:D5}";
+            try
+            {
+                await using var command = connection.CreateCommand();
+                command.Transaction = _context.Database.CurrentTransaction?.GetDbTransaction();
+                command.CommandText =
+                    """
+                    MERGE InvoiceSequences WITH (HOLDLOCK) AS target
+                    USING (SELECT @tenantId AS TenantID, @year AS [Year]) AS source
+                        ON target.TenantID = source.TenantID
+                       AND target.[Year] = source.[Year]
+                    WHEN MATCHED THEN
+                        UPDATE SET LastValue = target.LastValue + 1
+                    WHEN NOT MATCHED THEN
+                        INSERT (TenantID, [Year], LastValue)
+                        VALUES (source.TenantID, source.[Year], 1)
+                    OUTPUT inserted.LastValue;
+                    """;
+
+                var tenantParameter = command.CreateParameter();
+                tenantParameter.ParameterName = "@tenantId";
+                tenantParameter.DbType = DbType.Int32;
+                tenantParameter.Value = tenantId;
+                command.Parameters.Add(tenantParameter);
+
+                var yearParameter = command.CreateParameter();
+                yearParameter.ParameterName = "@year";
+                yearParameter.DbType = DbType.Int32;
+                yearParameter.Value = year;
+                command.Parameters.Add(yearParameter);
+
+                var result = await command.ExecuteScalarAsync();
+                var sequence = Convert.ToInt32(result);
+                return InvoiceNumberFormatter.Format(tenantId, year, sequence);
+            }
+            finally
+            {
+                if (shouldClose)
+                {
+                    await connection.CloseAsync();
+                }
+            }
         }
     }
 }

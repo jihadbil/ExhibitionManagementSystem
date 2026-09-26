@@ -10,7 +10,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل خدمة يمكن تقديمها للعارضين أو إضافتها إلى الحجوزات.
 /// </summary>
-public class Service : IAuditableEntity, ISoftDeletable
+public class Service : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
 
     /// <summary>
@@ -26,17 +26,17 @@ public class Service : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// اسم الخدمة.
     /// </summary>
-    [Required, StringLength(200)] public string ServiceName { get; set; }
+    [Required, StringLength(200)] public string ServiceName { get; set; } = string.Empty;
 
     /// <summary>
     /// تصنيف الخدمة.
     /// </summary>
-    [StringLength(100)] public string Category { get; set; }
+    [StringLength(100)] public string Category { get; set; } = string.Empty;
 
     /// <summary>
     /// وحدة قياس الخدمة مثل قطعة أو يوم أو متر.
     /// </summary>
-    [StringLength(50)] public string Unit { get; set; }
+    [StringLength(50)] public string Unit { get; set; } = string.Empty;
 
     /// <summary>
     /// السعر الافتراضي للخدمة عند عدم وجود قاعدة تسعير مخصصة.
@@ -51,7 +51,7 @@ public class Service : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// وصف الخدمة.
     /// </summary>
-    [StringLength(500)] public string Description { get; set; }
+    [StringLength(500)] public string Description { get; set; } = string.Empty;
 
     /// <summary>
     /// يحدد ما إذا كانت الخدمة نشطة ومتاحة للاستخدام.
@@ -86,6 +86,6 @@ public class Service : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// المستأجر المرتبط بالخدمة.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
 }

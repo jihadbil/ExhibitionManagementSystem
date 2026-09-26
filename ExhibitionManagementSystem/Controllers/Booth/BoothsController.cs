@@ -138,6 +138,15 @@ public class BoothsController : BaseApiController
         return ToActionResult(result);
     }
 
+    // DELETE /api/booths/{boothId}
+    [HttpDelete("{boothId:int}")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> Delete(int boothId)
+    {
+        var result = await _boothService.DeleteAsync(TenantId, UserId, boothId);
+        return ToActionResult(result);
+    }
+
     // POST /api/booths/merge
     [HttpPost("merge")]
     [Authorize(Policy = "AdminOnly")]

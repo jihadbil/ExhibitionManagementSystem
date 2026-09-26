@@ -196,6 +196,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
             {
                 var reservation = new BoothReservation
                 {
+                    TenantID = tenantId,
                     ExhibitorID = dto.ExhibitorID,
                     BoothID = dto.BoothID,
                     ExhibitionID = dto.ExhibitionID,
@@ -253,10 +254,24 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 var resultDto = _mapper.Map<BoothReservationDto>(fullReservation ?? reservation);
                 return ServiceResult<BoothReservationDto>.Success(resultDto);
             }
-            catch (Exception ex)
+            catch (DbUpdateConcurrencyException)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<BoothReservationDto>.Failure($"فشل إنشاء الحجز: {ex.Message}", "RESERVATION_CREATION_FAILED");
+                return ServiceResult<BoothReservationDto>.Failure(
+                    "تغيرت حالة الحجز أثناء العملية. أعد تحميل البيانات وحاول مرة أخرى.",
+                    "RESERVATION_CONFLICT");
+            }
+            catch (DbUpdateException)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ServiceResult<BoothReservationDto>.Failure(
+                    "تعذر إتمام الحجز لأن الجناح حُجز بالتزامن مع طلبك.",
+                    "RESERVATION_CONFLICT");
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ServiceResult<BoothReservationDto>.Failure("تعذر إنشاء الحجز.", "RESERVATION_CREATION_FAILED");
             }
         }
 
@@ -364,10 +379,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
                 return await GetByIdAsync(tenantId, id);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<BoothReservationDto>.Failure($"فشل تحديث الحجز: {ex.Message}", "RESERVATION_UPDATE_FAILED");
+                return ServiceResult<BoothReservationDto>.Failure("تعذر تحديث الحجز.", "RESERVATION_UPDATE_FAILED");
             }
         }
 
@@ -417,10 +432,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 await _unitOfWork.CommitTransactionAsync();
                 return ServiceResult.Success();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult.Failure($"فشل إلغاء الحجز: {ex.Message}", "CANCEL_FAILED");
+                return ServiceResult.Failure("تعذر إلغاء الحجز.", "CANCEL_FAILED");
             }
         }
 
@@ -470,10 +485,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 await _unitOfWork.CommitTransactionAsync();
                 return await GetByIdAsync(tenantId, id);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<BoothReservationDto>.Failure($"فشل تأكيد الحجز: {ex.Message}", "APPROVE_FAILED");
+                return ServiceResult<BoothReservationDto>.Failure("تعذر تأكيد الحجز.", "APPROVE_FAILED");
             }
         }
 
@@ -554,10 +569,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 mappedDto.ServiceName = service.ServiceName; // Populate navigation field manually if Mapper didn't
                 return ServiceResult<ReservationServiceDto>.Success(mappedDto);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<ReservationServiceDto>.Failure($"فشل إضافة الخدمة للحجز: {ex.Message}", "ADD_SERVICE_FAILED");
+                return ServiceResult<ReservationServiceDto>.Failure("تعذر إضافة الخدمة للحجز.", "ADD_SERVICE_FAILED");
             }
         }
 
@@ -620,10 +635,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
                 return ServiceResult.Success();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult.Failure($"فشل حذف الخدمة من الحجز: {ex.Message}", "REMOVE_SERVICE_FAILED");
+                return ServiceResult.Failure("تعذر حذف الخدمة من الحجز.", "REMOVE_SERVICE_FAILED");
             }
         }
 

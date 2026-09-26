@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -15,17 +15,17 @@ public class Currency
     /// <summary>
     /// رمز العملة القياسي المكون من ثلاثة أحرف.
     /// </summary>
-    [Key, StringLength(3)] public string CurrencyCode { get; set; }
+    [Key, StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>
     /// الاسم الكامل للعملة.
     /// </summary>
-    [Required, StringLength(50)] public string CurrencyName { get; set; }
+    [Required, StringLength(50)] public string CurrencyName { get; set; } = string.Empty;
 
     /// <summary>
     /// رمز عرض العملة مثل $ أو د.ل.
     /// </summary>
-    [Required, StringLength(5)] public string Symbol { get; set; }
+    [Required, StringLength(5)] public string Symbol { get; set; } = string.Empty;
 
     /// <summary>
     /// يحدد ما إذا كانت العملة متاحة للاستخدام.

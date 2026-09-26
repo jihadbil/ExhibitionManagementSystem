@@ -2,6 +2,7 @@ using ExhibitionManagementSystem.Controllers.Base;
 using ExhibitionManagementSystem.Models.DTOs.Financial;
 using ExhibitionManagementSystem.Services.Interfaces;
 using ExhibitionManagementSystem.Services.Common;
+using ExhibitionManagementSystem.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 namespace ExhibitionManagementSystem.Controllers.Financial
 {
     [Route("api/financial/invoices/{invoiceId:int}/items")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicies.FinanceManagement)]
     public class InvoiceItemsController : BaseApiController
     {
         private readonly IInvoiceItemService _invoiceItemService;
@@ -33,13 +34,8 @@ namespace ExhibitionManagementSystem.Controllers.Financial
         [HttpGet("{itemId:int}")]
         public async Task<ActionResult<InvoiceItemDto>> GetItemById(int invoiceId, int itemId)
         {
-            var checkResult = await _invoiceItemService.GetItemByIdAsync(TenantId, itemId);
-            if (!checkResult.IsSuccess) return ToActionResult(checkResult);
-            if (checkResult.Data!.InvoiceID != invoiceId)
-            {
-                return BadRequest("البند المحدد لا ينتمي إلى هذه الفاتورة.");
-            }
-            return Ok(checkResult.Data);
+            var result = await _invoiceItemService.GetItemByIdAsync(TenantId, invoiceId, itemId);
+            return ToActionResult(result);
         }
 
         // POST /api/financial/invoices/{invoiceId}/items
@@ -60,14 +56,7 @@ namespace ExhibitionManagementSystem.Controllers.Financial
                 return BadRequest("معرف البند غير متطابق.");
             }
 
-            var checkResult = await _invoiceItemService.GetItemByIdAsync(TenantId, itemId);
-            if (!checkResult.IsSuccess) return ToActionResult(checkResult);
-            if (checkResult.Data!.InvoiceID != invoiceId)
-            {
-                return BadRequest("البند المحدد لا ينتمي إلى هذه الفاتورة.");
-            }
-
-            var result = await _invoiceItemService.UpdateItemAsync(TenantId, itemId, dto);
+            var result = await _invoiceItemService.UpdateItemAsync(TenantId, invoiceId, itemId, dto);
             return ToActionResult(result);
         }
 
@@ -75,16 +64,8 @@ namespace ExhibitionManagementSystem.Controllers.Financial
         [HttpDelete("{itemId:int}")]
         public async Task<IActionResult> DeleteItem(int invoiceId, int itemId)
         {
-            var checkResult = await _invoiceItemService.GetItemByIdAsync(TenantId, itemId);
-            if (!checkResult.IsSuccess) return ToActionResult((ServiceResult)checkResult);
-            if (checkResult.Data!.InvoiceID != invoiceId)
-            {
-                return BadRequest("البند المحدد لا ينتمي إلى هذه الفاتورة.");
-            }
-
-            var result = await _invoiceItemService.DeleteItemAsync(TenantId, itemId);
+            var result = await _invoiceItemService.DeleteItemAsync(TenantId, invoiceId, itemId);
             return ToActionResult((ServiceResult)result);
         }
     }
 }
-

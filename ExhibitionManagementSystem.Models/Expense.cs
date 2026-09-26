@@ -8,7 +8,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل مصروفًا ماليًا مرتبطًا بمعرض ومستأجر.
 /// </summary>
-public class Expense : IAuditableEntity, ISoftDeletable
+public class Expense : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     /// <summary>
     /// المعرف الفريد للمصروف.
@@ -28,12 +28,12 @@ public class Expense : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// وصف المصروف.
     /// </summary>
-    [Required, StringLength(200)] public string Description { get; set; }
+    [Required, StringLength(200)] public string Description { get; set; } = string.Empty;
 
     /// <summary>
     /// تصنيف المصروف المالي.
     /// </summary>
-    [Required, StringLength(100)] public string Category { get; set; }
+    [Required, StringLength(100)] public string Category { get; set; } = string.Empty;
 
     /// <summary>
     /// قيمة المصروف.
@@ -43,7 +43,7 @@ public class Expense : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// رمز العملة المستخدمة في المصروف.
     /// </summary>
-    [Required, StringLength(3)] public string CurrencyCode { get; set; }
+    [Required, StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ المصروف.
@@ -88,17 +88,17 @@ public class Expense : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// المستأجر المرتبط بالمصروف.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>
     /// المعرض المرتبط بالمصروف.
     /// </summary>
-    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; }
+    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; } = null!;
 
     /// <summary>
     /// العملة المستخدمة في المصروف.
     /// </summary>
-    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
 
     /// <summary>
     /// المستخدم الذي أنشأ سجل المصروف.

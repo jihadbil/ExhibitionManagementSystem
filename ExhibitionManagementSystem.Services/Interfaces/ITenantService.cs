@@ -10,7 +10,9 @@ namespace ExhibitionManagementSystem.Services.Interfaces
     {
         Task<ServiceResult<PagedResultDto<TenantDto>>> GetAllAsync(int page, int pageSize);
         Task<ServiceResult<TenantDto>> GetByIdAsync(int tenantId);
-        Task<ServiceResult<TenantDto>> CreateAsync(TenantCreateDto dto);
+        Task<ServiceResult<TenantDto>> CreateAsync(TenantCreateDto dto, string actorUserId);
+        Task<ServiceResult> AcceptInvitationAsync(TenantInvitationAcceptDto dto);
+        Task<ServiceResult> ResendInvitationAsync(int tenantId, string actorUserId);
         Task<ServiceResult<TenantDto>> UpdateAsync(int tenantId, TenantUpdateDto dto);
         Task<ServiceResult> DeleteAsync(int tenantId);
         Task<ServiceResult<TenantSubscriptionDto>> GetActiveSubscriptionAsync(int tenantId);

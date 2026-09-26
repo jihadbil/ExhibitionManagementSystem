@@ -14,10 +14,10 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
         }
 
-        public async Task<Ticket?> GetByQRCodeAsync(string qrCode)
+        public async Task<Ticket?> GetByQRCodeAsync(int tenantId, string qrCode)
         {
-            return await _dbSet.IgnoreQueryFilters().AsNoTracking()
-                .FirstOrDefaultAsync(t => t.QRCode == qrCode);
+            return await _dbSet.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TenantID == tenantId && t.QRCode == qrCode);
         }
 
         public async Task<IReadOnlyList<Ticket>> GetByVisitorAsync(int visitorId)

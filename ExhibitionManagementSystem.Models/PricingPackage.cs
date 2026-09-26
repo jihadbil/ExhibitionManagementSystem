@@ -10,7 +10,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل باقة تسعير تحتوي على مجموعة خدمات وسعر إجمالي.
 /// </summary>
-public class PricingPackage : IAuditableEntity, ISoftDeletable
+public class PricingPackage : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     /// <summary>
     /// المعرف الفريد لباقة التسعير.
@@ -25,12 +25,12 @@ public class PricingPackage : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// اسم باقة التسعير.
     /// </summary>
-    [Required, StringLength(200)] public string PackageName { get; set; }
+    [Required, StringLength(200)] public string PackageName { get; set; } = string.Empty;
 
     /// <summary>
     /// وصف محتوى الباقة.
     /// </summary>
-    [StringLength(500)] public string Description { get; set; }
+    [StringLength(500)] public string Description { get; set; } = string.Empty;
 
     /// <summary>
     /// السعر الإجمالي للباقة.
@@ -40,7 +40,7 @@ public class PricingPackage : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// رمز العملة المستخدمة في سعر الباقة.
     /// </summary>
-    [Required, StringLength(3)] public string CurrencyCode { get; set; }
+    [Required, StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ بداية صلاحية الباقة.
@@ -85,12 +85,12 @@ public class PricingPackage : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// المستأجر المرتبط بالباقة.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>
     /// العملة المستخدمة في سعر الباقة.
     /// </summary>
-    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
 
     /// <summary>
     /// الخدمات المضمنة في الباقة.

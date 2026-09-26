@@ -25,22 +25,22 @@ public class BoothStaff : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// اسم عضو الفريق.
     /// </summary>
-    [Required, StringLength(100)] public string StaffName { get; set; }
+    [Required, StringLength(100)] public string StaffName { get; set; } = string.Empty;
 
     /// <summary>
     /// الدور أو الوظيفة داخل الجناح.
     /// </summary>
-    [StringLength(50)] public string Role { get; set; }
+    [StringLength(50)] public string Role { get; set; } = string.Empty;
 
     /// <summary>
     /// رقم هاتف عضو الفريق.
     /// </summary>
-    [StringLength(20)] public string Phone { get; set; }
+    [StringLength(20)] public string Phone { get; set; } = string.Empty;
 
     /// <summary>
     /// البريد الإلكتروني لعضو الفريق.
     /// </summary>
-    [StringLength(200)] public string Email { get; set; }
+    [StringLength(200)] public string Email { get; set; } = string.Empty;
 
     /// <summary>
     /// يحدد ما إذا تم إصدار شارة دخول لعضو الفريق.
@@ -50,7 +50,7 @@ public class BoothStaff : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// رقم شارة الدخول الصادرة لعضو الفريق.
     /// </summary>
-    [StringLength(50)] public string BadgeNumber { get; set; }
+    [StringLength(50)] public string BadgeNumber { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ إنشاء سجل عضو الفريق.
@@ -80,5 +80,5 @@ public class BoothStaff : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// الحجز المرتبط بعضو الفريق.
     /// </summary>
-    [ForeignKey(nameof(ReservationID))] public virtual BoothReservation Reservation { get; set; }
+    [ForeignKey(nameof(ReservationID))] public virtual BoothReservation Reservation { get; set; } = null!;
 }

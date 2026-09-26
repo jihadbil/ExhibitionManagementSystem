@@ -90,6 +90,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
 
             var booth = _mapper.Map<Booth>(dto);
+            booth.TenantID = tenantId;
             await _unitOfWork.Booths.AddAsync(booth);
             await _unitOfWork.SaveChangesAsync();
 
@@ -202,16 +203,21 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 var resultDto = _mapper.Map<BoothMergeDto>(fullMerge ?? boothMerge);
                 return ServiceResult<BoothMergeDto>.Success(resultDto);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<BoothMergeDto>.Failure($"فشل دمج الأكشاك: {ex.Message}", "MERGE_FAILED");
+                return ServiceResult<BoothMergeDto>.Failure("تعذر دمج الأكشاك.", "MERGE_FAILED");
             }
         }
 
         public async Task<ServiceResult> UnmergeBoothsAsync(int tenantId, int mergeId)
         {
-            var merge = await _unitOfWork.BoothMerges.GetByIdWithIncludesAsync(mergeId, m => m.MergeItems);
+            var merge = await _unitOfWork.BoothMerges.AsQueryable()
+                .Include(m => m.MergeItems)
+                .Include(m => m.Exhibition)
+                .FirstOrDefaultAsync(m =>
+                    m.MergeID == mergeId &&
+                    m.Exhibition.TenantID == tenantId);
             if (merge == null)
             {
                 return ServiceResult.Failure("عملية الدمج غير موجودة", "MERGE_NOT_FOUND");
@@ -241,14 +247,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
                 return ServiceResult.Success();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult.Failure($"فشل فك دمج الأكشاك: {ex.Message}", "UNMERGE_FAILED");
+                return ServiceResult.Failure("تعذر فك دمج الأكشاك.", "UNMERGE_FAILED");
             }
         }
 
-        public async Task<ServiceResult> DeleteAsync(int tenantId, int boothId)
+        public async Task<ServiceResult> DeleteAsync(int tenantId, string userId, int boothId)
         {
             var booth = await _unitOfWork.Booths.GetByIdWithIncludesAsync(boothId, b => b.Hall, b => b.Hall.Venue);
             if (booth == null || booth.Hall == null || booth.Hall.Venue == null || booth.Hall.Venue.TenantID != tenantId)
@@ -262,7 +268,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult.Failure("لا يمكن حذف الكشك لوجود حجوزات نشطة عليه", "BOOTH_HAS_RESERVATIONS");
             }
 
-            await _unitOfWork.Booths.SoftDeleteAsync(boothId, "System");
+            await _unitOfWork.Booths.SoftDeleteAsync(boothId, userId);
             await _unitOfWork.SaveChangesAsync();
 
             return ServiceResult.Success();

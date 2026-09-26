@@ -26,7 +26,7 @@ public class Hall : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// اسم القاعة.
     /// </summary>
-    [Required, StringLength(200)] public string HallName { get; set; }
+    [Required, StringLength(200)] public string HallName { get; set; } = string.Empty;
 
     /// <summary>
     /// مساحة القاعة بالمتر المربع.
@@ -51,7 +51,7 @@ public class Hall : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// تمثيل JSON لمخطط القاعة وتفاصيل توزيعها.
     /// </summary>
-    public string FloorPlanJSON { get; set; }
+    public string FloorPlanJSON { get; set; } = string.Empty;
 
     /// <summary>
     /// يحدد ما إذا كانت القاعة متاحة للاستخدام.
@@ -86,7 +86,7 @@ public class Hall : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// الموقع الذي يحتوي على القاعة.
     /// </summary>
-    [ForeignKey(nameof(VenueID))] public virtual Venue Venue { get; set; }
+    [ForeignKey(nameof(VenueID))] public virtual Venue Venue { get; set; } = null!;
 
     /// <summary>
     /// الأجنحة الموجودة داخل القاعة.

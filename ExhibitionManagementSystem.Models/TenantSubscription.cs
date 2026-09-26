@@ -27,7 +27,7 @@ public class TenantSubscription : IAuditableEntity
     /// <summary>
     /// اسم خطة الاشتراك.
     /// </summary>
-    [Required, StringLength(50)] public string Plan { get; set; }
+    [Required, StringLength(50)] public string Plan { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ بداية الاشتراك.
@@ -47,7 +47,7 @@ public class TenantSubscription : IAuditableEntity
     /// <summary>
     /// رمز العملة المستخدمة في رسوم الاشتراك.
     /// </summary>
-    [StringLength(3)] public string CurrencyCode { get; set; }
+    [StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>
     /// حالة الاشتراك الحالية.
@@ -67,11 +67,11 @@ public class TenantSubscription : IAuditableEntity
     /// <summary>
     /// المستأجر المرتبط بالاشتراك.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>
     /// العملة المستخدمة في رسوم الاشتراك.
     /// </summary>
-    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
 
 }

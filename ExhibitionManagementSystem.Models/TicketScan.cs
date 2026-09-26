@@ -32,7 +32,7 @@ public class TicketScan
     /// اسم البوابة التي تمت عندها عملية المسح.
     /// </summary>
     [StringLength(100)] 
-    public string GateName { get; set; }
+    public string GateName { get; set; } = string.Empty;
 
     /// <summary>
     /// اتجاه الحركة المسجلة في عملية المسح.
@@ -43,18 +43,18 @@ public class TicketScan
     /// معرف المستخدم الذي نفذ عملية المسح.
     /// </summary>
     [StringLength(450)] 
-    public string ScannedByUserId { get; set; }
+    public string ScannedByUserId { get; set; } = string.Empty;
 
     /// <summary>
     /// التذكرة المرتبطة بعملية المسح.
     /// </summary>
     [ForeignKey(nameof(TicketID))] 
-    public virtual Ticket Ticket { get; set; }
+    public virtual Ticket Ticket { get; set; } = null!;
 
     /// <summary>
     /// المستخدم الذي نفذ عملية المسح.
     /// </summary>
     [ForeignKey(nameof(ScannedByUserId))] 
-    public virtual ApplicationUser ScannedByUser { get; set; }
+    public virtual ApplicationUser ScannedByUser { get; set; } = null!;
 
 }

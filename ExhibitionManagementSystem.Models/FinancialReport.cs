@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
+using ExhibitionManagementSystem.Models.Interfaces;
 
 namespace ExhibitionManagementSystem.Models;
 
 /// <summary>
 /// يمثل تقريرًا ماليًا ملخصًا لمعرض ضمن فترة محددة.
 /// </summary>
-public class FinancialReport
+public class FinancialReport : ITenantEntity
 {
     /// <summary>
     /// المعرف الفريد للتقرير المالي.
@@ -64,7 +65,7 @@ public class FinancialReport
     /// <summary>
     /// رمز العملة المستخدمة في قيم التقرير.
     /// </summary>
-    [Required, StringLength(3)] public string CurrencyCode { get; set; }
+    [Required, StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ ووقت توليد التقرير.
@@ -74,7 +75,7 @@ public class FinancialReport
     /// <summary>
     /// معرف المستخدم الذي ولّد التقرير.
     /// </summary>
-    [StringLength(450)] public string GeneratedByUserId { get; set; }
+    [StringLength(450)] public string GeneratedByUserId { get; set; } = string.Empty;
 
     /// <summary>
     /// بداية الفترة التي يغطيها التقرير.
@@ -89,21 +90,21 @@ public class FinancialReport
     /// <summary>
     /// المستأجر المرتبط بالتقرير.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>
     /// المعرض المرتبط بالتقرير.
     /// </summary>
-    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; }
+    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; } = null!;
 
     /// <summary>
     /// العملة المستخدمة في التقرير.
     /// </summary>
-    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
 
     /// <summary>
     /// المستخدم الذي ولّد التقرير.
     /// </summary>
-    [ForeignKey(nameof(GeneratedByUserId))] public virtual ApplicationUser GeneratedByUser { get; set; }
+    [ForeignKey(nameof(GeneratedByUserId))] public virtual ApplicationUser GeneratedByUser { get; set; } = null!;
 
 }

@@ -30,22 +30,22 @@ public class Product : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// اسم المنتج.
     /// </summary>
-    [Required, StringLength(200)] public string ProductName { get; set; }
+    [Required, StringLength(200)] public string ProductName { get; set; } = string.Empty;
 
     /// <summary>
     /// تصنيف المنتج.
     /// </summary>
-    [StringLength(100)] public string Category { get; set; }
+    [StringLength(100)] public string Category { get; set; } = string.Empty;
 
     /// <summary>
     /// وصف المنتج.
     /// </summary>
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
 
     /// <summary>
     /// رابط صورة المنتج.
     /// </summary>
-    [StringLength(500)] public string ImageURL { get; set; }
+    [StringLength(500)] public string ImageURL { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ إنشاء سجل المنتج.
@@ -75,11 +75,11 @@ public class Product : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// العارض صاحب المنتج.
     /// </summary>
-    [ForeignKey(nameof(ExhibitorID))] public virtual Exhibitor Exhibitor { get; set; }
+    [ForeignKey(nameof(ExhibitorID))] public virtual Exhibitor Exhibitor { get; set; } = null!;
 
     /// <summary>
     /// المعرض الذي يعرض فيه المنتج.
     /// </summary>
-    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; }
+    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; } = null!;
 
 }

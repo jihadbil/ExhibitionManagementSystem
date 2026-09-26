@@ -7,7 +7,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Interfaces
 {
     public interface ITicketRepository : IGenericRepository<Ticket>
     {
-        Task<Ticket?> GetByQRCodeAsync(string qrCode);
+        Task<Ticket?> GetByQRCodeAsync(int tenantId, string qrCode);
         Task<IReadOnlyList<Ticket>> GetByVisitorAsync(int visitorId);
         Task<IReadOnlyList<Ticket>> GetByExhibitionAsync(int exhibitionId);
         Task<IReadOnlyList<Ticket>> GetByStatusAsync(int exhibitionId, TicketStatus status);

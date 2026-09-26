@@ -10,7 +10,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل عقد أو اتفاقية رعاية موثقة بين إدارة المعرض وجهة راعية.
 /// </summary>
-public class SponsorshipContract : IAuditableEntity, ISoftDeletable
+public class SponsorshipContract : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     [Key]
     public int ContractID { get; set; }

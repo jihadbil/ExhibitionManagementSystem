@@ -16,5 +16,13 @@ namespace ExhibitionManagementSystem.Services.Interfaces
         Task<ServiceResult<InvoiceDto>> CreateInvoiceAsync(int tenantId, InvoiceCreateDto dto);
         Task<ServiceResult<PaymentDto>> RecordPaymentAsync(int tenantId, string userId, PaymentCreateDto dto);
         Task<ServiceResult<IList<PaymentDto>>> GetPaymentsByInvoiceAsync(int tenantId, int invoiceId);
+        Task<ServiceResult<CreditNoteDto>> CreateCreditNoteAsync(
+            int tenantId,
+            string userId,
+            int invoiceId,
+            CreditNoteCreateDto dto);
+        Task<ServiceResult<IList<CreditNoteDto>>> GetCreditNotesByInvoiceAsync(
+            int tenantId,
+            int invoiceId);
     }
 }

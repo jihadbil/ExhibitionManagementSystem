@@ -39,7 +39,7 @@ public class VisitorRating
     /// <summary>
     /// تعليق نصي اختياري يوضح رأي الزائر.
     /// </summary>
-    [StringLength(1000)] public string Comment { get; set; }
+    [StringLength(1000)] public string Comment { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ ووقت تسجيل التقييم.
@@ -49,16 +49,16 @@ public class VisitorRating
     /// <summary>
     /// الزائر الذي قدم التقييم.
     /// </summary>
-    [ForeignKey(nameof(VisitorID))] public virtual Visitor Visitor { get; set; }
+    [ForeignKey(nameof(VisitorID))] public virtual Visitor Visitor { get; set; } = null!;
 
     /// <summary>
     /// المعرض المرتبط بالتقييم.
     /// </summary>
-    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; }
+    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; } = null!;
 
     /// <summary>
     /// العارض المرتبط بالتقييم عند وجوده.
     /// </summary>
-    [ForeignKey(nameof(ExhibitorID))] public virtual Exhibitor Exhibitor { get; set; }
+    [ForeignKey(nameof(ExhibitorID))] public virtual Exhibitor Exhibitor { get; set; } = null!;
 
 }

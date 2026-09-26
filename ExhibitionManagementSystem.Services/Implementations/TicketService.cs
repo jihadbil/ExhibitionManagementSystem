@@ -9,6 +9,7 @@ using ExhibitionManagementSystem.Models.Enums;
 using ExhibitionManagementSystem.Models.DTOs.Visitor;
 using ExhibitionManagementSystem.Services.Common;
 using ExhibitionManagementSystem.Services.Interfaces;
+using ExhibitionManagementSystem.Services.Tickets;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExhibitionManagementSystem.Services.Implementations
@@ -47,6 +48,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
 
             var ticket = _mapper.Map<Ticket>(dto);
+            ticket.TenantID = tenantId;
             ticket.QRCode = qrCode;
             ticket.Status = TicketStatus.Active;
             ticket.IssuedAt = DateTime.UtcNow;
@@ -113,17 +115,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(t => t.TicketScans)
                 .FirstOrDefaultAsync(t => t.QRCode == qrCode);
 
-            if (ticket == null || ticket.Visitor.TenantID != tenantId)
+            if (ticket == null || ticket.TenantID != tenantId)
             {
                 return ServiceResult<TicketScanDto>.Failure("التذكرة غير موجودة", "TICKET_NOT_FOUND");
             }
 
-            if (ticket.Status != TicketStatus.Active && ticket.Status != TicketStatus.Used)
-            {
-                return ServiceResult<TicketScanDto>.Failure("التذكرة ملغاة أو غير صالحة حالياً", "TICKET_NOT_VALID");
-            }
-
-            if (ticket.ValidDate.HasValue && ticket.ValidDate.Value.Date < DateTime.UtcNow.Date)
+            if (ticket.Status is TicketStatus.Active or TicketStatus.Used &&
+                ticket.ValidDate.HasValue &&
+                ticket.ValidDate.Value.Date < DateTime.UtcNow.Date)
             {
                 await _unitOfWork.BeginTransactionAsync();
                 try
@@ -145,6 +144,22 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<TicketScanDto>.Failure("اتجاه المسح غير صالح", "INVALID_SCAN_DIRECTION");
             }
 
+            var lastDirection = ticket.TicketScans
+                .OrderByDescending(scan => scan.ScanDateTime)
+                .ThenByDescending(scan => scan.ScanID)
+                .Select(scan => (ScanDirection?)scan.Direction)
+                .FirstOrDefault();
+            var scanPolicy = TicketScanPolicy.Evaluate(
+                ticket.Status,
+                scanDirection,
+                lastDirection);
+            if (!scanPolicy.IsAllowed)
+            {
+                return ServiceResult<TicketScanDto>.Failure(
+                    scanPolicy.ErrorMessage ?? "التذكرة غير صالحة للمسح.",
+                    scanPolicy.ErrorCode ?? "TICKET_NOT_VALID");
+            }
+
             await _unitOfWork.BeginTransactionAsync();
             try
             {
@@ -157,11 +172,13 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     ScannedByUserId = scannedByUserId
                 };
 
-                if (ticket.Status == TicketStatus.Active && scanDirection == ScanDirection.In)
+                if (scanPolicy.MarkTicketUsed)
                 {
                     ticket.Status = TicketStatus.Used;
-                    _unitOfWork.Tickets.Update(ticket);
                 }
+
+                ticket.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Tickets.Update(ticket);
 
                 await _unitOfWork.TicketScans.AddAsync(scan);
                 await _unitOfWork.SaveChangesAsync();
@@ -174,10 +191,24 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 var resultDto = _mapper.Map<TicketScanDto>(fullScan ?? scan);
                 return ServiceResult<TicketScanDto>.Success(resultDto);
             }
-            catch (Exception ex)
+            catch (DbUpdateConcurrencyException)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<TicketScanDto>.Failure($"فشل تسجيل مسح التذكرة: {ex.Message}", "SCAN_FAILED");
+                return ServiceResult<TicketScanDto>.Failure(
+                    "تمت معالجة التذكرة في بوابة أخرى بالتزامن. أعد تحميل حالتها.",
+                    "TICKET_SCAN_CONFLICT");
+            }
+            catch (DbUpdateException)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ServiceResult<TicketScanDto>.Failure(
+                    "تعذر تسجيل المسح بسبب تعارض في البيانات.",
+                    "TICKET_SCAN_CONFLICT");
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ServiceResult<TicketScanDto>.Failure("تعذر تسجيل مسح التذكرة.", "SCAN_FAILED");
             }
         }
 

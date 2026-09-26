@@ -1,6 +1,7 @@
 using ExhibitionManagementSystem.Controllers.Base;
 using ExhibitionManagementSystem.Models.DTOs.Common;
 using ExhibitionManagementSystem.Models.DTOs.Financial;
+using ExhibitionManagementSystem.Security;
 using ExhibitionManagementSystem.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ExhibitionManagementSystem.Controllers.Financial;
 
 [Route("api/[controller]")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = AuthorizationPolicies.FinanceManagement)]
 public class FinancialController : BaseApiController
 {
     private readonly IFinancialService _financialService;
@@ -94,6 +95,31 @@ public class FinancialController : BaseApiController
     {
         var result = await _financialService.GetPaymentsByInvoiceAsync(
             TenantId, invoiceId);
+        return ToActionResult(result);
+    }
+
+    // POST /api/financial/invoices/{invoiceId}/credit-notes
+    [HttpPost("invoices/{invoiceId:int}/credit-notes")]
+    public async Task<ActionResult<CreditNoteDto>> CreateCreditNote(
+        int invoiceId,
+        [FromBody] CreditNoteCreateDto dto)
+    {
+        var result = await _financialService.CreateCreditNoteAsync(
+            TenantId,
+            UserId,
+            invoiceId,
+            dto);
+        return ToActionResult(result);
+    }
+
+    // GET /api/financial/invoices/{invoiceId}/credit-notes
+    [HttpGet("invoices/{invoiceId:int}/credit-notes")]
+    public async Task<ActionResult<IList<CreditNoteDto>>> GetCreditNotes(
+        int invoiceId)
+    {
+        var result = await _financialService.GetCreditNotesByInvoiceAsync(
+            TenantId,
+            invoiceId);
         return ToActionResult(result);
     }
 }

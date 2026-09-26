@@ -11,12 +11,15 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل دفعة مالية مسجلة على فاتورة.
 /// </summary>
-public class Payment : IAuditableEntity
+public class Payment : IAuditableEntity, ITenantEntity
 {
     /// <summary>
     /// المعرف الفريد للدفعة.
     /// </summary>
     [Key] public int PaymentID { get; set; }
+
+    /// <summary>معرف المستأجر المالك للدفعة.</summary>
+    public int TenantID { get; set; }
 
     /// <summary>
     /// معرف الفاتورة المرتبطة بالدفعة.
@@ -36,7 +39,7 @@ public class Payment : IAuditableEntity
     /// <summary>
     /// رمز العملة المستخدمة في الدفعة.
     /// </summary>
-    [Required, StringLength(3)] public string CurrencyCode { get; set; }
+    [Required, StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>
     /// طريقة الدفع المستخدمة.
@@ -46,7 +49,7 @@ public class Payment : IAuditableEntity
     /// <summary>
     /// رقم مرجعي للدفع مثل رقم التحويل أو الشيك.
     /// </summary>
-    [StringLength(100)] public string ReferenceNo { get; set; }
+    [StringLength(100)] public string ReferenceNo { get; set; } = string.Empty;
 
     /// <summary>
     /// حالة الدفعة الحالية.
@@ -56,12 +59,12 @@ public class Payment : IAuditableEntity
     /// <summary>
     /// ملاحظات إضافية على الدفعة.
     /// </summary>
-    [StringLength(500)] public string Notes { get; set; }
+    [StringLength(500)] public string Notes { get; set; } = string.Empty;
 
     /// <summary>
     /// معرف المستخدم الذي استلم أو سجل الدفعة.
     /// </summary>
-    [StringLength(450)] public string ReceivedByUserId { get; set; }
+    [StringLength(450)] public string ReceivedByUserId { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ إنشاء سجل الدفعة.
@@ -73,19 +76,21 @@ public class Payment : IAuditableEntity
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
 
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
+
     /// <summary>
     /// الفاتورة المرتبطة بالدفعة.
     /// </summary>
-    [ForeignKey(nameof(InvoiceID))] public virtual Invoice Invoice { get; set; }
+    [ForeignKey(nameof(InvoiceID))] public virtual Invoice Invoice { get; set; } = null!;
 
     /// <summary>
     /// العملة المستخدمة في الدفعة.
     /// </summary>
-    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
 
     /// <summary>
     /// المستخدم الذي استلم أو سجل الدفعة.
     /// </summary>
-    [ForeignKey(nameof(ReceivedByUserId))] public virtual ApplicationUser ReceivedByUser { get; set; }
+    [ForeignKey(nameof(ReceivedByUserId))] public virtual ApplicationUser ReceivedByUser { get; set; } = null!;
 
 }

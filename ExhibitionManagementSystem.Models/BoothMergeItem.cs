@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -39,12 +39,12 @@ public class BoothMergeItem
     /// <summary>
     /// عملية الدمج المرتبطة بهذا العنصر.
     /// </summary>
-    [ForeignKey(nameof(MergeID))] public virtual BoothMerge Merge { get; set; }
+    [ForeignKey(nameof(MergeID))] public virtual BoothMerge Merge { get; set; } = null!;
 
     /// <summary>
     /// الجناح المرتبط بهذا العنصر.
     /// </summary>
-    [ForeignKey(nameof(BoothID))] public virtual Booth Booth { get; set; }
+    [ForeignKey(nameof(BoothID))] public virtual Booth Booth { get; set; } = null!;
 
 
 

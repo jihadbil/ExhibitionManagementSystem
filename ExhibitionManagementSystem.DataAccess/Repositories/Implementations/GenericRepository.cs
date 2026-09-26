@@ -22,7 +22,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task<T?> GetByIdAsync(object id)
         {
-            return await _dbSet.FindAsync(id);
+            return await _dbSet.FirstOrDefaultAsync(BuildKeyPredicate(id));
         }
 
         public async Task<IReadOnlyList<T>> GetAllAsync()
@@ -143,7 +143,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task SoftDeleteAsync(object id, string deletedByUserId)
         {
-            var entity = await _dbSet.FindAsync(id);
+            var entity = await GetByIdAsync(id);
             if (entity == null) 
                 return;
 
@@ -162,17 +162,8 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task RestoreAsync(object id)
         {
-            var keyName = _context.Model.FindEntityType(typeof(T))?.FindPrimaryKey()?.Properties.FirstOrDefault()?.Name;
-            if (keyName == null) 
-                throw new InvalidOperationException("Entity does not have a primary key.");
-
-            var parameter = Expression.Parameter(typeof(T), "e");
-            var property = Expression.Property(parameter, keyName);
-            var convertedId = Expression.Constant(Convert.ChangeType(id, property.Type));
-            var body = Expression.Equal(property, convertedId);
-            var lambda = Expression.Lambda<Func<T, bool>>(body, parameter);
-
-            var entity = await _dbSet.IgnoreQueryFilters().FirstOrDefaultAsync(lambda);
+            var query = ApplyTenantIsolation(_dbSet.IgnoreQueryFilters());
+            var entity = await query.FirstOrDefaultAsync(BuildKeyPredicate(id));
             if (entity == null) 
                 return;
 
@@ -193,8 +184,8 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             if (typeof(ISoftDeletable).IsAssignableFrom(typeof(T)))
             {
-                return await _dbSet.IgnoreQueryFilters()
-                    .Where(e => ((ISoftDeletable)e).IsDeleted)
+                return await ApplyTenantIsolation(_dbSet.IgnoreQueryFilters())
+                    .Where(e => EF.Property<bool>(e, nameof(ISoftDeletable.IsDeleted)))
                     .AsNoTracking()
                     .ToListAsync();
             }
@@ -211,7 +202,46 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public IQueryable<T> AsQueryableIgnoringSoftDelete()
         {
-            return _dbSet.IgnoreQueryFilters().AsQueryable();
+            return ApplyTenantIsolation(_dbSet.IgnoreQueryFilters());
+        }
+
+        private Expression<Func<T, bool>> BuildKeyPredicate(object id)
+        {
+            var keyName = _context.Model.FindEntityType(typeof(T))?
+                .FindPrimaryKey()?.Properties.FirstOrDefault()?.Name;
+            if (keyName == null)
+            {
+                throw new InvalidOperationException("Entity does not have a primary key.");
+            }
+
+            var parameter = Expression.Parameter(typeof(T), "e");
+            var property = Expression.Property(parameter, keyName);
+            var convertedId = Expression.Constant(Convert.ChangeType(id, property.Type));
+            var body = Expression.Equal(property, convertedId);
+            return Expression.Lambda<Func<T, bool>>(body, parameter);
+        }
+
+        private IQueryable<T> ApplyTenantIsolation(IQueryable<T> query)
+        {
+            if (_context.CanBypassTenantIsolation)
+            {
+                return query;
+            }
+
+            if (!typeof(ITenantEntity).IsAssignableFrom(typeof(T)))
+            {
+                throw new InvalidOperationException(
+                    $"Ignoring query filters for {typeof(T).Name} requires an explicit tenant-owned query.");
+            }
+
+            var tenantId = _context.CurrentTenantId;
+            if (tenantId <= 0)
+            {
+                return query.Where(_ => false);
+            }
+
+            return query.Where(entity =>
+                EF.Property<int>(entity, nameof(ITenantEntity.TenantID)) == tenantId);
         }
     }
 }

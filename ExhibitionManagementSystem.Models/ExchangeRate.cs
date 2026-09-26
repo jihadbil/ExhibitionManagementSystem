@@ -21,12 +21,12 @@ public class ExchangeRate
     /// <summary>
     /// رمز العملة المصدر التي يتم التحويل منها.
     /// </summary>
-    [Required, StringLength(3)] public string FromCurrency { get; set; }
+    [Required, StringLength(3)] public string FromCurrency { get; set; } = string.Empty;
 
     /// <summary>
     /// رمز العملة الهدف التي يتم التحويل إليها.
     /// </summary>
-    [Required, StringLength(3)] public string ToCurrency { get; set; }
+    [Required, StringLength(3)] public string ToCurrency { get; set; } = string.Empty;
 
     /// <summary>
     /// قيمة سعر الصرف بين العملتين.
@@ -41,12 +41,12 @@ public class ExchangeRate
     /// <summary>
     /// مصدر سعر الصرف أو الجهة التي تم الاعتماد عليها.
     /// </summary>
-    [Required, StringLength(50)] public string Source { get; set; }
+    [Required, StringLength(50)] public string Source { get; set; } = string.Empty;
 
     /// <summary>
     /// معرف المستخدم الذي أضاف سعر الصرف.
     /// </summary>
-    [StringLength(450)] public string CreatedByUserId { get; set; }
+    [StringLength(450)] public string CreatedByUserId { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ إنشاء سجل سعر الصرف.
@@ -56,16 +56,16 @@ public class ExchangeRate
     /// <summary>
     /// العملة المصدر المرتبطة بسعر الصرف.
     /// </summary>
-    [ForeignKey(nameof(FromCurrency))] public virtual Currency FromCurrencyNav { get; set; }
+    [ForeignKey(nameof(FromCurrency))] public virtual Currency FromCurrencyNav { get; set; } = null!;
 
     /// <summary>
     /// العملة الهدف المرتبطة بسعر الصرف.
     /// </summary>
-    [ForeignKey(nameof(ToCurrency))] public virtual Currency ToCurrencyNav { get; set; }
+    [ForeignKey(nameof(ToCurrency))] public virtual Currency ToCurrencyNav { get; set; } = null!;
 
     /// <summary>
     /// المستخدم الذي أضاف سعر الصرف.
     /// </summary>
-    [ForeignKey(nameof(CreatedByUserId))] public virtual ApplicationUser CreatedByUser { get; set; }
+    [ForeignKey(nameof(CreatedByUserId))] public virtual ApplicationUser CreatedByUser { get; set; } = null!;
 
 }

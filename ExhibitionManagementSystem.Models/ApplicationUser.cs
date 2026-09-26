@@ -24,7 +24,7 @@ public class ApplicationUser:IdentityUser
     /// </summary>
     [Required]
     [StringLength(100)]
-    public string FullName { get; set; }
+    public string FullName { get; set; } = string.Empty;
 
     /// <summary>
     /// يحدد ما إذا كان حساب المستخدم مفعّلًا.
@@ -37,19 +37,11 @@ public class ApplicationUser:IdentityUser
     public DateTime? LastLogin { get; set; }
 
     /// <summary>
-    /// رمز التحديث المستخدم لإصدار رموز وصول جديدة.
-    /// </summary>
-    public string? RefreshToken { get; set; }
-
-    /// <summary>
-    /// تاريخ انتهاء صلاحية رمز التحديث.
-    /// </summary>
-    public DateTime? RefreshTokenExpiry { get; set; }
-
-    /// <summary>
     /// المستأجر المرتبط بالمستخدم.
     /// </summary>
-    public virtual Tenant Tenant { get; set; }
+    public virtual Tenant Tenant { get; set; } = null!;
+
+    public virtual ICollection<RefreshSession> RefreshSessions { get; set; } = new HashSet<RefreshSession>();
 
 
 

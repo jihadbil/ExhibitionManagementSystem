@@ -1,5 +1,6 @@
 using ExhibitionManagementSystem.Controllers.Base;
 using ExhibitionManagementSystem.Models.DTOs.Financial;
+using ExhibitionManagementSystem.Security;
 using ExhibitionManagementSystem.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ExhibitionManagementSystem.Controllers.Reports;
 
 [Route("api/[controller]")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = AuthorizationPolicies.FinanceManagement)]
 public class ReportsController : BaseApiController
 {
     private readonly IReportService _reportService;

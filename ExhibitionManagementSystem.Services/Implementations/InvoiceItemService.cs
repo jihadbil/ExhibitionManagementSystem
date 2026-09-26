@@ -6,6 +6,7 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using ExhibitionManagementSystem.DataAccess.Repositories.Interfaces;
 using ExhibitionManagementSystem.Models;
+using ExhibitionManagementSystem.Models.Enums;
 using ExhibitionManagementSystem.Models.DTOs.Financial;
 using ExhibitionManagementSystem.Services.Common;
 using ExhibitionManagementSystem.Services.Interfaces;
@@ -23,13 +24,16 @@ namespace ExhibitionManagementSystem.Services.Implementations
             _mapper = mapper;
         }
 
-        public async Task<ServiceResult<InvoiceItemDto>> GetItemByIdAsync(int tenantId, int itemId)
+        public async Task<ServiceResult<InvoiceItemDto>> GetItemByIdAsync(int tenantId, int invoiceId, int itemId)
         {
             var item = await _unitOfWork.InvoiceItems.AsQueryable()
                 .Include(i => i.Invoice)
-                .FirstOrDefaultAsync(i => i.InvoiceItemID == itemId);
+                .FirstOrDefaultAsync(i =>
+                    i.InvoiceItemID == itemId &&
+                    i.InvoiceID == invoiceId &&
+                    i.Invoice.TenantID == tenantId);
 
-            if (item == null || item.Invoice.TenantID != tenantId)
+            if (item == null)
             {
                 return ServiceResult<InvoiceItemDto>.Failure("البند المحدد غير موجود", "INVOICE_ITEM_NOT_FOUND");
             }
@@ -66,71 +70,120 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<InvoiceItemDto>.Failure("الفاتورة المحددة غير موجودة", "INVOICE_NOT_FOUND");
             }
 
+            if (invoice.Status != InvoiceStatus.Draft)
+            {
+                return ServiceResult<InvoiceItemDto>.Failure(
+                    "لا يمكن تعديل بنود الفاتورة بعد إصدارها",
+                    "INVOICE_IMMUTABLE");
+            }
+
             var item = _mapper.Map<InvoiceItem>(dto);
             item.InvoiceID = invoiceId;
             item.TotalPrice = item.Quantity * item.UnitPrice;
 
-            await _unitOfWork.InvoiceItems.AddAsync(item);
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                await _unitOfWork.InvoiceItems.AddAsync(item);
+                await _unitOfWork.SaveChangesAsync();
+                await RecalculateInvoiceTotalsAsync(tenantId, invoiceId);
+                await _unitOfWork.CommitTransactionAsync();
 
-            // إعادة احتساب إجمالي الفاتورة
-            await RecalculateInvoiceTotalsAsync(invoiceId);
-
-            var resultDto = _mapper.Map<InvoiceItemDto>(item);
-            return ServiceResult<InvoiceItemDto>.Success(resultDto);
+                var resultDto = _mapper.Map<InvoiceItemDto>(item);
+                return ServiceResult<InvoiceItemDto>.Success(resultDto);
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
-        public async Task<ServiceResult<InvoiceItemDto>> UpdateItemAsync(int tenantId, int itemId, InvoiceItemUpdateDto dto)
+        public async Task<ServiceResult<InvoiceItemDto>> UpdateItemAsync(int tenantId, int invoiceId, int itemId, InvoiceItemUpdateDto dto)
         {
             var item = await _unitOfWork.InvoiceItems.AsQueryable()
                 .Include(i => i.Invoice)
-                .FirstOrDefaultAsync(i => i.InvoiceItemID == itemId);
+                .FirstOrDefaultAsync(i =>
+                    i.InvoiceItemID == itemId &&
+                    i.InvoiceID == invoiceId &&
+                    i.Invoice.TenantID == tenantId);
 
-            if (item == null || item.Invoice.TenantID != tenantId)
+            if (item == null)
             {
                 return ServiceResult<InvoiceItemDto>.Failure("البند المحدد غير موجود", "INVOICE_ITEM_NOT_FOUND");
+            }
+
+            if (item.Invoice.Status != InvoiceStatus.Draft)
+            {
+                return ServiceResult<InvoiceItemDto>.Failure(
+                    "لا يمكن تعديل بنود الفاتورة بعد إصدارها",
+                    "INVOICE_IMMUTABLE");
             }
 
             _mapper.Map(dto, item);
             item.TotalPrice = item.Quantity * item.UnitPrice;
 
-            _unitOfWork.InvoiceItems.Update(item);
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                _unitOfWork.InvoiceItems.Update(item);
+                await _unitOfWork.SaveChangesAsync();
+                await RecalculateInvoiceTotalsAsync(tenantId, invoiceId);
+                await _unitOfWork.CommitTransactionAsync();
 
-            // إعادة احتساب إجمالي الفاتورة
-            await RecalculateInvoiceTotalsAsync(item.InvoiceID);
-
-            var resultDto = _mapper.Map<InvoiceItemDto>(item);
-            return ServiceResult<InvoiceItemDto>.Success(resultDto);
+                var resultDto = _mapper.Map<InvoiceItemDto>(item);
+                return ServiceResult<InvoiceItemDto>.Success(resultDto);
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
-        public async Task<ServiceResult<bool>> DeleteItemAsync(int tenantId, int itemId)
+        public async Task<ServiceResult<bool>> DeleteItemAsync(int tenantId, int invoiceId, int itemId)
         {
             var item = await _unitOfWork.InvoiceItems.AsQueryable()
                 .Include(i => i.Invoice)
-                .FirstOrDefaultAsync(i => i.InvoiceItemID == itemId);
+                .FirstOrDefaultAsync(i =>
+                    i.InvoiceItemID == itemId &&
+                    i.InvoiceID == invoiceId &&
+                    i.Invoice.TenantID == tenantId);
 
-            if (item == null || item.Invoice.TenantID != tenantId)
+            if (item == null)
             {
                 return ServiceResult<bool>.Failure("البند المحدد غير موجود", "INVOICE_ITEM_NOT_FOUND");
             }
 
-            var invoiceId = item.InvoiceID;
+            if (item.Invoice.Status != InvoiceStatus.Draft)
+            {
+                return ServiceResult<bool>.Failure(
+                    "لا يمكن تعديل بنود الفاتورة بعد إصدارها",
+                    "INVOICE_IMMUTABLE");
+            }
 
-            _unitOfWork.InvoiceItems.Remove(item);
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                _unitOfWork.InvoiceItems.Remove(item);
+                await _unitOfWork.SaveChangesAsync();
+                await RecalculateInvoiceTotalsAsync(tenantId, invoiceId);
+                await _unitOfWork.CommitTransactionAsync();
 
-            // إعادة احتساب إجمالي الفاتورة
-            await RecalculateInvoiceTotalsAsync(invoiceId);
-
-            return ServiceResult<bool>.Success(true);
+                return ServiceResult<bool>.Success(true);
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
-        private async Task RecalculateInvoiceTotalsAsync(int invoiceId)
+        private async Task RecalculateInvoiceTotalsAsync(int tenantId, int invoiceId)
         {
             var invoice = await _unitOfWork.Invoices.AsQueryable()
                 .Include(i => i.InvoiceItems)
-                .FirstOrDefaultAsync(i => i.InvoiceID == invoiceId);
+                .FirstOrDefaultAsync(i => i.InvoiceID == invoiceId && i.TenantID == tenantId);
 
             if (invoice != null)
             {

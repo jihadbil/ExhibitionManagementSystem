@@ -25,7 +25,7 @@ public class BoothMerge
     /// <summary>
     /// التسمية النهائية للجناح المدمج.
     /// </summary>
-    [Required, StringLength(200)] public string MergedBoothLabel { get; set; }
+    [Required, StringLength(200)] public string MergedBoothLabel { get; set; } = string.Empty;
 
     /// <summary>
     /// إجمالي مساحة الأجنحة المدمجة بالمتر المربع.
@@ -45,27 +45,27 @@ public class BoothMerge
     /// <summary>
     /// معرف المستخدم الذي نفذ عملية الدمج.
     /// </summary>
-    [StringLength(450)] public string MergedByUserId { get; set; }
+    [StringLength(450)] public string MergedByUserId { get; set; } = string.Empty;
 
     /// <summary>
     /// ملاحظات إضافية حول عملية الدمج.
     /// </summary>
-    [StringLength(500)] public string Notes { get; set; }
+    [StringLength(500)] public string Notes { get; set; } = string.Empty;
 
     /// <summary>
     /// المعرض المرتبط بعملية الدمج.
     /// </summary>
-    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; }
+    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; } = null!;
 
     /// <summary>
     /// الحجز المرتبط بالجناح المدمج.
     /// </summary>
-    [ForeignKey(nameof(ReservationID))] public virtual BoothReservation Reservation { get; set; }
+    [ForeignKey(nameof(ReservationID))] public virtual BoothReservation Reservation { get; set; } = null!;
 
     /// <summary>
     /// المستخدم الذي نفذ عملية الدمج.
     /// </summary>
-    [ForeignKey(nameof(MergedByUserId))] public virtual ApplicationUser MergedByUser { get; set; }
+    [ForeignKey(nameof(MergedByUserId))] public virtual ApplicationUser MergedByUser { get; set; } = null!;
 
     /// <summary>
     /// العناصر التي توضح الأجنحة الداخلة في عملية الدمج.

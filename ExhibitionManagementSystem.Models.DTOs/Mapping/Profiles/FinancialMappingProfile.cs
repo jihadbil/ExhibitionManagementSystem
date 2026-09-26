@@ -15,7 +15,14 @@ public class FinancialMappingProfile : Profile
             .ForMember(dest => dest.CurrencySymbol, opt => opt.MapFrom(src => src.Currency != null ? src.Currency.Symbol : string.Empty))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
             .ForMember(dest => dest.Payments, opt => opt.MapFrom(src => src.Payments))
-            .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.InvoiceItems));
+            .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.InvoiceItems))
+            .ForMember(dest => dest.CreditNotes, opt => opt.MapFrom(src => src.CreditNotes))
+            .ForMember(dest => dest.AdjustedTotalAmount,
+                opt => opt.MapFrom(src => src.TotalAmount - src.CreditNotes.Sum(note => note.Amount)))
+            .ForMember(dest => dest.RefundedAmount,
+                opt => opt.MapFrom(src => src.CreditNotes
+                    .Where(note => note.Type == CreditNoteType.Refund)
+                    .Sum(note => note.Amount)));
 
 
         CreateMap<InvoiceCreateDto, Invoice>()
@@ -65,6 +72,8 @@ public class FinancialMappingProfile : Profile
             .ForMember(dest => dest.InvoiceID, opt => opt.Ignore())
             .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.Quantity * src.UnitPrice))
             .ForMember(dest => dest.Invoice, opt => opt.Ignore());
+
+        CreateMap<CreditNote, CreditNoteDto>()
+            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()));
     }
 }
-

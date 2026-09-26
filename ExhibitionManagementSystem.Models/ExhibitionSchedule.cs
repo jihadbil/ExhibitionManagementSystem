@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -32,7 +32,7 @@ public class ExhibitionSchedule
     /// <summary>
     /// اسم الفعالية أو الجلسة.
     /// </summary>
-    [Required, StringLength(200)] public string EventName { get; set; }
+    [Required, StringLength(200)] public string EventName { get; set; } = string.Empty;
 
     /// <summary>
     /// نوع الفعالية مثل محاضرة أو ورشة.
@@ -52,7 +52,7 @@ public class ExhibitionSchedule
     /// <summary>
     /// اسم المتحدث أو مقدم الفعالية.
     /// </summary>
-    [StringLength(200)] public string SpeakerName { get; set; }
+    [StringLength(200)] public string SpeakerName { get; set; } = string.Empty;
 
     /// <summary>
     /// الحد الأقصى لعدد الحضور.
@@ -62,7 +62,7 @@ public class ExhibitionSchedule
     /// <summary>
     /// وصف محتوى الفعالية.
     /// </summary>
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
 
     /// <summary>
     /// يحدد ما إذا كانت الفعالية متاحة للجمهور.
@@ -72,11 +72,11 @@ public class ExhibitionSchedule
     /// <summary>
     /// المعرض المرتبط بالفعالية.
     /// </summary>
-    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; }
+    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; } = null!;
 
     /// <summary>
     /// القاعة المرتبطة بالفعالية.
     /// </summary>
-    [ForeignKey(nameof(HallID))] public virtual Hall Hall { get; set; }
+    [ForeignKey(nameof(HallID))] public virtual Hall Hall { get; set; } = null!;
 
 }

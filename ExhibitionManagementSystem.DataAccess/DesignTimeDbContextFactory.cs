@@ -21,14 +21,21 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Applicatio
         var configuration = new ConfigurationBuilder()
             .SetBasePath(basePath)
             .AddJsonFile("appsettings.json", optional: true)
+            .AddEnvironmentVariables()
             .Build();
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Server=(local);Database=MyDatabase;Trusted_Connection=True;TrustServerCertificate=True;";
+            ?? throw new InvalidOperationException(
+                "ConnectionStrings:DefaultConnection is required for EF Core design-time operations.");
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "ConnectionStrings:DefaultConnection is required for EF Core design-time operations.");
+        }
 
         optionsBuilder.UseSqlServer(connectionString);
 
         return new ApplicationDbContext(optionsBuilder.Options);
     }
 }
-

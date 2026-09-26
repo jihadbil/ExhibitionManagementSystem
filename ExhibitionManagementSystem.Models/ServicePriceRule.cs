@@ -11,7 +11,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل قاعدة تسعير مخصصة لخدمة حسب المستأجر أو المعرض أو فئة العارض.
 /// </summary>
-public class ServicePriceRule : IAuditableEntity, ISoftDeletable
+public class ServicePriceRule : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     /// <summary>
     /// المعرف الفريد لقاعدة تسعير الخدمة.
@@ -46,7 +46,7 @@ public class ServicePriceRule : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// رمز العملة المستخدمة في السعر.
     /// </summary>
-    [Required, StringLength(3)] public string CurrencyCode { get; set; }
+    [Required, StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ بداية صلاحية قاعدة التسعير.
@@ -86,21 +86,21 @@ public class ServicePriceRule : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// الخدمة المرتبطة بقاعدة التسعير.
     /// </summary>
-    [ForeignKey(nameof(ServiceID))] public virtual Service Service { get; set; }
+    [ForeignKey(nameof(ServiceID))] public virtual Service Service { get; set; } = null!;
 
     /// <summary>
     /// المستأجر المرتبط بقاعدة التسعير.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>
     /// المعرض المرتبط بقاعدة التسعير.
     /// </summary>
-    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; }
+    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; } = null!;
 
     /// <summary>
     /// العملة المستخدمة في قاعدة التسعير.
     /// </summary>
-    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
 
 }

@@ -10,7 +10,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل موقعًا يستضيف المعارض ويحتوي على قاعات.
 /// </summary>
-public class Venue : IAuditableEntity, ISoftDeletable
+public class Venue : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
 
     /// <summary>
@@ -26,22 +26,22 @@ public class Venue : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// اسم الموقع.
     /// </summary>
-    [Required, StringLength(200)] public string Name { get; set; }
+    [Required, StringLength(200)] public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// العنوان التفصيلي للموقع.
     /// </summary>
-    [StringLength(500)] public string Address { get; set; }
+    [StringLength(500)] public string Address { get; set; } = string.Empty;
 
     /// <summary>
     /// المدينة التي يقع فيها الموقع.
     /// </summary>
-    [StringLength(100)] public string City { get; set; }
+    [StringLength(100)] public string City { get; set; } = string.Empty;
 
     /// <summary>
     /// الدولة التي يقع فيها الموقع.
     /// </summary>
-    [StringLength(100)] public string Country { get; set; }
+    [StringLength(100)] public string Country { get; set; } = string.Empty;
 
     /// <summary>
     /// الطاقة الاستيعابية الإجمالية للموقع.
@@ -51,7 +51,7 @@ public class Venue : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// رابط صورة خريطة الموقع.
     /// </summary>
-    [StringLength(500)] public string MapImageURL { get; set; }
+    [StringLength(500)] public string MapImageURL { get; set; } = string.Empty;
 
     /// <summary>
     /// يحدد ما إذا كان الموقع نشطًا ومتاحًا للاستخدام.
@@ -86,7 +86,7 @@ public class Venue : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// المستأجر المرتبط بالموقع.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>
     /// القاعات الموجودة داخل الموقع.

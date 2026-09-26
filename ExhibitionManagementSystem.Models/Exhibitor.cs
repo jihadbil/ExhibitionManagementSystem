@@ -11,7 +11,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل عارضًا أو شركة مشاركة في المعارض.
 /// </summary>
-public class Exhibitor : IAuditableEntity, ISoftDeletable
+public class Exhibitor : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     /// <summary>
     /// المعرف الفريد للعارض.
@@ -26,32 +26,32 @@ public class Exhibitor : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// اسم الشركة العارضة.
     /// </summary>
-    [Required, StringLength(200)] public string CompanyName { get; set; }
+    [Required, StringLength(200)] public string CompanyName { get; set; } = string.Empty;
 
     /// <summary>
     /// اسم مسؤول التواصل لدى الشركة.
     /// </summary>
-    [StringLength(100)] public string ContactPerson { get; set; }
+    [StringLength(100)] public string ContactPerson { get; set; } = string.Empty;
 
     /// <summary>
     /// رقم هاتف العارض.
     /// </summary>
-    [StringLength(20)] public string Phone { get; set; }
+    [StringLength(20)] public string Phone { get; set; } = string.Empty;
 
     /// <summary>
     /// البريد الإلكتروني للعارض.
     /// </summary>
-    [StringLength(200)] public string Email { get; set; }
+    [StringLength(200)] public string Email { get; set; } = string.Empty;
 
     /// <summary>
     /// القطاع أو المجال الذي يعمل فيه العارض.
     /// </summary>
-    [StringLength(100)] public string Sector { get; set; }
+    [StringLength(100)] public string Sector { get; set; } = string.Empty;
 
     /// <summary>
     /// جنسية أو بلد العارض.
     /// </summary>
-    [StringLength(100)] public string Nationality { get; set; }
+    [StringLength(100)] public string Nationality { get; set; } = string.Empty;
 
     /// <summary>
     /// فئة العارض المستخدمة في التصنيف والتسعير.
@@ -61,12 +61,12 @@ public class Exhibitor : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// رابط شعار الشركة العارضة.
     /// </summary>
-    [StringLength(500)] public string LogoURL { get; set; }
+    [StringLength(500)] public string LogoURL { get; set; } = string.Empty;
 
     /// <summary>
     /// نبذة تعريفية عن الشركة العارضة.
     /// </summary>
-    public string CompanyProfile { get; set; }
+    public string CompanyProfile { get; set; } = string.Empty;
 
     /// <summary>
     /// يحدد ما إذا كان العارض نشطًا.
@@ -106,7 +106,7 @@ public class Exhibitor : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// المستأجر المرتبط بالعارض.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>
     /// حساب المستخدم المرتبط بالعارض.

@@ -39,7 +39,7 @@ public class ReservationService
     /// <summary>
     /// رمز العملة المستخدمة في تسعير الخدمة.
     /// </summary>
-    [Required, StringLength(3)] public string CurrencyCode { get; set; }
+    [Required, StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>
     /// إجمالي سعر الخدمة بعد ضرب الكمية في سعر الوحدة.
@@ -49,16 +49,16 @@ public class ReservationService
     /// <summary>
     /// الحجز المرتبط بالخدمة.
     /// </summary>
-    [ForeignKey(nameof(ReservationID))] public virtual BoothReservation Reservation { get; set; }
+    [ForeignKey(nameof(ReservationID))] public virtual BoothReservation Reservation { get; set; } = null!;
 
     /// <summary>
     /// الخدمة المرتبطة بالحجز.
     /// </summary>
-    [ForeignKey(nameof(ServiceID))] public virtual Service Service { get; set; }
+    [ForeignKey(nameof(ServiceID))] public virtual Service Service { get; set; } = null!;
 
     /// <summary>
     /// العملة المستخدمة في تسعير الخدمة.
     /// </summary>
-    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
 
 }

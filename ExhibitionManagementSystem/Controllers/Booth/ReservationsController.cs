@@ -1,6 +1,7 @@
 using ExhibitionManagementSystem.Controllers.Base;
 using ExhibitionManagementSystem.Models.DTOs.Common;
 using ExhibitionManagementSystem.Models.DTOs.Reservation;
+using ExhibitionManagementSystem.Security;
 using ExhibitionManagementSystem.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ExhibitionManagementSystem.Controllers.Booth;
 
 [Route("api/[controller]")]
+[Authorize(Policy = AuthorizationPolicies.EventManagement)]
 public class ReservationsController : BaseApiController
 {
     private readonly IReservationService _reservationService;
@@ -39,7 +41,6 @@ public class ReservationsController : BaseApiController
 
     // GET /api/reservations/exhibition/{exhibitionId}/unpaid
     [HttpGet("exhibition/{exhibitionId:int}/unpaid")]
-    [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<IList<BoothReservationSummaryDto>>> GetUnpaid(
         int exhibitionId)
     {
@@ -69,7 +70,6 @@ public class ReservationsController : BaseApiController
 
     // PUT /api/reservations/{reservationId}
     [HttpPut("{reservationId:int}")]
-    [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<BoothReservationDto>> Update(
         int reservationId,
         [FromBody] BoothReservationUpdateDto dto)
@@ -80,7 +80,6 @@ public class ReservationsController : BaseApiController
 
     // PATCH /api/reservations/{reservationId}/approve
     [HttpPatch("{reservationId:int}/approve")]
-    [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<BoothReservationDto>> Approve(int reservationId)
     {
         var result = await _reservationService.ApproveAsync(TenantId, reservationId);

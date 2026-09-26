@@ -11,12 +11,15 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل تذكرة دخول زائر إلى معرض.
 /// </summary>
-public class Ticket : IAuditableEntity, ISoftDeletable
+public class Ticket : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     /// <summary>
     /// المعرف الفريد للتذكرة.
     /// </summary>
     [Key] public int TicketID { get; set; }
+
+    /// <summary>معرف المستأجر المالك للتذكرة.</summary>
+    public int TenantID { get; set; }
 
     /// <summary>
     /// معرف الزائر صاحب التذكرة.
@@ -31,7 +34,7 @@ public class Ticket : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// نوع التذكرة.
     /// </summary>
-    [Required, StringLength(50)] public string TicketType { get; set; }
+    [Required, StringLength(50)] public string TicketType { get; set; } = string.Empty;
 
     /// <summary>
     /// سعر التذكرة.
@@ -46,7 +49,7 @@ public class Ticket : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// قيمة رمز QR الخاص بالتذكرة.
     /// </summary>
-    [Required, StringLength(500)] public string QRCode { get; set; }
+    [Required, StringLength(500)] public string QRCode { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ صلاحية التذكرة عند تقييدها بيوم محدد.
@@ -89,19 +92,27 @@ public class Ticket : IAuditableEntity, ISoftDeletable
     public string? DeletedByUserId { get; set; }
 
     /// <summary>
+    /// رمز تزامن يمنع قبول عمليتي مسح متوازيتين اعتمادًا على حالة قديمة.
+    /// </summary>
+    [Timestamp]
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
+
+    /// <summary>
     /// الزائر صاحب التذكرة.
     /// </summary>
-    [ForeignKey(nameof(VisitorID))] public virtual Visitor Visitor { get; set; }
+    [ForeignKey(nameof(VisitorID))] public virtual Visitor Visitor { get; set; } = null!;
 
     /// <summary>
     /// المعرض المرتبط بالتذكرة.
     /// </summary>
-    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; }
+    [ForeignKey(nameof(ExhibitionID))] public virtual Exhibition Exhibition { get; set; } = null!;
 
     /// <summary>
     /// العملة المستخدمة في سعر التذكرة.
     /// </summary>
-    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(CurrencyCode))] public virtual Currency? Currency { get; set; }
 
     /// <summary>
     /// عمليات مسح الدخول والخروج المرتبطة بالتذكرة.

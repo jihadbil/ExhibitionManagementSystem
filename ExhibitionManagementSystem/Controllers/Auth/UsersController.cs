@@ -1,6 +1,7 @@
 using ExhibitionManagementSystem.Controllers.Base;
 using ExhibitionManagementSystem.Models.DTOs.Auth;
 using ExhibitionManagementSystem.Models.DTOs.Common;
+using ExhibitionManagementSystem.Security;
 using ExhibitionManagementSystem.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ExhibitionManagementSystem.Controllers.Auth;
 
 [Route("api/[controller]")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = AuthorizationPolicies.TenantAdministration)]
 public class UsersController : BaseApiController
 {
     private readonly IAuthService _authService;
@@ -30,7 +31,7 @@ public class UsersController : BaseApiController
     [HttpGet("{userId}")]
     public async Task<ActionResult<UserManagementDto>> GetById(string userId)
     {
-        var result = await _authService.GetUserByIdAsync(userId);
+        var result = await _authService.GetUserByIdAsync(TenantId, userId);
         return ToActionResult(result);
     }
 
@@ -51,7 +52,7 @@ public class UsersController : BaseApiController
         string userId,
         [FromBody] bool isActive)
     {
-        var result = await _authService.UpdateUserStatusAsync(userId, isActive);
+        var result = await _authService.UpdateUserStatusAsync(TenantId, UserId, userId, isActive);
         return ToActionResult(result);
     }
 
@@ -59,7 +60,7 @@ public class UsersController : BaseApiController
     [HttpDelete("{userId}")]
     public async Task<IActionResult> Delete(string userId)
     {
-        var result = await _authService.DeleteUserAsync(userId);
+        var result = await _authService.DeleteUserAsync(TenantId, UserId, userId);
         return ToActionResult(result);
     }
 }

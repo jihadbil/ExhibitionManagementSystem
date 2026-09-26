@@ -52,11 +52,11 @@ public class ScheduleRegistration : IAuditableEntity
     /// <summary>
     /// الفعالية المجدولة المرتبطة بالتسجيل.
     /// </summary>
-    [ForeignKey(nameof(ScheduleID))] public virtual ExhibitionSchedule Schedule { get; set; }
+    [ForeignKey(nameof(ScheduleID))] public virtual ExhibitionSchedule Schedule { get; set; } = null!;
 
     /// <summary>
     /// الزائر المسجل في الفعالية.
     /// </summary>
-    [ForeignKey(nameof(VisitorID))] public virtual Visitor Visitor { get; set; }
+    [ForeignKey(nameof(VisitorID))] public virtual Visitor Visitor { get; set; } = null!;
 
 }

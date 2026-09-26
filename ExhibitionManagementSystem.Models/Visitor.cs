@@ -10,7 +10,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل زائرًا مسجلًا لدى مستأجر ويمكنه امتلاك تذاكر للمعارض.
 /// </summary>
-public class Visitor : IAuditableEntity, ISoftDeletable
+public class Visitor : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     /// <summary>
     /// المعرف الفريد للزائر.
@@ -25,27 +25,27 @@ public class Visitor : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// الاسم الكامل للزائر.
     /// </summary>
-    [Required, StringLength(100)] public string FullName { get; set; }
+    [Required, StringLength(100)] public string FullName { get; set; } = string.Empty;
 
     /// <summary>
     /// رقم هاتف الزائر.
     /// </summary>
-    [StringLength(20)] public string Phone { get; set; }
+    [StringLength(20)] public string Phone { get; set; } = string.Empty;
 
     /// <summary>
     /// البريد الإلكتروني للزائر.
     /// </summary>
-    [StringLength(200)] public string Email { get; set; }
+    [StringLength(200)] public string Email { get; set; } = string.Empty;
 
     /// <summary>
     /// جنسية الزائر.
     /// </summary>
-    [StringLength(100)] public string Nationality { get; set; }
+    [StringLength(100)] public string Nationality { get; set; } = string.Empty;
 
     /// <summary>
     /// نوع الزائر أو تصنيفه.
     /// </summary>
-    [StringLength(50)] public string VisitorType { get; set; }
+    [StringLength(50)] public string VisitorType { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ ووقت تسجيل الزائر.
@@ -85,7 +85,7 @@ public class Visitor : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// المستأجر المرتبط بالزائر.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>
     /// حساب المستخدم المرتبط بالزائر.

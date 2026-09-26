@@ -11,7 +11,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل فاتورة مالية ناتجة عن حجز جناح.
 /// </summary>
-public class Invoice : IAuditableEntity, ISoftDeletable
+public class Invoice : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     /// <summary>
     /// المعرف الفريد للفاتورة.
@@ -31,7 +31,7 @@ public class Invoice : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// رقم الفاتورة الظاهر للمستخدمين.
     /// </summary>
-    [Required, StringLength(50)] public string InvoiceNumber { get; set; }
+    [Required, StringLength(50)] public string InvoiceNumber { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ إصدار الفاتورة.
@@ -61,7 +61,7 @@ public class Invoice : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// رمز العملة المستخدمة في الفاتورة.
     /// </summary>
-    [Required, StringLength(3)] public string CurrencyCode { get; set; }
+    [Required, StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
     /// <summary>
     /// حالة الفاتورة الحالية.
@@ -76,7 +76,7 @@ public class Invoice : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// ملاحظات إضافية على الفاتورة.
     /// </summary>
-    [StringLength(500)] public string Notes { get; set; }
+    [StringLength(500)] public string Notes { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ إنشاء سجل الفاتورة.
@@ -104,19 +104,25 @@ public class Invoice : IAuditableEntity, ISoftDeletable
     public string? DeletedByUserId { get; set; }
 
     /// <summary>
+    /// رمز تزامن يمنع قبول دفعات متوازية اعتمادًا على رصيد قديم.
+    /// </summary>
+    [Timestamp]
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+    /// <summary>
     /// المستأجر المرتبط بالفاتورة.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>
     /// الحجز المرتبط بالفاتورة.
     /// </summary>
-    [ForeignKey(nameof(ReservationID))] public virtual BoothReservation Reservation { get; set; }
+    [ForeignKey(nameof(ReservationID))] public virtual BoothReservation Reservation { get; set; } = null!;
 
     /// <summary>
     /// العملة المستخدمة في الفاتورة.
     /// </summary>
-    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
 
     /// <summary>
     /// المدفوعات المسجلة على الفاتورة.
@@ -127,5 +133,9 @@ public class Invoice : IAuditableEntity, ISoftDeletable
     /// البنود التفصيلية التابعة للفاتورة.
     /// </summary>
     public virtual ICollection<InvoiceItem> InvoiceItems { get; set; } = new HashSet<InvoiceItem>();
-}
 
+    /// <summary>
+    /// الإشعارات الدائنة وعمليات الاسترداد المرتبطة بالفاتورة.
+    /// </summary>
+    public virtual ICollection<CreditNote> CreditNotes { get; set; } = new HashSet<CreditNote>();
+}

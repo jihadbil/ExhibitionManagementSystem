@@ -22,12 +22,12 @@ public class Tenant : IAuditableEntity
     /// <summary>
     /// اسم الشركة أو الجهة المالكة للمستأجر.
     /// </summary>
-    [Required, StringLength(200)] public string CompanyName { get; set; }
+    [Required, StringLength(200)] public string CompanyName { get; set; } = string.Empty;
 
     /// <summary>
     /// النطاق الفرعي الخاص بالمستأجر.
     /// </summary>
-    [StringLength(100)] public string Subdomain { get; set; }
+    [StringLength(100)] public string Subdomain { get; set; } = string.Empty;
 
     /// <summary>
     /// يحدد ما إذا كان المستأجر نشطًا في النظام.
@@ -42,7 +42,7 @@ public class Tenant : IAuditableEntity
     /// <summary>
     /// رمز العملة الأساسية للمستأجر.
     /// </summary>
-    [StringLength(3)] public string BaseCurrency { get; set; }
+    [StringLength(3)] public string BaseCurrency { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ إنشاء سجل المستأجر.
@@ -59,7 +59,7 @@ public class Tenant : IAuditableEntity
     /// </summary>
     [NotMapped]
     public string? CurrentPlan => TenantSubscriptions
-        .Where(s => s.Status == SubscriptionStatus.Active)
+        .Where(s => s.Status is SubscriptionStatus.Active or SubscriptionStatus.Trial)
         .OrderByDescending(s => s.StartDate)
         .FirstOrDefault()?.Plan;
 
@@ -67,7 +67,7 @@ public class Tenant : IAuditableEntity
     /// العملة الأساسية المرتبطة بالمستأجر.
     /// </summary>
     [ForeignKey(nameof(BaseCurrency))]
-    public virtual Currency Currency { get; set; }
+    public virtual Currency Currency { get; set; } = null!;
 
     /// <summary>
     /// اشتراكات المستأجر عبر الزمن.

@@ -1,25 +1,40 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using ExhibitionManagementSystem.Configuration;
 using ExhibitionManagementSystem.DataAccess;
 using ExhibitionManagementSystem.DataAccess.Extensions;
+using ExhibitionManagementSystem.DataAccess.MultiTenancy;
 using ExhibitionManagementSystem.Models;
 using ExhibitionManagementSystem.Models.DTOs.Mapping;
+using ExhibitionManagementSystem.Security;
+using ExhibitionManagementSystem.Filters;
+using ExhibitionManagementSystem.Middleware;
 using ExhibitionManagementSystem.Services.Extensions;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
+using System.Threading.RateLimiting;
+using ExhibitionManagementSystem.Health;
+using ExhibitionManagementSystem.Services.Options;
 
 var builder = WebApplication.CreateBuilder(args);
+var securityConfiguration = SecurityConfigurationLoader.Load(builder.Configuration);
+
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
 // Add database context and repositories
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDataAccess(connectionString);
+builder.Services.AddDataAccess(securityConfiguration.ConnectionString);
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
+builder.Services.Configure<TenantInvitationOptions>(
+    builder.Configuration.GetSection(TenantInvitationOptions.SectionName));
+builder.Services.Configure<SmtpOptions>(
+    builder.Configuration.GetSection(SmtpOptions.SectionName));
 
 // Add ASP.NET Core Identity
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -28,6 +43,9 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     options.Password.RequireLowercase = true;
     options.Password.RequireUppercase = true;
     options.Password.RequiredLength = 8;
+    options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
@@ -40,30 +58,61 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-    var secretKey = jwtSettings["SecretKey"] ?? "SuperSecretKeyForExhibitionManagementSystemSecurity2026";
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"] ?? "ExhibitionManagementSystem",
-        ValidAudience = jwtSettings["Audience"] ?? "ExhibitionManagementSystemClients",
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        ValidIssuer = securityConfiguration.JwtIssuer,
+        ValidAudience = securityConfiguration.JwtAudience,
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(securityConfiguration.JwtSecretKey)),
         ClockSkew = TimeSpan.Zero
     };
 });
 
-builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+    options.IncludeSubDomains = true;
+});
+builder.Services.AddControllers(options =>
+    options.Filters.Add<PaginationValidationFilter>());
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("authentication", httpContext =>
+    {
+        var clientAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var partitionKey = $"{clientAddress}:{httpContext.Request.Path}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
+});
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("ConfiguredOrigins", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        if (securityConfiguration.AllowedCorsOrigins.Length > 0)
+        {
+            policy.WithOrigins(securityConfiguration.AllowedCorsOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
     });
 });
 
@@ -77,10 +126,7 @@ builder.Services.AddOpenApi(options =>
 // سياسات التفويض
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly",
-        policy => policy.RequireRole("Admin", "SuperAdmin"));
-    options.AddPolicy("SuperAdminOnly",
-        policy => policy.RequireRole("SuperAdmin"));
+    AuthorizationPolicies.Configure(options);
 });
 
 // Register DTO mappings and Service Layer
@@ -89,29 +135,32 @@ builder.Services.AddServiceLayer();
 
 var app = builder.Build();
 
-// Seed Database
-try
+if (!app.Environment.IsDevelopment())
 {
-    await DataSeeder.SeedDataAsync(app.Services);
-    // await DataSeederTest.SeedDataAsync(app.Services);
+    app.UseHsts();
 }
-catch (Exception ex)
-{
-    var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "An error occurred while seeding the database.");
-}
-using var scope = app.Services.CreateScope();
-var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-Console.WriteLine(db.Database.GetConnectionString());
 // Configure the HTTP request pipeline.
 
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
-app.UseCors("AllowAll");
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers.Remove("X-Powered-By");
+    await next();
+});
+
+app.UseCors("ConfiguredOrigins");
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<IdempotencyMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -126,8 +175,18 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+}).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = registration => registration.Tags.Contains("ready")
+}).AllowAnonymous();
 
 app.Run();
+
+public partial class Program;
 
 // OpenAPI transformer لدعم JWT في Scalar
 internal sealed class BearerSecuritySchemeTransformer(IAuthenticationSchemeProvider authenticationSchemeProvider) : IOpenApiDocumentTransformer

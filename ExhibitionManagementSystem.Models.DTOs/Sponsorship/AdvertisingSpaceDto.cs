@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using ExhibitionManagementSystem.Models.Enums;
 
 namespace ExhibitionManagementSystem.Models.DTOs.Sponsorship;
@@ -36,6 +37,7 @@ public class AdvertisingSpaceCreateDto
     public string SpaceName { get; set; } = string.Empty;
     public AdvertisingSpaceType SpaceType { get; set; } = AdvertisingSpaceType.DigitalScreen;
     public string? DimensionsDescription { get; set; }
+    [Range(typeof(decimal), "0", "79228162514264337593543950335")]
     public decimal BasePrice { get; set; }
     public string CurrencyCode { get; set; } = "LYD";
     public bool IsAvailable { get; set; } = true;

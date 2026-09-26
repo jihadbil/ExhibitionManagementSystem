@@ -313,6 +313,13 @@ public class SponsorshipService : ISponsorshipService
 
     public async Task<ServiceResult<SponsorshipContractDto>> CreateContractAsync(int tenantId, string userId, SponsorshipContractCreateDto dto)
     {
+        if (dto.TotalAmount < 0)
+        {
+            return ServiceResult<SponsorshipContractDto>.Failure(
+                "قيمة العقد لا يمكن أن تكون سالبة",
+                "INVALID_CONTRACT_AMOUNT");
+        }
+
         var sponsor = await _unitOfWork.Sponsors.GetByIdAsync(dto.SponsorID);
         if (sponsor == null || sponsor.TenantID != tenantId)
         {
@@ -323,6 +330,41 @@ public class SponsorshipService : ISponsorshipService
         if (exhibition == null || exhibition.TenantID != tenantId)
         {
             return ServiceResult<SponsorshipContractDto>.Failure("المعرض غير موجود", "EXHIBITION_NOT_FOUND");
+        }
+
+        if (dto.PackageID.HasValue)
+        {
+            var package = await _unitOfWork.SponsorshipPackages.AsQueryable()
+                .FirstOrDefaultAsync(p =>
+                    p.PackageID == dto.PackageID.Value &&
+                    p.TenantID == tenantId &&
+                    p.ExhibitionID == dto.ExhibitionID);
+            if (package == null)
+            {
+                return ServiceResult<SponsorshipContractDto>.Failure(
+                    "باقة الرعاية غير موجودة في هذا المعرض",
+                    "PACKAGE_NOT_FOUND");
+            }
+        }
+
+        var requestedSpaceIds = dto.SpaceIDsToAssign
+            .Distinct()
+            .ToArray();
+        var spacesToAssign = requestedSpaceIds.Length == 0
+            ? []
+            : await _unitOfWork.AdvertisingSpaces.AsQueryable()
+                .Where(space =>
+                    requestedSpaceIds.Contains(space.SpaceID) &&
+                    space.TenantID == tenantId &&
+                    space.ExhibitionID == dto.ExhibitionID &&
+                    space.IsAvailable)
+                .ToListAsync();
+
+        if (spacesToAssign.Count != requestedSpaceIds.Length)
+        {
+            return ServiceResult<SponsorshipContractDto>.Failure(
+                "واحدة أو أكثر من المساحات الإعلانية غير متاحة لهذا المعرض",
+                "SPACE_UNAVAILABLE");
         }
 
         string contractNumber = dto.ContractNumber ?? $"SPN-{dto.ExhibitionID}-{DateTime.UtcNow:yyyyMMddHHmmss}";
@@ -352,27 +394,23 @@ public class SponsorshipService : ISponsorshipService
             await _unitOfWork.SaveChangesAsync();
 
             // Assign advertising spaces if specified
-            if (dto.SpaceIDsToAssign != null && dto.SpaceIDsToAssign.Any())
+            if (spacesToAssign.Count > 0)
             {
-                foreach (var spaceId in dto.SpaceIDsToAssign)
+                foreach (var space in spacesToAssign)
                 {
-                    var space = await _unitOfWork.AdvertisingSpaces.GetByIdAsync(spaceId);
-                    if (space != null && space.TenantID == tenantId)
+                    space.IsAvailable = false;
+                    _unitOfWork.AdvertisingSpaces.Update(space);
+
+                    var assignment = new SponsorAdAssignment
                     {
-                        space.IsAvailable = false;
-                        _unitOfWork.AdvertisingSpaces.Update(space);
+                        ContractID = contract.ContractID,
+                        SpaceID = space.SpaceID,
+                        AssignedDate = DateTime.UtcNow,
+                        AssetStatus = "Pending",
+                        CreatedAt = DateTime.UtcNow
+                    };
 
-                        var assignment = new SponsorAdAssignment
-                        {
-                            ContractID = contract.ContractID,
-                            SpaceID = spaceId,
-                            AssignedDate = DateTime.UtcNow,
-                            AssetStatus = "Pending",
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        await _unitOfWork.SponsorAdAssignments.AddAsync(assignment);
-                    }
+                    await _unitOfWork.SponsorAdAssignments.AddAsync(assignment);
                 }
                 await _unitOfWork.SaveChangesAsync();
             }
@@ -383,10 +421,10 @@ public class SponsorshipService : ISponsorshipService
             var resultDto = _mapper.Map<SponsorshipContractDto>(fullContract ?? contract);
             return ServiceResult<SponsorshipContractDto>.Success(resultDto);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await _unitOfWork.RollbackTransactionAsync();
-            return ServiceResult<SponsorshipContractDto>.Failure($"فشل إنشاء عقد الرعاية: {ex.Message}", "CONTRACT_CREATION_FAILED");
+            return ServiceResult<SponsorshipContractDto>.Failure("تعذر إنشاء عقد الرعاية.", "CONTRACT_CREATION_FAILED");
         }
     }
 
@@ -440,9 +478,18 @@ public class SponsorshipService : ISponsorshipService
         }
 
         var space = await _unitOfWork.AdvertisingSpaces.GetByIdAsync(dto.SpaceID);
-        if (space == null || space.TenantID != tenantId)
+        if (space == null ||
+            space.TenantID != tenantId ||
+            space.ExhibitionID != contract.ExhibitionID)
         {
             return ServiceResult<SponsorAdAssignmentDto>.Failure("المساحة الإعلانية غير موجودة", "SPACE_NOT_FOUND");
+        }
+
+        if (!space.IsAvailable)
+        {
+            return ServiceResult<SponsorAdAssignmentDto>.Failure(
+                "المساحة الإعلانية مخصصة بالفعل",
+                "SPACE_UNAVAILABLE");
         }
 
         space.IsAvailable = false;
@@ -459,8 +506,17 @@ public class SponsorshipService : ISponsorshipService
             CreatedAt = DateTime.UtcNow
         };
 
-        await _unitOfWork.SponsorAdAssignments.AddAsync(assignment);
-        await _unitOfWork.SaveChangesAsync();
+        try
+        {
+            await _unitOfWork.SponsorAdAssignments.AddAsync(assignment);
+            await _unitOfWork.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return ServiceResult<SponsorAdAssignmentDto>.Failure(
+                "تم تخصيص المساحة بعملية أخرى متزامنة",
+                "SPACE_ASSIGNMENT_CONFLICT");
+        }
 
         var fullAssignment = await _unitOfWork.SponsorAdAssignments.AsQueryable()
             .Include(a => a.Space)
@@ -474,7 +530,11 @@ public class SponsorshipService : ISponsorshipService
     {
         var assignment = await _unitOfWork.SponsorAdAssignments.AsQueryable()
             .Include(a => a.Space)
-            .FirstOrDefaultAsync(a => a.AssignmentID == assignmentId);
+            .Include(a => a.Contract)
+            .FirstOrDefaultAsync(a =>
+                a.AssignmentID == assignmentId &&
+                a.Space.TenantID == tenantId &&
+                a.Contract.TenantID == tenantId);
 
         if (assignment == null)
         {

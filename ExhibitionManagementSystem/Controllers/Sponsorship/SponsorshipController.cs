@@ -1,13 +1,16 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using ExhibitionManagementSystem.Controllers.Base;
 using ExhibitionManagementSystem.Models.DTOs.Sponsorship;
+using ExhibitionManagementSystem.Security;
 using ExhibitionManagementSystem.Services.Interfaces;
 
 namespace ExhibitionManagementSystem.Controllers.Sponsorship;
 
 [Route("api/[controller]")]
+[Authorize(Policy = AuthorizationPolicies.SponsorshipManagement)]
 public class SponsorshipController : BaseApiController
 {
     private readonly ISponsorshipService _sponsorshipService;

@@ -39,11 +39,11 @@ public class PackageService
     /// <summary>
     /// باقة التسعير المرتبطة.
     /// </summary>
-    [ForeignKey(nameof(PackageID))] public virtual PricingPackage Package { get; set; }
+    [ForeignKey(nameof(PackageID))] public virtual PricingPackage Package { get; set; } = null!;
 
     /// <summary>
     /// الخدمة المرتبطة بالباقة.
     /// </summary>
-    [ForeignKey(nameof(ServiceID))] public virtual Service Service { get; set; }
+    [ForeignKey(nameof(ServiceID))] public virtual Service Service { get; set; } = null!;
 
 }

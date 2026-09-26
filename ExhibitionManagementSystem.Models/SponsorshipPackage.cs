@@ -10,7 +10,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل باقة رعاية محددة معروضة للرعاة في معرض معين.
 /// </summary>
-public class SponsorshipPackage : IAuditableEntity, ISoftDeletable
+public class SponsorshipPackage : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     [Key]
     public int PackageID { get; set; }

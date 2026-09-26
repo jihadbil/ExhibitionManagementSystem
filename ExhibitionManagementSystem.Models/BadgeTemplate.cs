@@ -9,7 +9,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل قالب تصميم وتخصيص بطاقات الدخول (Badges) للمشاركين.
 /// </summary>
-public class BadgeTemplate : IAuditableEntity, ISoftDeletable
+public class BadgeTemplate : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     [Key]
     public int TemplateID { get; set; }

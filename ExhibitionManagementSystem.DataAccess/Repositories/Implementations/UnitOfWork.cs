@@ -19,6 +19,17 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         private readonly ApplicationDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private IDbContextTransaction? _transaction;
+        private static readonly HashSet<string> SensitiveAuditProperties = new(
+            StringComparer.OrdinalIgnoreCase)
+        {
+            "PasswordHash",
+            "SecurityStamp",
+            "ConcurrencyStamp",
+            "RefreshToken",
+            "Token",
+            "SecretKey",
+            "ConnectionString"
+        };
 
         // Lazy repository backing fields
         private ITenantRepository? _tenants;
@@ -102,116 +113,158 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task<int> SaveChangesAsync()
         {
-            var now = DateTime.UtcNow;
-
-            // 1. Audit properties handling for IAuditableEntity
-            foreach (var entry in _context.ChangeTracker.Entries<IAuditableEntity>())
+            IDbContextTransaction? auditTransaction = null;
+            if (_context.Database.IsRelational() &&
+                _context.Database.CurrentTransaction == null)
             {
-                switch (entry.State)
+                auditTransaction = await _context.Database.BeginTransactionAsync();
+            }
+
+            try
+            {
+                var now = DateTime.UtcNow;
+
+                // 1. Audit properties handling for IAuditableEntity
+                foreach (var entry in _context.ChangeTracker.Entries<IAuditableEntity>())
                 {
-                    case EntityState.Added:
-                        entry.Entity.CreatedAt = now;
-                        entry.Entity.UpdatedAt = null;
-                        break;
-                    case EntityState.Modified:
-                        entry.Property(x => x.CreatedAt).IsModified = false;
-                        entry.Entity.UpdatedAt = now;
-                        break;
-                }
-            }
-
-            // Resolve context values from HTTP Request
-            var httpContext = _httpContextAccessor.HttpContext;
-            var userId = httpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
-            {
-                userId = _context.Users.OrderBy(u => u.Id).Select(u => u.Id).FirstOrDefault();
-            }
-
-            var tenantIdClaim = httpContext?.User?.FindFirst("TenantId")?.Value;
-            int.TryParse(tenantIdClaim, out var tenantId);
-
-            var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-            if (ipAddress.Length > 50)
-            {
-                ipAddress = ipAddress.Substring(0, 50);
-            }
-
-            // 2. Build audit log entries pre-save (to capture modified states/values)
-            var auditWrappers = new List<AuditEntryWrapper>();
-            foreach (var entry in _context.ChangeTracker.Entries())
-            {
-                if (entry.Entity is AuditLog) 
-                    continue; // Skip AuditLog entities to avoid recursive calls
-
-                if (entry.State == EntityState.Detached || entry.State == EntityState.Unchanged) 
-                    continue;
-
-                // Determine TenantID for this entity's audit log
-                var tenantIdProp = entry.Entity.GetType().GetProperty("TenantID");
-                var entityTenantId = tenantIdProp != null ? (int?)tenantIdProp.GetValue(entry.Entity) : null;
-                var logTenantId = entityTenantId ?? tenantId;
-                if (logTenantId == 0)
-                {
-                    logTenantId = _context.Tenants.OrderBy(t => t.TenantID).Select(t => t.TenantID).FirstOrDefault();
-                    if (logTenantId == 0) logTenantId = 1;
+                    switch (entry.State)
+                    {
+                        case EntityState.Added:
+                            entry.Entity.CreatedAt = now;
+                            entry.Entity.UpdatedAt = null;
+                            break;
+                        case EntityState.Modified:
+                            entry.Property(x => x.CreatedAt).IsModified = false;
+                            entry.Entity.UpdatedAt = now;
+                            break;
+                    }
                 }
 
-                var auditLog = new AuditLog
+                // Resolve context values from HTTP Request
+                var httpContext = _httpContextAccessor.HttpContext;
+                var userId = httpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                var tenantIdClaim = httpContext?.User?.FindFirst("TenantId")?.Value;
+                int.TryParse(tenantIdClaim, out var tenantId);
+
+                var ipAddress = httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+                if (ipAddress.Length > 50)
                 {
-                    TenantID = logTenantId,
-                    UserId = userId ?? string.Empty,
-                    TableName = entry.Metadata.GetTableName() ?? entry.Entity.GetType().Name,
-                    Action = entry.State.ToString(),
-                    ActionAt = now,
-                    RecordID = "0", // Temp value to satisfy compiler nullable check before post-save population
-                    IPAddress = ipAddress,
-                    OldValues = entry.State != EntityState.Added
-                        ? JsonSerializer.Serialize(entry.Properties
-                            .Where(p => entry.State == EntityState.Deleted || p.IsModified)
-                            .ToDictionary(p => p.Metadata.Name, p => p.OriginalValue?.ToString()))
-                        : string.Empty,
-                    NewValues = entry.State != EntityState.Deleted
-                        ? JsonSerializer.Serialize(entry.Properties
-                            .Where(p => entry.State == EntityState.Added || p.IsModified)
-                            .ToDictionary(p => p.Metadata.Name, p => p.CurrentValue?.ToString()))
-                        : string.Empty
-                };
-
-                auditWrappers.Add(new AuditEntryWrapper { Entry = entry, AuditLog = auditLog });
-            }
-
-            // 3. Save actual entities
-            var result = await _context.SaveChangesAsync();
-
-            // 4. Save audit logs with resolved PK values
-            if (auditWrappers.Any())
-            {
-                foreach (var wrapper in auditWrappers)
-                {
-                    wrapper.AuditLog.RecordID = GetPrimaryKeyValue(wrapper.Entry);
+                    ipAddress = ipAddress.Substring(0, 50);
                 }
 
-                _context.AuditLogs.AddRange(auditWrappers.Select(w => w.AuditLog));
-                await _context.SaveChangesAsync();
-            }
+                // 2. Build audit log entries pre-save (to capture modified states/values)
+                var auditWrappers = new List<AuditEntryWrapper>();
+                foreach (var entry in _context.ChangeTracker.Entries())
+                {
+                    if (entry.Entity is AuditLog)
+                        continue; // Skip AuditLog entities to avoid recursive calls
 
-            return result;
+                    if (entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
+                        continue;
+
+                    // Determine TenantID for this entity's audit log
+                    var tenantIdProp = entry.Entity.GetType().GetProperty("TenantID");
+                    var entityTenantId = tenantIdProp != null ? (int?)tenantIdProp.GetValue(entry.Entity) : null;
+                    var logTenantId = entityTenantId ?? tenantId;
+                    if (string.IsNullOrWhiteSpace(userId) || logTenantId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            "Audited writes require an authenticated user and a trusted tenant context.");
+                    }
+
+                    var auditLog = new AuditLog
+                    {
+                        TenantID = logTenantId,
+                        UserId = userId,
+                        TableName = entry.Metadata.GetTableName() ?? entry.Entity.GetType().Name,
+                        Action = entry.State.ToString(),
+                        ActionAt = now,
+                        RecordID = "0", // Temp value to satisfy compiler nullable check before post-save population
+                        IPAddress = ipAddress,
+                        OldValues = entry.State != EntityState.Added
+                            ? JsonSerializer.Serialize(entry.Properties
+                                .Where(p =>
+                                    !IsSensitiveAuditProperty(p.Metadata.Name) &&
+                                    (entry.State == EntityState.Deleted || p.IsModified))
+                                .ToDictionary(p => p.Metadata.Name, p => p.OriginalValue?.ToString()))
+                            : string.Empty,
+                        NewValues = entry.State != EntityState.Deleted
+                            ? JsonSerializer.Serialize(entry.Properties
+                                .Where(p =>
+                                    !IsSensitiveAuditProperty(p.Metadata.Name) &&
+                                    (entry.State == EntityState.Added || p.IsModified))
+                                .ToDictionary(p => p.Metadata.Name, p => p.CurrentValue?.ToString()))
+                            : string.Empty
+                    };
+
+                    auditWrappers.Add(new AuditEntryWrapper { Entry = entry, AuditLog = auditLog });
+                }
+
+                // 3. Save actual entities
+                var result = await _context.SaveChangesAsync();
+
+                // 4. Save audit logs with resolved PK values
+                if (auditWrappers.Any())
+                {
+                    foreach (var wrapper in auditWrappers)
+                    {
+                        wrapper.AuditLog.RecordID = GetPrimaryKeyValue(wrapper.Entry);
+                    }
+
+                    _context.AuditLogs.AddRange(auditWrappers.Select(w => w.AuditLog));
+                    await _context.SaveChangesAsync();
+                }
+
+                if (auditTransaction != null)
+                {
+                    await auditTransaction.CommitAsync();
+                }
+
+                return result;
+            }
+            catch
+            {
+                if (auditTransaction != null)
+                {
+                    await auditTransaction.RollbackAsync();
+                }
+
+                throw;
+            }
+            finally
+            {
+                if (auditTransaction != null)
+                {
+                    await auditTransaction.DisposeAsync();
+                }
+            }
         }
 
         private string GetPrimaryKeyValue(EntityEntry entry)
         {
             var key = entry.Metadata.FindPrimaryKey();
-            if (key == null) 
+            if (key == null)
                 return "0";
 
             var values = key.Properties.Select(p => entry.Property(p.Name).CurrentValue?.ToString());
             return string.Join(",", values);
         }
 
+        private static bool IsSensitiveAuditProperty(string propertyName) =>
+            SensitiveAuditProperties.Contains(propertyName) ||
+            propertyName.Contains("Password", StringComparison.OrdinalIgnoreCase) ||
+            propertyName.Contains("Secret", StringComparison.OrdinalIgnoreCase) ||
+            propertyName.Contains("Token", StringComparison.OrdinalIgnoreCase);
+
         public async Task BeginTransactionAsync()
         {
-            _transaction = await _context.Database.BeginTransactionAsync();
+            if (_transaction == null &&
+                _context.Database.IsRelational() &&
+                _context.Database.CurrentTransaction == null)
+            {
+                _transaction = await _context.Database.BeginTransactionAsync();
+            }
         }
 
         public async Task CommitTransactionAsync()

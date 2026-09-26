@@ -3,10 +3,12 @@ using ExhibitionManagementSystem.Models.DTOs.Auth;
 using ExhibitionManagementSystem.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ExhibitionManagementSystem.Controllers.Auth;
 
 [Route("api/[controller]")]
+[EnableRateLimiting("authentication")]
 public class AuthController : BaseApiController
 {
     private readonly IAuthService _authService;
@@ -24,16 +26,6 @@ public class AuthController : BaseApiController
         if (!result.IsSuccess)
             return BadRequest(new { result.ErrorMessage, result.ErrorCode });
         return Ok(result.Data);
-    }
-
-    // POST /api/auth/register
-    [HttpPost("register")]
-    [AllowAnonymous]
-    public async Task<ActionResult<UserManagementDto>> Register(
-        [FromBody] RegisterRequestDto dto)
-    {
-        var result = await _authService.RegisterAsync(dto);
-        return ToActionResult(result);
     }
 
     // POST /api/auth/logout

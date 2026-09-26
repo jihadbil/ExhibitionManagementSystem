@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ExhibitionManagementSystem.Models.Enums;
 using ExhibitionManagementSystem.Models.Interfaces;
+using ExhibitionManagementSystem.DataAccess.MultiTenancy;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -13,7 +14,17 @@ namespace ExhibitionManagementSystem.DataAccess
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+        private readonly ITenantContext _tenantContext;
+
+        public ApplicationDbContext(
+            DbContextOptions<ApplicationDbContext> options,
+            ITenantContext? tenantContext = null) : base(options)
+        {
+            _tenantContext = tenantContext ?? new EmptyTenantContext();
+        }
+
+        public int CurrentTenantId => _tenantContext.TenantId ?? 0;
+        public bool CanBypassTenantIsolation => _tenantContext.CanBypassTenantIsolation;
 
 
 
@@ -22,6 +33,9 @@ namespace ExhibitionManagementSystem.DataAccess
 
         public DbSet<Tenant> Tenants { get; set; }
         public DbSet<TenantSubscription> TenantSubscriptions { get; set; }
+        public DbSet<TenantInvitation> TenantInvitations { get; set; }
+        public DbSet<RefreshSession> RefreshSessions { get; set; }
+        public DbSet<IdempotencyRecord> IdempotencyRecords { get; set; }
         public DbSet<Currency> Currencies { get; set; }
         public DbSet<ExchangeRate> ExchangeRates { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
@@ -44,8 +58,10 @@ namespace ExhibitionManagementSystem.DataAccess
         public DbSet<PackageService> PackageServices { get; set; }
         public DbSet<ReservationService> ReservationServices { get; set; }
         public DbSet<Invoice> Invoices { get; set; }
+        public DbSet<InvoiceSequence> InvoiceSequences { get; set; }
         public DbSet<InvoiceItem> InvoiceItems { get; set; }
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<CreditNote> CreditNotes { get; set; }
 
         public DbSet<FinancialReport> FinancialReports { get; set; }
         public DbSet<Visitor> Visitors { get; set; }
@@ -76,6 +92,7 @@ namespace ExhibitionManagementSystem.DataAccess
             builder.Entity<Invoice>().Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
             builder.Entity<Payment>().Property(e => e.Method).HasConversion<string>().HasMaxLength(50);
             builder.Entity<Payment>().Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+            builder.Entity<CreditNote>().Property(e => e.Type).HasConversion<string>().HasMaxLength(20);
             builder.Entity<TicketScan>().Property(e => e.Direction).HasConversion<string>().HasMaxLength(10);
             builder.Entity<Booth>().Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
             builder.Entity<Booth>().Property(e => e.ShapeType).HasConversion<string>().HasMaxLength(20);
@@ -101,10 +118,64 @@ namespace ExhibitionManagementSystem.DataAccess
             builder.Entity<ExchangeRate>().HasIndex(e => new { e.FromCurrency, e.ToCurrency, e.RateDate }).IsUnique();
             builder.Entity<ScheduleRegistration>().HasIndex(s => new { s.ScheduleID, s.VisitorID }).IsUnique();
             builder.Entity<Invoice>().HasIndex(i => new { i.TenantID, i.InvoiceNumber }).IsUnique();
+            builder.Entity<InvoiceSequence>().HasKey(sequence => new { sequence.TenantID, sequence.Year });
             builder.Entity<Ticket>().HasIndex(t => t.QRCode).IsUnique();
+            builder.Entity<RefreshSession>().HasIndex(session => session.TokenHash).IsUnique();
+            builder.Entity<RefreshSession>().HasIndex(session => new { session.UserId, session.RevokedAt, session.ExpiresAt });
+            builder.Entity<IdempotencyRecord>()
+                .HasIndex(record => new { record.TenantID, record.Operation, record.Key })
+                .IsUnique();
+            builder.Entity<IdempotencyRecord>()
+                .HasIndex(record => record.ExpiresAt);
+            builder.Entity<CreditNote>()
+                .HasIndex(note => new { note.TenantID, note.CreditNoteNumber })
+                .IsUnique();
+            builder.Entity<CreditNote>()
+                .HasIndex(note => new { note.TenantID, note.InvoiceID });
+            builder.Entity<TenantInvitation>()
+                .HasIndex(invitation => invitation.TokenHash)
+                .IsUnique();
+            builder.Entity<TenantInvitation>()
+                .HasIndex(invitation => invitation.NormalizedEmail)
+                .IsUnique()
+                .HasFilter("[AcceptedAt] IS NULL AND [RevokedAt] IS NULL");
+            builder.Entity<TenantInvitation>()
+                .HasIndex(invitation => new
+                {
+                    invitation.TenantID,
+                    invitation.NormalizedEmail,
+                    invitation.AcceptedAt,
+                    invitation.RevokedAt
+                });
 
             // قيد التقييم من 1 إلى 5
             builder.Entity<VisitorRating>().ToTable(t => t.HasCheckConstraint("CK_VISITOR_RATINGS_Score", "Score >= 1 AND Score <= 5"));
+
+            // Financial invariants are enforced in the database as a final line
+            // of defense in addition to API validation and service checks.
+            builder.Entity<InvoiceItem>().ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_InvoiceItems_Quantity_Positive", "Quantity > 0");
+                t.HasCheckConstraint("CK_InvoiceItems_UnitPrice_NonNegative", "UnitPrice >= 0");
+                t.HasCheckConstraint("CK_InvoiceItems_TotalPrice_NonNegative", "TotalPrice >= 0");
+            });
+            builder.Entity<Payment>().ToTable(t =>
+                t.HasCheckConstraint("CK_Payments_Amount_Positive", "Amount > 0"));
+            builder.Entity<CreditNote>().ToTable(t =>
+                t.HasCheckConstraint("CK_CreditNotes_Amount_Positive", "Amount > 0"));
+            builder.Entity<Expense>().ToTable(t =>
+                t.HasCheckConstraint("CK_Expenses_Amount_Positive", "Amount > 0"));
+            builder.Entity<Ticket>().ToTable(t =>
+                t.HasCheckConstraint("CK_Tickets_Price_NonNegative", "Price >= 0"));
+            builder.Entity<SponsorshipPackage>().ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_SponsorshipPackages_Price_NonNegative", "Price >= 0");
+                t.HasCheckConstraint("CK_SponsorshipPackages_MaxSponsors_Positive", "MaxSponsorsCount > 0");
+            });
+            builder.Entity<SponsorshipContract>().ToTable(t =>
+                t.HasCheckConstraint("CK_SponsorshipContracts_TotalAmount_NonNegative", "TotalAmount >= 0"));
+            builder.Entity<AdvertisingSpace>().ToTable(t =>
+                t.HasCheckConstraint("CK_AdvertisingSpaces_BasePrice_NonNegative", "BasePrice >= 0"));
 
             // 3. معالجة العلاقات الدائرية (Circular References) لمنع أخطاء الحذف التعاقبي
             builder.Entity<BoothMerge>()
@@ -134,8 +205,32 @@ namespace ExhibitionManagementSystem.DataAccess
 
             builder.Entity<Payment>()
                 .HasOne(p => p.Invoice)
-                .WithMany()
+                .WithMany(i => i.Payments)
                 .HasForeignKey(p => p.InvoiceID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Payment>()
+                .HasOne(p => p.Tenant)
+                .WithMany()
+                .HasForeignKey(p => p.TenantID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<CreditNote>()
+                .HasOne(note => note.Invoice)
+                .WithMany(invoice => invoice.CreditNotes)
+                .HasForeignKey(note => note.InvoiceID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<CreditNote>()
+                .HasOne(note => note.Tenant)
+                .WithMany()
+                .HasForeignKey(note => note.TenantID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<CreditNote>()
+                .HasOne(note => note.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(note => note.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<PricingPackage>()
@@ -182,7 +277,7 @@ namespace ExhibitionManagementSystem.DataAccess
 
             builder.Entity<ExhibitionSchedule>()
                 .HasOne(s => s.Exhibition)
-                .WithMany()
+                .WithMany(e => e.ExhibitionSchedules)
                 .HasForeignKey(s => s.ExhibitionID)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -194,14 +289,20 @@ namespace ExhibitionManagementSystem.DataAccess
 
             builder.Entity<BoothReservation>()
                 .HasOne(br => br.Exhibitor)
-                .WithMany()
+                .WithMany(e => e.BoothReservations)
                 .HasForeignKey(br => br.ExhibitorID)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<BoothReservation>()
                 .HasOne(br => br.Exhibition)
-                .WithMany()
+                .WithMany(e => e.BoothReservations)
                 .HasForeignKey(br => br.ExhibitionID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<BoothReservation>()
+                .HasOne(br => br.Tenant)
+                .WithMany()
+                .HasForeignKey(br => br.TenantID)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Ticket>()
@@ -211,8 +312,20 @@ namespace ExhibitionManagementSystem.DataAccess
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Ticket>()
-                .HasOne(t => t.Visitor)
+                .HasOne(t => t.Tenant)
                 .WithMany()
+                .HasForeignKey(t => t.TenantID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Booth>()
+                .HasOne(b => b.Tenant)
+                .WithMany()
+                .HasForeignKey(b => b.TenantID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Ticket>()
+                .HasOne(t => t.Visitor)
+                .WithMany(v => v.Tickets)
                 .HasForeignKey(t => t.VisitorID)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -240,10 +353,16 @@ namespace ExhibitionManagementSystem.DataAccess
                 .HasForeignKey(u => u.TenantID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<ApplicationRole>()
-                .HasOne(r => r.Tenant)
+            builder.Entity<RefreshSession>()
+                .HasOne(session => session.User)
+                .WithMany(user => user.RefreshSessions)
+                .HasForeignKey(session => session.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<TenantInvitation>()
+                .HasOne(invitation => invitation.Tenant)
                 .WithMany()
-                .HasForeignKey(r => r.TenantID)
+                .HasForeignKey(invitation => invitation.TenantID)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // User relationship configurations
@@ -271,12 +390,25 @@ namespace ExhibitionManagementSystem.DataAccess
             builder.Entity<Exhibition>().HasIndex(e => new { e.TenantID, e.Status });
             builder.Entity<BoothReservation>().HasIndex(br => new { br.ExhibitionID, br.IsDeleted, br.Status });
             builder.Entity<BoothReservation>().HasIndex(br => br.ExhibitorID);
+            builder.Entity<BoothReservation>()
+                .HasIndex(br => new { br.ExhibitionID, br.BoothID })
+                .IsUnique()
+                .HasFilter("[BoothID] IS NOT NULL AND [IsDeleted] = 0 AND [Status] <> N'Cancelled'")
+                .HasDatabaseName("UX_BoothReservations_ActiveBooth");
+            builder.Entity<BoothReservation>()
+                .HasIndex(br => new { br.ExhibitionID, br.MergeID })
+                .IsUnique()
+                .HasFilter("[MergeID] IS NOT NULL AND [IsDeleted] = 0 AND [Status] <> N'Cancelled'")
+                .HasDatabaseName("UX_BoothReservations_ActiveMerge");
             builder.Entity<Booth>().HasIndex(b => new { b.HallID, b.IsDeleted, b.Status });
+            builder.Entity<Booth>().HasIndex(b => new { b.TenantID, b.HallID });
             builder.Entity<Ticket>().HasIndex(t => new { t.ExhibitionID, t.Status });
+            builder.Entity<Ticket>().HasIndex(t => new { t.TenantID, t.ExhibitionID });
             builder.Entity<TicketScan>().HasIndex(ts => ts.TicketID);
             builder.Entity<AuditLog>().HasIndex(a => new { a.TenantID, a.ActionAt });
             builder.Entity<Invoice>().HasIndex(i => i.ReservationID);
             builder.Entity<Payment>().HasIndex(p => p.InvoiceID);
+            builder.Entity<Payment>().HasIndex(p => new { p.TenantID, p.InvoiceID });
             builder.Entity<Exhibitor>().HasIndex(e => new { e.TenantID, e.IsDeleted });
             builder.Entity<Visitor>().HasIndex(v => new { v.TenantID, v.IsDeleted });
 
@@ -301,6 +433,11 @@ namespace ExhibitionManagementSystem.DataAccess
             builder.Entity<SponsorshipContract>().HasIndex(c => new { c.TenantID, c.ContractNumber }).IsUnique();
             builder.Entity<AdvertisingSpace>().HasIndex(a => new { a.ExhibitionID, a.SpaceCode }).IsUnique();
             builder.Entity<SponsorAdAssignment>().HasIndex(sa => new { sa.ContractID, sa.SpaceID });
+            builder.Entity<SponsorAdAssignment>()
+                .HasIndex(sa => sa.SpaceID)
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0")
+                .HasDatabaseName("UX_SponsorAdAssignments_ActiveSpace");
 
             // Badge & Sponsorship FK Configurations
             builder.Entity<BadgeTemplate>()
@@ -415,26 +552,164 @@ namespace ExhibitionManagementSystem.DataAccess
             var cascadeFKs = builder.Model.GetEntityTypes()
                 .Where(t => t.ClrType.Namespace == "ExhibitionManagementSystem.Models")
                 .SelectMany(t => t.GetForeignKeys())
-                .Where(fk => !fk.IsOwnership && fk.DeleteBehavior == DeleteBehavior.Cascade);
+                .Where(fk =>
+                    !fk.IsOwnership &&
+                    fk.DeleteBehavior == DeleteBehavior.Cascade &&
+                    fk.DeclaringEntityType.ClrType != typeof(RefreshSession));
 
             foreach (var fk in cascadeFKs)
             {
                 fk.DeleteBehavior = DeleteBehavior.Restrict;
             }
 
-            // Global Soft Delete Filter
+            // Global tenant isolation and soft-delete filters. Both conditions are
+            // combined so adding one filter never overwrites the other.
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
-                if (typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType))
+                var isSoftDeletable = typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType);
+                var isTenantEntity = typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType);
+                if (!isSoftDeletable && !isTenantEntity)
                 {
-                    var parameter = Expression.Parameter(entityType.ClrType, "e");
-                    var body = Expression.Equal(
+                    continue;
+                }
+
+                var parameter = Expression.Parameter(entityType.ClrType, "e");
+                Expression body = Expression.Constant(true);
+
+                if (isSoftDeletable)
+                {
+                    var notDeleted = Expression.Equal(
                         Expression.Property(parameter, nameof(ISoftDeletable.IsDeleted)),
                         Expression.Constant(false)
                     );
-                    builder.Entity(entityType.ClrType).HasQueryFilter(
-                        Expression.Lambda(body, parameter)
-                    );
+                    body = Expression.AndAlso(body, notDeleted);
+                }
+
+                if (isTenantEntity)
+                {
+                    var bypass = Expression.Property(
+                        Expression.Constant(this),
+                        nameof(CanBypassTenantIsolation));
+                    var tenantMatches = Expression.Equal(
+                        Expression.Property(parameter, nameof(ITenantEntity.TenantID)),
+                        Expression.Property(
+                            Expression.Constant(this),
+                            nameof(CurrentTenantId)));
+                    body = Expression.AndAlso(body, Expression.OrElse(bypass, tenantMatches));
+                }
+
+                builder.Entity(entityType.ClrType).HasQueryFilter(
+                    Expression.Lambda(body, parameter));
+            }
+        }
+
+        public override int SaveChanges()
+        {
+            EnforceTenantWrites();
+            EnforceIssuedInvoiceImmutability();
+            return base.SaveChanges();
+        }
+
+        public override Task<int> SaveChangesAsync(
+            CancellationToken cancellationToken = default)
+        {
+            EnforceTenantWrites();
+            EnforceIssuedInvoiceImmutability();
+            return base.SaveChangesAsync(cancellationToken);
+        }
+
+        private void EnforceIssuedInvoiceImmutability()
+        {
+            var immutableProperties = new HashSet<string>(StringComparer.Ordinal)
+            {
+                nameof(Invoice.TenantID),
+                nameof(Invoice.ReservationID),
+                nameof(Invoice.InvoiceNumber),
+                nameof(Invoice.InvoiceDate),
+                nameof(Invoice.SubTotal),
+                nameof(Invoice.TaxRate),
+                nameof(Invoice.TaxAmount),
+                nameof(Invoice.TotalAmount),
+                nameof(Invoice.CurrencyCode),
+                nameof(Invoice.DueDate),
+                nameof(Invoice.Notes),
+                nameof(Invoice.IsDeleted),
+                nameof(Invoice.DeletedAt),
+                nameof(Invoice.DeletedByUserId)
+            };
+
+            foreach (var entry in ChangeTracker.Entries<Invoice>()
+                         .Where(candidate => candidate.State == EntityState.Modified))
+            {
+                var originalStatus = entry.Property(invoice => invoice.Status).OriginalValue;
+                if (originalStatus == InvoiceStatus.Draft)
+                {
+                    continue;
+                }
+
+                if (entry.Properties.Any(property =>
+                        property.IsModified && immutableProperties.Contains(property.Metadata.Name)))
+                {
+                    throw new InvalidOperationException(
+                        "Issued invoice financial data is immutable; use a credit note or refund.");
+                }
+
+                var currentStatus = entry.Entity.Status;
+                var validTransition = originalStatus switch
+                {
+                    InvoiceStatus.Issued => currentStatus is InvoiceStatus.Issued or
+                        InvoiceStatus.PartiallyPaid or InvoiceStatus.Paid or InvoiceStatus.Cancelled,
+                    InvoiceStatus.PartiallyPaid => currentStatus is InvoiceStatus.PartiallyPaid or
+                        InvoiceStatus.Paid or InvoiceStatus.Cancelled,
+                    InvoiceStatus.Paid => currentStatus == InvoiceStatus.Paid,
+                    InvoiceStatus.Cancelled => currentStatus == InvoiceStatus.Cancelled,
+                    _ => false
+                };
+
+                if (!validTransition)
+                {
+                    throw new InvalidOperationException(
+                        "Invalid issued invoice status transition.");
+                }
+            }
+        }
+
+        private void EnforceTenantWrites()
+        {
+            if (CanBypassTenantIsolation)
+            {
+                return;
+            }
+
+            var tenantId = _tenantContext.TenantId;
+            var tenantEntries = ChangeTracker.Entries()
+                .Where(entry => entry.Entity is ITenantEntity &&
+                                entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+                .ToArray();
+
+            if (tenantEntries.Length == 0)
+            {
+                return;
+            }
+
+            if (tenantId is null or <= 0)
+            {
+                throw new InvalidOperationException(
+                    "A trusted tenant context is required for tenant-owned writes.");
+            }
+
+            foreach (var entry in tenantEntries)
+            {
+                var entity = (ITenantEntity)entry.Entity;
+                if (entry.State == EntityState.Added && entity.TenantID == 0)
+                {
+                    entity.TenantID = tenantId.Value;
+                }
+
+                if (entity.TenantID != tenantId.Value)
+                {
+                    throw new InvalidOperationException(
+                        "Cross-tenant write was blocked.");
                 }
             }
         }

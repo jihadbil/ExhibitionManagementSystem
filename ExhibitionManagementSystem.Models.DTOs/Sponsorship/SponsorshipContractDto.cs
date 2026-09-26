@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using ExhibitionManagementSystem.Models.Enums;
 
 namespace ExhibitionManagementSystem.Models.DTOs.Sponsorship;
@@ -34,6 +35,7 @@ public class SponsorshipContractCreateDto
     public int SponsorID { get; set; }
     public int? PackageID { get; set; }
     public string? ContractNumber { get; set; }
+    [Range(typeof(decimal), "0", "79228162514264337593543950335")]
     public decimal TotalAmount { get; set; }
     public string CurrencyCode { get; set; } = "LYD";
     public SponsorshipStatus Status { get; set; } = SponsorshipStatus.Confirmed;

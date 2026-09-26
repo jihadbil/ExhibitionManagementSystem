@@ -11,7 +11,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل معرضًا يتم تنظيمه لمستأجر في موقع محدد.
 /// </summary>
-public class Exhibition : IAuditableEntity, ISoftDeletable
+public class Exhibition : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
 
     /// <summary>
@@ -32,17 +32,17 @@ public class Exhibition : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// اسم المعرض.
     /// </summary>
-    [Required, StringLength(200)] public string Name { get; set; }
+    [Required, StringLength(200)] public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// نوع أو تصنيف المعرض.
     /// </summary>
-    [StringLength(100)] public string Type { get; set; }
+    [StringLength(100)] public string Type { get; set; } = string.Empty;
 
     /// <summary>
     /// رقم أو وصف نسخة المعرض.
     /// </summary>
-    [StringLength(50)] public string Edition { get; set; }
+    [StringLength(50)] public string Edition { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ بداية المعرض.
@@ -62,7 +62,7 @@ public class Exhibition : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// وصف تفصيلي للمعرض.
     /// </summary>
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
 
     /// <summary>
     /// العدد المتوقع للزوار.
@@ -77,7 +77,7 @@ public class Exhibition : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// رمز العملة المستخدمة لرسوم الدخول.
     /// </summary>
-    [StringLength(3)] public string EntryCurrency { get; set; }
+    [StringLength(3)] public string EntryCurrency { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ إنشاء سجل المعرض.
@@ -107,17 +107,17 @@ public class Exhibition : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// المستأجر المنظم للمعرض.
     /// </summary>
-    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; }
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
 
     /// <summary>
     /// الموقع الذي يستضيف المعرض.
     /// </summary>
-    [ForeignKey(nameof(VenueID))] public virtual Venue Venue { get; set; }
+    [ForeignKey(nameof(VenueID))] public virtual Venue Venue { get; set; } = null!;
 
     /// <summary>
     /// العملة المرتبطة برسوم الدخول.
     /// </summary>
-    [ForeignKey(nameof(EntryCurrency))] public virtual Currency Currency { get; set; }
+    [ForeignKey(nameof(EntryCurrency))] public virtual Currency Currency { get; set; } = null!;
 
     /// <summary>
     /// جدول الفعاليات المرتبطة بالمعرض.

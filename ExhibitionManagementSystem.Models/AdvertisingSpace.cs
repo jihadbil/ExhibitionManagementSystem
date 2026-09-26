@@ -10,7 +10,7 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل مساحة أو موقعاً إعلانياً متاحاً للرعاية داخل المعرض أو القاعات أو الوسائط الرقمية.
 /// </summary>
-public class AdvertisingSpace : IAuditableEntity, ISoftDeletable
+public class AdvertisingSpace : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
     [Key]
     public int SpaceID { get; set; }

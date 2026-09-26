@@ -3,23 +3,21 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using ExhibitionManagementSystem.Models.Interfaces;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ExhibitionManagementSystem.Models;
 
 /// <summary>
-/// يمثل دور صلاحية في نظام الهوية مرتبطًا بمستأجر محدد.
+/// يمثل دور صلاحية عالميًا ثابتًا في نظام الهوية.
 /// </summary>
 public class ApplicationRole : IdentityRole, IAuditableEntity
 {
     /// <summary>
-    /// معرف المستأجر الذي يملك هذا الدور.
+    /// يحفظ ارتباط الدور القديم أثناء الانتقال إلى الأدوار العالمية.
+    /// لا يُستخدم في التفويض أو في إنشاء أدوار جديدة.
     /// </summary>
-    public int TenantID { get; set; }
-
-    /// <summary>
-    /// المستأجر المرتبط بالدور.
-    /// </summary>
-    public virtual Tenant Tenant { get; set; }
+    [Column("TenantID")]
+    public int? LegacyTenantID { get; set; }
 
     /// <summary>
     /// تاريخ إنشاء الدور.

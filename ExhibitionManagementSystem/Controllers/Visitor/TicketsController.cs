@@ -1,11 +1,15 @@
+using System.ComponentModel.DataAnnotations;
 using ExhibitionManagementSystem.Controllers.Base;
 using ExhibitionManagementSystem.Models.DTOs.Visitor;
+using ExhibitionManagementSystem.Security;
 using ExhibitionManagementSystem.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExhibitionManagementSystem.Controllers.Visitor;
 
 [Route("api/[controller]")]
+[Authorize(Policy = AuthorizationPolicies.GateOperations)]
 public class TicketsController : BaseApiController
 {
     private readonly ITicketService _ticketService;
@@ -15,6 +19,7 @@ public class TicketsController : BaseApiController
 
     // POST /api/tickets
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.EventManagement)]
     public async Task<ActionResult<TicketDto>> Issue(
         [FromBody] TicketCreateDto dto)
     {
@@ -66,6 +71,7 @@ public class TicketsController : BaseApiController
 
     // PATCH /api/tickets/{ticketId}/cancel
     [HttpPatch("{ticketId:int}/cancel")]
+    [Authorize(Policy = AuthorizationPolicies.EventManagement)]
     public async Task<IActionResult> Cancel(int ticketId)
     {
         var result = await _ticketService.CancelTicketAsync(TenantId, ticketId);
@@ -73,4 +79,7 @@ public class TicketsController : BaseApiController
     }
 }
 
-public record ScanTicketRequest(string QrCode, string Direction, string? Location);
+public sealed record ScanTicketRequest(
+    [property: Required, StringLength(500, MinimumLength = 1)] string QrCode,
+    [property: Required, RegularExpression("^(?i:In|Out)$")] string Direction,
+    [property: StringLength(100)] string? Location);

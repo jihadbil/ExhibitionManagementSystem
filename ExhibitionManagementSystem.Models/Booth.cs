@@ -11,13 +11,16 @@ namespace ExhibitionManagementSystem.Models;
 /// <summary>
 /// يمثل جناحًا داخل قاعة معرض مع بيانات المساحة والمخطط والحالة.
 /// </summary>
-public class Booth : IAuditableEntity, ISoftDeletable
+public class Booth : IAuditableEntity, ISoftDeletable, ITenantEntity
 {
 
     /// <summary>
     /// المعرف الفريد للجناح.
     /// </summary>
     [Key] public int BoothID { get; set; }
+
+    /// <summary>معرف المستأجر المالك للجناح.</summary>
+    public int TenantID { get; set; }
 
     /// <summary>
     /// معرف القاعة التي يقع فيها الجناح.
@@ -27,7 +30,7 @@ public class Booth : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// الرقم أو الرمز التشغيلي للجناح داخل القاعة.
     /// </summary>
-    [Required, StringLength(20)] public string BoothNumber { get; set; }
+    [Required, StringLength(20)] public string BoothNumber { get; set; } = string.Empty;
 
     /// <summary>
     /// المساحة الأصلية للجناح بالمتر المربع قبل أي دمج أو تعديل.
@@ -87,7 +90,7 @@ public class Booth : IAuditableEntity, ISoftDeletable
     /// <summary>
     /// تمثيل JSON لنقاط الشكل عندما يكون الجناح مضلعًا.
     /// </summary>
-    public string ShapePolygonJSON { get; set; }
+    public string ShapePolygonJSON { get; set; } = string.Empty;
 
     /// <summary>
     /// تاريخ إنشاء سجل الجناح.
@@ -114,15 +117,17 @@ public class Booth : IAuditableEntity, ISoftDeletable
     /// </summary>
     public string? DeletedByUserId { get; set; }
 
+    [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
+
     /// <summary>
     /// القاعة التي تحتوي على الجناح.
     /// </summary>
-    [ForeignKey(nameof(HallID))] public virtual Hall Hall { get; set; }
+    [ForeignKey(nameof(HallID))] public virtual Hall Hall { get; set; } = null!;
 
     /// <summary>
     /// عملية الدمج المرتبطة بالجناح.
     /// </summary>
-    [ForeignKey(nameof(MergeID))] public virtual BoothMerge BoothMerge { get; set; }
+    [ForeignKey(nameof(MergeID))] public virtual BoothMerge BoothMerge { get; set; } = null!;
 
     /// <summary>
     /// معرف قاعدة التسعير المخصصة المعينة للجناح يدوياً (اختياري).

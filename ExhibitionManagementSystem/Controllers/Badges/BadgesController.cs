@@ -1,13 +1,16 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using ExhibitionManagementSystem.Controllers.Base;
 using ExhibitionManagementSystem.Models.DTOs.Badge;
+using ExhibitionManagementSystem.Security;
 using ExhibitionManagementSystem.Services.Interfaces;
 
 namespace ExhibitionManagementSystem.Controllers.Badges;
 
 [Route("api/[controller]")]
+[Authorize(Policy = AuthorizationPolicies.BadgeManagement)]
 public class BadgesController : BaseApiController
 {
     private readonly IBadgeService _badgeService;
