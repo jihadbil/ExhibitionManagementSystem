@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main, "codex/**"]
+  pull_request:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-audit:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore ExhibitionManagementSystem.slnx
+
+      - name: Build
+        run: dotnet build ExhibitionManagementSystem.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test ExhibitionManagementSystem.slnx --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"
+
+      - name: Validate EF migration script
+        shell: pwsh
+        env:
+          ConnectionStrings__DefaultConnection: Server=(localdb)\MSSQLLocalDB;Database=MigrationValidation;Trusted_Connection=True;TrustServerCertificate=True;
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.12
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          dotnet ef migrations script 0 `
+            --project ExhibitionManagementSystem.DataAccess/ExhibitionManagementSystem.DataAccess.csproj `
+            --startup-project ExhibitionManagementSystem/ExhibitionManagementSystem.csproj `
+            --context ApplicationDbContext `
+            --configuration Release `
+            --no-build `
+            --output artifacts/migrations.sql
+
+      - name: Reject high or critical NuGet vulnerabilities
+        shell: pwsh
+        run: |
+          $output = dotnet list ExhibitionManagementSystem.slnx package --vulnerable --include-transitive 2>&1
+          $output | Write-Output
+          if ($output -match '(?im)^\s*>.*\s(High|Critical)\s') {
+            throw 'High or critical NuGet vulnerability detected.'
+          }
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/test-results.trx"
+
+      - name: Upload migration script
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-script
+          path: artifacts/migrations.sql
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan Git history for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
