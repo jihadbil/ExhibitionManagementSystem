@@ -28,9 +28,14 @@ public class TokenRefreshHandler : DelegatingHandler
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        // HttpRequestMessage (وخاصة محتواه) لا يمكن إرساله مرتين بأمان.
+        // نجهز نسخة مستقلة قبل الإرسال الأول لاستخدامها عند تجديد الجلسة.
+        var retryRequest = !string.IsNullOrEmpty(_session.RefreshToken)
+            ? await CloneRequestAsync(request, cancellationToken)
+            : null;
         var response = await base.SendAsync(request, cancellationToken);
 
-        if (response.StatusCode == HttpStatusCode.Unauthorized && !string.IsNullOrEmpty(_session.RefreshToken))
+        if (response.StatusCode == HttpStatusCode.Unauthorized && retryRequest != null)
         {
             await _semaphore.WaitAsync(cancellationToken);
             try
@@ -39,18 +44,18 @@ public class TokenRefreshHandler : DelegatingHandler
                 var currentAccessToken = request.Headers.Authorization?.Parameter;
                 if (currentAccessToken != _session.AccessToken)
                 {
-                    // Yes, token was refreshed, retry request with new token
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _session.AccessToken);
-                    return await base.SendAsync(request, cancellationToken);
+                    retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _session.AccessToken);
+                    response.Dispose();
+                    return await base.SendAsync(retryRequest, cancellationToken);
                 }
 
                 // Try to refresh token
                 var refreshed = await TryRefreshTokenAsync(cancellationToken);
                 if (refreshed)
                 {
-                    // Retry original request with the new token
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _session.AccessToken);
-                    return await base.SendAsync(request, cancellationToken);
+                    retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _session.AccessToken);
+                    response.Dispose();
+                    return await base.SendAsync(retryRequest, cancellationToken);
                 }
                 else
                 {
@@ -82,6 +87,39 @@ public class TokenRefreshHandler : DelegatingHandler
         return response;
     }
 
+    private static async Task<HttpRequestMessage> CloneRequestAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        var clone = new HttpRequestMessage(request.Method, request.RequestUri)
+        {
+            Version = request.Version,
+            VersionPolicy = request.VersionPolicy
+        };
+
+        foreach (var header in request.Headers)
+        {
+            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        foreach (var option in request.Options)
+        {
+            clone.Options.Set(new HttpRequestOptionsKey<object?>(option.Key), option.Value);
+        }
+
+        if (request.Content != null)
+        {
+            var contentBytes = await request.Content.ReadAsByteArrayAsync(cancellationToken);
+            clone.Content = new ByteArrayContent(contentBytes);
+            foreach (var header in request.Content.Headers)
+            {
+                clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+        }
+
+        return clone;
+    }
+
     private async Task<bool> TryRefreshTokenAsync(CancellationToken cancellationToken)
     {
         try
@@ -90,7 +128,8 @@ public class TokenRefreshHandler : DelegatingHandler
             using var client = new HttpClient();
             
             var config = _serviceProvider.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
-            var apiBaseUrl = config["ApiBaseUrl"] ?? "https://localhost:7001";
+            var apiBaseUrl = config["ApiBaseUrl"]
+                ?? throw new InvalidOperationException("ApiBaseUrl configuration is missing.");
             client.BaseAddress = new Uri(apiBaseUrl);
             
             var requestDto = new RefreshTokenRequestDto

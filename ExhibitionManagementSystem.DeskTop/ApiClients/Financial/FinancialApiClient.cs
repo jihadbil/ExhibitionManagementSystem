@@ -49,11 +49,33 @@ public class FinancialApiClient : ApiClientBase, IFinancialService
 
     public Task<ServiceResult<PaymentDto>> RecordPaymentAsync(int tenantId, string userId, PaymentCreateDto dto)
     {
-        return PostAsync<PaymentDto>("api/financial/payments", dto);
+        return PostAsync<PaymentDto>(
+            "api/financial/payments",
+            dto,
+            Guid.NewGuid().ToString("N"));
     }
 
     public Task<ServiceResult<IList<PaymentDto>>> GetPaymentsByInvoiceAsync(int tenantId, int invoiceId)
     {
         return GetAsync<IList<PaymentDto>>($"api/financial/payments/invoice/{invoiceId}");
+    }
+
+    public Task<ServiceResult<CreditNoteDto>> CreateCreditNoteAsync(
+        int tenantId,
+        string userId,
+        int invoiceId,
+        CreditNoteCreateDto dto)
+    {
+        return PostAsync<CreditNoteDto>(
+            $"api/financial/invoices/{invoiceId}/credit-notes",
+            dto);
+    }
+
+    public Task<ServiceResult<IList<CreditNoteDto>>> GetCreditNotesByInvoiceAsync(
+        int tenantId,
+        int invoiceId)
+    {
+        return GetAsync<IList<CreditNoteDto>>(
+            $"api/financial/invoices/{invoiceId}/credit-notes");
     }
 }

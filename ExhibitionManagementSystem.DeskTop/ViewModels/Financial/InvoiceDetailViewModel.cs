@@ -46,8 +46,8 @@ public partial class InvoiceDetailViewModel : ViewModelBase
     public Action? CloseAction { get; set; }
 
     // Calculated properties
-    public decimal PaidAmount => Payments.Where(p => p.Status.Equals("Success", StringComparison.OrdinalIgnoreCase) || p.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase)).Sum(p => p.Amount);
-    public decimal RemainingAmount => (Invoice?.TotalAmount ?? 0) - PaidAmount;
+    public decimal PaidAmount => Payments.Where(p => p.Status.Equals("Success", StringComparison.OrdinalIgnoreCase) || p.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase) || p.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase)).Sum(p => p.Amount) - (Invoice?.RefundedAmount ?? 0);
+    public decimal RemainingAmount => Math.Max(0, (Invoice?.AdjustedTotalAmount ?? 0) - PaidAmount);
 
     // ━━━━━━━━━━━━━━ Constructor ━━━━━━━━━━━━━━
 

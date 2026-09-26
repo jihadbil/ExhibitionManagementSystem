@@ -90,9 +90,15 @@ public partial class ToastNotificationControl : UserControl
         this.BeginAnimation(OpacityProperty, fadeInAnimation);
 
         // Auto-dismiss after 5 seconds
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher == null)
+        {
+            return;
+        }
+
         Task.Delay(5000).ContinueWith(_ =>
         {
-            Application.Current.Dispatcher.Invoke(Dismiss);
+            dispatcher.Invoke(Dismiss);
         });
     }
 

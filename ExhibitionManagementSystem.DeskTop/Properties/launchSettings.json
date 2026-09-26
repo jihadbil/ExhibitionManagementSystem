@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ExhibitionManagementSystem.DeskTop": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

@@ -16,10 +16,9 @@ namespace ExhibitionManagementSystem.DeskTop.ApiClients.Financial
         {
         }
 
-        public Task<ServiceResult<InvoiceItemDto>> GetItemByIdAsync(int tenantId, int itemId)
+        public Task<ServiceResult<InvoiceItemDto>> GetItemByIdAsync(int tenantId, int invoiceId, int itemId)
         {
-            // نمرر الـ invoiceId بقيمة افتراضية 0 لأن المعرّف الفريد للبند يكفي للبحث في الـ API
-            return GetAsync<InvoiceItemDto>($"api/financial/invoices/0/items/{itemId}");
+            return GetAsync<InvoiceItemDto>($"api/financial/invoices/{invoiceId}/items/{itemId}");
         }
 
         public Task<ServiceResult<IList<InvoiceItemDto>>> GetItemsByInvoiceIdAsync(int tenantId, int invoiceId)
@@ -32,15 +31,14 @@ namespace ExhibitionManagementSystem.DeskTop.ApiClients.Financial
             return PostAsync<InvoiceItemDto>($"api/financial/invoices/{invoiceId}/items", dto);
         }
 
-        public Task<ServiceResult<InvoiceItemDto>> UpdateItemAsync(int tenantId, int itemId, InvoiceItemUpdateDto dto)
+        public Task<ServiceResult<InvoiceItemDto>> UpdateItemAsync(int tenantId, int invoiceId, int itemId, InvoiceItemUpdateDto dto)
         {
-            // نرسل الطلب لتحديث البند التابع للفاتورة
-            return PutAsync<InvoiceItemDto>($"api/financial/invoices/{dto.InvoiceItemID}/items/{itemId}", dto);
+            return PutAsync<InvoiceItemDto>($"api/financial/invoices/{invoiceId}/items/{itemId}", dto);
         }
 
-        public async Task<ServiceResult<bool>> DeleteItemAsync(int tenantId, int itemId)
+        public async Task<ServiceResult<bool>> DeleteItemAsync(int tenantId, int invoiceId, int itemId)
         {
-            var result = await DeleteAsync($"api/financial/invoices/0/items/{itemId}");
+            var result = await DeleteAsync($"api/financial/invoices/{invoiceId}/items/{itemId}");
             if (result.IsSuccess)
             {
                 return ServiceResult<bool>.Success(true);
@@ -49,4 +47,3 @@ namespace ExhibitionManagementSystem.DeskTop.ApiClients.Financial
         }
     }
 }
-

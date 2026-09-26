@@ -82,10 +82,21 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // قراءة appsettings.json
+#if DEBUG
+        var defaultEnvironment = "Development";
+#else
+        var defaultEnvironment = "Production";
+#endif
+        var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+            ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? defaultEnvironment;
+
+        // قراءة الإعداد العام ثم إعداد البيئة، مع السماح لمتغيرات البيئة بالتجاوز.
         var config = new ConfigurationBuilder()
             .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+            .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: false)
+            .AddEnvironmentVariables()
             .Build();
 
         // بناء الـ Host مع DI
@@ -112,11 +123,18 @@ public partial class App : Application
         var apiBaseUrl = config["ApiBaseUrl"] 
             ?? throw new InvalidOperationException("ApiBaseUrl configuration is missing!");
 
+        if (!Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiUri) ||
+            (apiUri.Scheme != Uri.UriSchemeHttps && !apiUri.IsLoopback))
+        {
+            throw new InvalidOperationException(
+                "ApiBaseUrl must use HTTPS unless it targets the local machine.");
+        }
+
         services.AddTransient<TokenRefreshHandler>();
 
         services.AddHttpClient("ApiClient", client =>
         {
-            client.BaseAddress = new Uri(apiBaseUrl);
+            client.BaseAddress = apiUri;
             client.Timeout = TimeSpan.FromSeconds(30);
             client.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));

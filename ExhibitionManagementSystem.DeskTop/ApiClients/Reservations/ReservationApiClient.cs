@@ -34,7 +34,10 @@ public class ReservationApiClient : ApiClientBase, IReservationService
 
     public Task<ServiceResult<BoothReservationDto>> CreateAsync(int tenantId, string userId, BoothReservationCreateDto dto)
     {
-        return PostAsync<BoothReservationDto>("api/reservations", dto);
+        return PostAsync<BoothReservationDto>(
+            "api/reservations",
+            dto,
+            Guid.NewGuid().ToString("N"));
     }
 
     public Task<ServiceResult<BoothReservationDto>> UpdateAsync(int tenantId, int id, BoothReservationUpdateDto dto)

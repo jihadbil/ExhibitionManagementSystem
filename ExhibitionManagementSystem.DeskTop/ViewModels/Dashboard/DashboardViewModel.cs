@@ -111,7 +111,7 @@ namespace ExhibitionManagementSystem.DeskTop.ViewModels.Dashboard
                     var monthlyInvoices = invoices.Where(inv => inv.CreatedAt.Year == monthDate.Year && inv.CreatedAt.Month == monthDate.Month).ToList();
 
                     double revenue = (double)monthlyInvoices.Sum(inv => inv.TotalAmount);
-                    double paid = (double)monthlyInvoices.SelectMany(inv => inv.Payments).Where(p => p.Status == "Completed" || p.Status == "Paid").Sum(p => p.Amount);
+                    double paid = (double)(monthlyInvoices.SelectMany(inv => inv.Payments).Where(p => p.Status == "Completed" || p.Status == "Paid").Sum(p => p.Amount) - monthlyInvoices.Sum(inv => inv.RefundedAmount));
                     double pending = revenue - paid;
                     if (pending < 0) pending = 0;
 

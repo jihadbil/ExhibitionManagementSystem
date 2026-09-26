@@ -10,7 +10,6 @@ namespace ExhibitionManagementSystem.Services.Interfaces
     {
         // Login & Registration
         Task<ServiceResult<LoginResponseDto>> LoginAsync(LoginRequestDto dto);
-        Task<ServiceResult<UserManagementDto>> RegisterAsync(RegisterRequestDto dto);
         Task<ServiceResult> LogoutAsync(string userId);
 
         // JWT & Refresh Token Management

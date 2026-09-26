@@ -49,12 +49,24 @@ public abstract class ApiClientBase
         }
     }
 
-    protected async Task<ServiceResult<T>> PostAsync<T>(string endpoint, object body)
+    protected async Task<ServiceResult<T>> PostAsync<T>(
+        string endpoint,
+        object body,
+        string? idempotencyKey = null)
     {
         try
         {
             var client = CreateClient();
-            var response = await client.PostAsJsonAsync(endpoint, body);
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+            {
+                Content = JsonContent.Create(body)
+            };
+            if (!string.IsNullOrWhiteSpace(idempotencyKey))
+            {
+                request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
+            }
+
+            var response = await client.SendAsync(request);
             return await HandleResponseAsync<T>(response);
         }
         catch (Exception ex)
@@ -63,12 +75,24 @@ public abstract class ApiClientBase
         }
     }
 
-    protected async Task<ServiceResult> PostVoidAsync(string endpoint, object body)
+    protected async Task<ServiceResult> PostVoidAsync(
+        string endpoint,
+        object body,
+        string? idempotencyKey = null)
     {
         try
         {
             var client = CreateClient();
-            var response = await client.PostAsJsonAsync(endpoint, body);
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+            {
+                Content = JsonContent.Create(body)
+            };
+            if (!string.IsNullOrWhiteSpace(idempotencyKey))
+            {
+                request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
+            }
+
+            var response = await client.SendAsync(request);
             return await HandleResponseAsync(response);
         }
         catch (Exception ex)

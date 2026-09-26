@@ -306,11 +306,11 @@ public partial class TicketsViewModel : ViewModelBase
         await ExecuteSafeAsync(async () =>
         {
             var result = await _ticketService.ScanTicketAsync(
-                Session.TenantId, ScannedQrCode, "Entry", null, Session.UserId);
+                Session.TenantId, ScannedQrCode, "In", null, Session.UserId);
 
             if (result.IsSuccess)
             {
-                NotificationService.ShowSuccess($"التذكرة صالحة ✓. نوع الدخول: Entry. رمز QR: {ScannedQrCode}");
+                NotificationService.ShowSuccess($"التذكرة صالحة ✓. نوع الدخول: In. رمز QR: {ScannedQrCode}");
                 ScannedQrCode = string.Empty;
                 if (SelectedExhibitionId > 0)
                 {

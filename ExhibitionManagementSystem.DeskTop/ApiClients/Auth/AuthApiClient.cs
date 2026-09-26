@@ -22,11 +22,6 @@ public class AuthApiClient : ApiClientBase, IAuthService
         return PostAsync<LoginResponseDto>("api/auth/login", dto);
     }
 
-    public Task<ServiceResult<UserManagementDto>> RegisterAsync(RegisterRequestDto dto)
-    {
-        return PostAsync<UserManagementDto>("api/auth/register", dto);
-    }
-
     public Task<ServiceResult> LogoutAsync(string userId)
     {
         return PostVoidAsync("api/auth/logout", new { });
