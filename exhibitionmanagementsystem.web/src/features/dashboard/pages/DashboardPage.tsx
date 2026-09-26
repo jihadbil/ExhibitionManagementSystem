@@ -23,17 +23,25 @@ export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
 
   const [stats, setStats] = useState<DashboardStatsDto>({
-    activeExhibitions: 8,
-    occupiedBooths: 142,
-    totalExhibitors: 86,
-    totalVisitors: 12450,
-    totalRevenue: 245800
+    totalExhibitions: 0,
+    activeExhibitions: 0,
+    occupiedBooths: 0,
+    totalExhibitors: 0,
+    totalVisitors: 0,
+    totalRevenue: 0,
+    pendingRevenue: 0,
+    totalBooths: 0,
+    occupancyRate: 0,
+    pendingReservations: 0,
+    currencyCode: '',
+    currencySymbol: '',
   });
 
   const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenuePoint[]>([]);
   const [typeDistribution, setTypeDistribution] = useState<ExhibitionTypeItem[]>([]);
   const [upcomingExhibitions, setUpcomingExhibitions] = useState<UpcomingExhibitionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   // Real-time Clock & Date
   const [currentTime, setCurrentTime] = useState('');
@@ -65,19 +73,19 @@ export const DashboardPage: React.FC = () => {
     const loadDashboardData = async () => {
       setIsLoading(true);
       try {
-        const [statsData, revenueData, typesData, upcomingData] = await Promise.all([
+        const [statsData, revenueData, upcomingData] = await Promise.all([
           dashboardService.getStats(),
           dashboardService.getMonthlyRevenue(),
-          dashboardService.getTypeDistribution(),
           dashboardService.getUpcomingExhibitions()
         ]);
 
         setStats(statsData);
         setMonthlyRevenue(revenueData);
-        setTypeDistribution(typesData);
+        setTypeDistribution(dashboardService.getTypeDistribution(upcomingData));
         setUpcomingExhibitions(upcomingData);
       } catch (err) {
         console.error('Error loading dashboard data', err);
+        setLoadError('تعذر تحميل بيانات لوحة التحكم من الخادم. تحقق من الاتصال ثم أعد المحاولة.');
       } finally {
         setIsLoading(false);
       }
@@ -88,6 +96,11 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      {loadError && (
+        <div role="alert" style={{ padding: '12px 16px', borderRadius: 'var(--radius-lg)', background: 'var(--danger-bg)', color: 'var(--danger-text)' }}>
+          {loadError}
+        </div>
+      )}
       {/* Page Header with Greeting & Live Clock */}
       <div
         style={{
@@ -152,7 +165,7 @@ export const DashboardPage: React.FC = () => {
       >
         <StatCard
           title="المعارض النشطة"
-          value={stats.activeExhibitions}
+          value={isLoading ? '—' : stats.activeExhibitions}
           icon={Building2}
           iconColor="#3b82f6"
           iconBg="#dbeafe"
@@ -162,7 +175,7 @@ export const DashboardPage: React.FC = () => {
 
         <StatCard
           title="الأجنحة المحجوزة"
-          value={`${stats.occupiedBooths} جناح`}
+          value={isLoading ? '—' : `${stats.occupiedBooths} جناح`}
           icon={Store}
           iconColor="#6366f1"
           iconBg="#e0e7ff"
@@ -172,7 +185,7 @@ export const DashboardPage: React.FC = () => {
 
         <StatCard
           title="الشركات العارضة"
-          value={`${stats.totalExhibitors} شركة`}
+          value={isLoading ? '—' : `${stats.totalExhibitors} شركة`}
           icon={Building}
           iconColor="#f59e0b"
           iconBg="#fef3c7"
@@ -182,7 +195,7 @@ export const DashboardPage: React.FC = () => {
 
         <StatCard
           title="الزوار المسجلين"
-          value={stats.totalVisitors.toLocaleString()}
+          value={isLoading ? '—' : stats.totalVisitors.toLocaleString()}
           icon={Users}
           iconColor="#10b981"
           iconBg="#d1fae5"

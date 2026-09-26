@@ -3,15 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, Mail, Lock, LogIn, AlertCircle, CheckCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useToast } from '../../../app/providers/ToastContext';
+import { getRememberedEmail } from '../services/auth.storage';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { showToast } = useToast();
 
-  const [email, setEmail] = useState('admin@expomanager.com');
-  const [password, setPassword] = useState('Admin@123456');
-  const [rememberMe, setRememberMe] = useState(true);
+  const rememberedEmail = getRememberedEmail();
+  const [email, setEmail] = useState(rememberedEmail);
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(Boolean(rememberedEmail));
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -281,7 +283,7 @@ export const LoginPage: React.FC = () => {
                 style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer' }}
               />
               <label htmlFor="remember" style={{ fontSize: '13px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                تذكرني على هذا الجهاز
+                تذكر البريد الإلكتروني على هذا الجهاز
               </label>
             </div>
 
@@ -308,24 +310,6 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Quick Demo Credentials Reminder */}
-          <div
-            style={{
-              marginTop: '32px',
-              padding: '16px',
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px dashed var(--border-main)',
-              fontSize: '12px',
-              color: 'var(--text-secondary)'
-            }}
-          >
-            <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
-              بيانات الدخول الافتراضية للتجربة السريعة:
-            </div>
-            <div>البريد: <code>admin@expomanager.com</code></div>
-            <div>كلمة المرور: <code>Admin@123456</code></div>
-          </div>
         </div>
       </div>
     </div>

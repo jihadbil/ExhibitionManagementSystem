@@ -34,7 +34,10 @@ export const TypeDistributionDonutChart: React.FC<TypeDistributionDonutChartProp
                 fontFamily: 'Cairo, Work Sans',
                 fontSize: '13px'
               }}
-              formatter={(value: any, name: any) => [`${value} معارض (${((Number(value) / total) * 100).toFixed(0)}%)`, String(name)]}
+              formatter={(value: number | string, name: string) => [
+                `${value} معارض (${total > 0 ? ((Number(value) / total) * 100).toFixed(0) : 0}%)`,
+                name,
+              ]}
             />
             <Pie
               data={data}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Compass,
   Plus,
@@ -7,11 +7,8 @@ import {
   Maximize2,
   Trash2,
   Grid,
-  CheckCircle2,
   AlertTriangle,
   Save,
-  RotateCw,
-  Building2,
   Sparkles
 } from 'lucide-react';
 import { useToast } from '../../../app/providers/ToastContext';
@@ -48,7 +45,7 @@ export const BoothDesignerPage: React.FC = () => {
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>('b1');
   const [zoomScale, setZoomScale] = useState(1.0);
   const [snapToGrid, setSnapToGrid] = useState(true);
-  const [showGrid, setShowGrid] = useState(true);
+  const [showGrid] = useState(true);
 
   // Dragging state
   const [isDragging, setIsDragging] = useState(false);
@@ -156,7 +153,7 @@ export const BoothDesignerPage: React.FC = () => {
   };
 
   const saveLayout = () => {
-    showToast('تم حفظ المخطط ثنائي الأبعاد بنجاح في قاعدة البيانات!', 'success');
+    showToast('هذا المصمم يعمل محلياً حالياً؛ لم يُحفظ المخطط في الخادم.', 'warning');
   };
 
   const autoArrange = () => {
@@ -164,7 +161,7 @@ export const BoothDesignerPage: React.FC = () => {
     let startY = 60;
     const spacing = 20;
 
-    const arranged = booths.map((b, i) => {
+    const arranged = booths.map((b) => {
       const x = startX;
       const y = startY;
       startX += b.width + spacing;

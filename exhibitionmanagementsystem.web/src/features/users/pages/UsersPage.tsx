@@ -1,95 +1,64 @@
-import React, { useState } from 'react';
-import { Users, Plus, ShieldCheck, Mail, CheckCircle2, XCircle } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Users } from 'lucide-react';
 import { useToast } from '../../../app/providers/ToastContext';
+import { api } from '../../../services/api';
 
-interface UserAccount {
-  id: string;
-  name: string;
+interface ManagedUser {
+  userId: string;
+  fullName: string;
   email: string;
-  role: string;
-  status: 'Active' | 'Inactive';
-  lastLogin: string;
+  phoneNumber: string;
+  isActive: boolean;
+  emailConfirmed: boolean;
+  lastLogin?: string;
+  roles: string[];
 }
 
-const mockUsers: UserAccount[] = [
-  { id: '1', name: 'المهندس جهاد بلعيد', email: 'jihad@expomanager.com', role: 'SuperAdmin (مدير عام)', status: 'Active', lastLogin: 'اليوم، 10:30 ص' },
-  { id: '2', name: 'أحمد مصطفى الفرجاني', email: 'ahmed.f@expomanager.com', role: 'EventOrganizer (منظم معارض)', status: 'Active', lastLogin: 'أمس، 04:15 م' },
-  { id: '3', name: 'سارة عبد السلام المنفي', email: 'sara.m@expomanager.com', role: 'FinanceManager (المسؤول المالي)', status: 'Active', lastLogin: '22 سبتمبر 2026' },
-  { id: '4', name: 'عمر الطاهر السويحلي', email: 'omar.s@expomanager.com', role: 'KioskOperator (مشغل الكشك)', status: 'Active', lastLogin: 'اليوم، 09:12 ص' },
-];
-
-export const UsersPage: React.FC = () => {
+export const UsersPage = () => {
   const { showToast } = useToast();
-  const [users, setUsers] = useState<UserAccount[]>(mockUsers);
+  const [users, setUsers] = useState<ManagedUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    await Promise.resolve();
+    setIsLoading(true);
+    try {
+      const response = await api.get<{ items: ManagedUser[] }>('/api/users?page=1&pageSize=100');
+      setUsers(response.data.items ?? []);
+      setError('');
+    } catch {
+      setError('تعذر تحميل المستخدمين من الخادم.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // تحميل القائمة الخارجية هو الغرض المقصود من هذا الأثر.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
+
+  const toggleStatus = async (user: ManagedUser) => {
+    try {
+      await api.patch(`/api/users/${encodeURIComponent(user.userId)}/status`, !user.isActive, { headers: { 'Content-Type': 'application/json' } });
+      showToast('تم تحديث حالة المستخدم.', 'success');
+      await load();
+    } catch {
+      showToast('تعذر تحديث حالة المستخدم.', 'danger');
+    }
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Users size={24} style={{ color: 'var(--primary)' }} />
-            <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
-              إدارة المستخدمين والصلاحيات
-            </h1>
-          </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-            التحكم في حسابات فريق العمل والأدوار الوظيفية في المنظومة
-          </p>
-        </div>
-
-        <button
-          onClick={() => showToast('نموذج إضافة مستخدم جديد جاهز', 'info')}
-          className="btn-primary"
-          style={{ height: '42px', padding: '0 20px' }}
-        >
-          <Plus size={16} />
-          <span>إضافة مستخدم جديد</span>
-        </button>
-      </div>
-
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>الاسم الكامل</th>
-                <th>البريد الإلكتروني</th>
-                <th>الدور والصلاحية</th>
-                <th>آخر تسجيل دخول</th>
-                <th>الحالة</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => (
-                <tr key={u.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary-gradient)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px' }}>
-                        {u.name[0]}
-                      </div>
-                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{u.name}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{u.email}</span>
-                  </td>
-                  <td>
-                    <span className="badge badge-featured">{u.role}</span>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{u.lastLogin}</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${u.status === 'Active' ? 'badge-success' : 'badge-danger'}`}>
-                      {u.status === 'Active' ? 'نشط' : 'معطل'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div><h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Users color="var(--primary)" />المستخدمون والصلاحيات</h1><p style={{ color: 'var(--text-secondary)' }}>الحسابات والأدوار الحالية للمستأجر.</p></div>
+      {error && <div role="alert" style={{ color: 'var(--danger-text)' }}>{error}</div>}
+      <div className="card" style={{ padding: 0 }}><div className="table-container"><table className="data-table"><thead><tr><th>الاسم</th><th>البريد</th><th>الأدوار</th><th>آخر دخول</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>
+        {users.map(user => <tr key={user.userId}><td>{user.fullName}</td><td>{user.email}</td><td>{user.roles.join('، ') || '—'}</td><td>{user.lastLogin ? new Date(user.lastLogin).toLocaleString('ar-LY') : '—'}</td><td>{user.isActive ? 'نشط' : 'موقوف'}</td><td><button className="btn-secondary" onClick={() => void toggleStatus(user)}>{user.isActive ? 'إيقاف' : 'تفعيل'}</button></td></tr>)}
+        {!isLoading && users.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center' }}>لا يوجد مستخدمون.</td></tr>}
+        {isLoading && <tr><td colSpan={6} style={{ textAlign: 'center' }}>جاري التحميل…</td></tr>}
+      </tbody></table></div></div>
     </div>
   );
 };

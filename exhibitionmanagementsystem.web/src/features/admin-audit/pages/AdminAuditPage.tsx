@@ -1,117 +1,52 @@
-import React, { useState } from 'react';
-import { FileText, Search, Activity, Clock, ShieldCheck, Database } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { FileText, Search } from 'lucide-react';
+import { api } from '../../../services/api';
 
-interface AuditLogItem {
-  id: number;
+interface AuditLog {
+  logID: number;
+  userName: string;
   tableName: string;
-  action: 'Insert' | 'Update' | 'Delete' | 'Login';
-  performedBy: string;
-  timestamp: string;
-  details: string;
+  recordID: string;
+  action: string;
+  actionAt: string;
+  ipAddress: string;
 }
 
-const mockAuditLogs: AuditLogItem[] = [
-  { id: 1, tableName: 'Booths', action: 'Update', performedBy: 'jihad@expomanager.com', timestamp: '2026-09-24 10:45:12', details: 'تحديث أبعاد وحالة الجناح VIP-01 إلى محجوز' },
-  { id: 2, tableName: 'Reservations', action: 'Insert', performedBy: 'ahmed.f@expomanager.com', timestamp: '2026-09-24 10:32:05', details: 'إنشاء طلب حجز جديد برقم RES-2026-004' },
-  { id: 3, tableName: 'Auth', action: 'Login', performedBy: 'sara.m@expomanager.com', timestamp: '2026-09-24 09:15:40', details: 'تسجيل دخول ناجح من عنوان IP 192.168.1.104' },
-  { id: 4, tableName: 'Exhibitions', action: 'Update', performedBy: 'jihad@expomanager.com', timestamp: '2026-09-23 16:20:18', details: 'تعديل تواريخ معرض طرابلس للتقنية 2026' },
-  { id: 5, tableName: 'Invoices', action: 'Insert', performedBy: 'sara.m@expomanager.com', timestamp: '2026-09-23 14:10:22', details: 'إصدار فاتورة حجز جناح INV-2026-0824' },
-];
+export const AdminAuditPage = () => {
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [query, setQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-export const AdminAuditPage: React.FC = () => {
-  const [logs, setLogs] = useState<AuditLogItem[]>(mockAuditLogs);
-  const [searchTable, setSearchTable] = useState('');
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await api.get<{ items: AuditLog[] }>('/api/admin/audit-logs?page=1&pageSize=100');
+        setLogs(response.data.items ?? []);
+      } catch {
+        setError('تعذر تحميل سجل الرقابة من الخادم.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    void load();
+  }, []);
 
-  const filtered = logs.filter(l =>
-    l.tableName.toLowerCase().includes(searchTable.toLowerCase()) ||
-    l.details.toLowerCase().includes(searchTable.toLowerCase()) ||
-    l.performedBy.toLowerCase().includes(searchTable.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const value = query.trim().toLowerCase();
+    return value ? logs.filter(log => [log.tableName, log.action, log.userName, log.recordID].some(field => field.toLowerCase().includes(value))) : logs;
+  }, [logs, query]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <FileText size={24} style={{ color: 'var(--primary)' }} />
-            <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
-              سجلات الرقابة والعمليات (Audit Logs)
-            </h1>
-          </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-            تتبع التغييرات وحركات المستخدمين وسجلات قواعد البيانات لضمان النزاهة والامتثال
-          </p>
-        </div>
-      </div>
-
-      <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ position: 'relative', width: '380px', maxWidth: '100%' }}>
-          <Search size={18} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input
-            type="text"
-            value={searchTable}
-            onChange={(e) => setSearchTable(e.target.value)}
-            placeholder="بحث بالجدول، المستخدم، أو تفاصيل العملية..."
-            className="input-field"
-            style={{ paddingRight: '42px', height: '42px' }}
-          />
-        </div>
-      </div>
-
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th style={{ width: '15%' }}>الجدول / الكيان</th>
-                <th style={{ width: '12%' }}>نوع الإجراء</th>
-                <th style={{ width: '22%' }}>المستخدم المنفذ</th>
-                <th style={{ width: '18%' }}>الوقت والتاريخ</th>
-                <th style={{ width: '33%' }}>تفاصيل التغيير</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(log => (
-                <tr key={log.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      <Database size={15} style={{ color: 'var(--primary)' }} />
-                      <span>{log.tableName}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span
-                      className={`badge ${
-                        log.action === 'Insert'
-                          ? 'badge-success'
-                          : log.action === 'Update'
-                          ? 'badge-info'
-                          : log.action === 'Delete'
-                          ? 'badge-danger'
-                          : 'badge-featured'
-                      }`}
-                    >
-                      {log.action}
-                    </span>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{log.performedBy}</span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                      <Clock size={13} />
-                      <span>{log.timestamp}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{log.details}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div><h1 style={{ display: 'flex', gap: '10px', alignItems: 'center' }}><FileText color="var(--primary)" />سجل الرقابة</h1><p style={{ color: 'var(--text-secondary)' }}>سجل غير قابل للتعديل، محمّل من الخادم.</p></div>
+      <div className="card" style={{ position: 'relative' }}><Search size={18} style={{ position: 'absolute', right: '28px', top: '50%', transform: 'translateY(-50%)' }} /><input className="input-field" value={query} onChange={event => setQuery(event.target.value)} placeholder="بحث في السجل" style={{ paddingRight: '42px' }} /></div>
+      {error && <div role="alert" style={{ color: 'var(--danger-text)' }}>{error}</div>}
+      <div className="card" style={{ padding: 0 }}><div className="table-container"><table className="data-table"><thead><tr><th>الوقت</th><th>المستخدم</th><th>الإجراء</th><th>الكيان</th><th>المعرف</th><th>عنوان IP</th></tr></thead><tbody>
+        {filtered.map(log => <tr key={log.logID}><td>{new Date(log.actionAt).toLocaleString('ar-LY')}</td><td>{log.userName || 'النظام'}</td><td>{log.action}</td><td>{log.tableName}</td><td>{log.recordID}</td><td dir="ltr">{log.ipAddress || '—'}</td></tr>)}
+        {!isLoading && filtered.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center' }}>لا توجد سجلات.</td></tr>}
+        {isLoading && <tr><td colSpan={6} style={{ textAlign: 'center' }}>جاري التحميل…</td></tr>}
+      </tbody></table></div></div>
     </div>
   );
 };

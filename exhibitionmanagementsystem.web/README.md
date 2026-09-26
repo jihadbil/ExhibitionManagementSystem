@@ -1,75 +1,30 @@
-# React + TypeScript + Vite
+# ExpoManager Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+واجهة React + TypeScript لنظام إدارة المعارض.
 
-Currently, two official plugins are available:
+## التشغيل المحلي
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. انسخ `.env.example` إلى `.env.local` عند الحاجة لتغيير عنوان خادم ASP.NET.
+2. شغّل الخادم الخلفي.
+3. نفّذ:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```powershell
+npm ci
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+يحوّل Vite طلبات `/api` إلى `https://localhost:7213` افتراضياً. يمكن تغيير الهدف عبر `VITE_DEV_API_URL`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## التحقق قبل النشر
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```powershell
+npm run lint
+npm run build
+npm audit --audit-level=high
 ```
+
+عند نشر الواجهة على أصل مختلف عن الـAPI يجب ضبط `VITE_API_URL` وقت البناء. رموز الجلسة تحفظ في `sessionStorage` فقط، بينما خيار «تذكر البريد» لا يحفظ كلمة المرور أو الرموز.
+
+## حالة الوظائف
+
+الشاشات التشغيلية والقوائم الرئيسية تقرأ من الـAPI، وتشمل المعارض والحجوزات والتذاكر والأجنحة والعارضين والمواقع والخدمات والفواتير والرعاة والمستخدمين والمستأجرين وسجل الرقابة. مصمم الأجنحة ومصمم الشارات وإعدادات المؤسسة ما زالت معاينات محلية لأن الخادم لا يوفر لها عقد حفظ متكامل؛ لذلك لا تعرض الواجهة نجاحاً زائفاً عند محاولة حفظها.

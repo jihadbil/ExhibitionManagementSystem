@@ -1,19 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   QrCode,
   Scan,
   CheckCircle2,
   Printer,
-  Users,
-  ShieldCheck,
-  Building2,
-  Sparkles,
-  ArrowRight,
-  Maximize,
-  Volume2
+  Users
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { useToast } from '../../../app/providers/ToastContext';
+import { api } from '../../../services/api';
 
 interface CheckedInAttendee {
   id: string;
@@ -25,60 +19,69 @@ interface CheckedInAttendee {
   boothLocation: string;
 }
 
-const mockRecentCheckIns: CheckedInAttendee[] = [
-  { id: '1', name: 'المهندس أحمد الهادي الفرجاني', company: 'مؤسسة التقنية والشبكات', category: 'VIP', ticketNumber: 'TKT-2026-8812', checkInTime: '10:45 ص', boothLocation: 'قاعة الابتكار | جناح A-101' },
-  { id: '2', name: 'سارة عبد السلام المنفي', company: 'شركة البرمجيات المتطورة', category: 'عارض', ticketNumber: 'TKT-2026-9043', checkInTime: '10:42 ص', boothLocation: 'صالة B | جناح B-204' },
-  { id: '3', name: 'د. عادل محمود الورفلي', company: 'المركز الليبي للبحوث', category: 'زائر', ticketNumber: 'TKT-2026-7731', checkInTime: '10:38 ص', boothLocation: 'المنطقة العامة' },
-];
+interface TicketScanResponse {
+  scanID: number;
+  ticketID: number;
+  qrCode: string;
+  scanTime: string;
+  scanDirection: string;
+  scanLocation: string;
+}
 
 export const CheckInKioskPage: React.FC = () => {
   const { showToast } = useToast();
   const [scanCode, setScanCode] = useState('');
-  const [todayCount, setTodayCount] = useState(384);
+  const [todayCount, setTodayCount] = useState(0);
   const [gateName, setGateName] = useState('البوابة الرئيسية (Gate A)');
-  const [autoPrint, setAutoPrint] = useState(true);
-  const [recentList, setRecentList] = useState<CheckedInAttendee[]>(mockRecentCheckIns);
+  const [autoPrint, setAutoPrint] = useState(false);
+  const [recentList, setRecentList] = useState<CheckedInAttendee[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
 
   // Success Flash state
   const [currentAttendee, setCurrentAttendee] = useState<CheckedInAttendee | null>(null);
   const [isSuccessFlash, setIsSuccessFlash] = useState(false);
 
-  const handleManualScan = (e: React.FormEvent) => {
+  const handleManualScan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!scanCode.trim()) return;
 
-    processCheckIn(scanCode.trim());
-    setScanCode('');
+    await processCheckIn(scanCode.trim());
   };
 
-  const processCheckIn = (code: string) => {
-    const attendee: CheckedInAttendee = {
-      id: Date.now().toString(),
-      name: 'د. طارق مصطفى المنصوري',
-      company: 'الشركة الليبية لتقنية المعلومات والاتصالات',
-      category: 'VIP خاص',
-      ticketNumber: code.toUpperCase(),
-      checkInTime: new Date().toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' }),
-      boothLocation: 'القاعة الكبرى | جناح VIP-01'
-    };
+  const processCheckIn = async (code: string) => {
+    setIsScanning(true);
+    try {
+      const response = await api.post<TicketScanResponse>('/api/tickets/scan', {
+        qrCode: code,
+        direction: 'In',
+        location: gateName,
+      });
+      const scan = response.data;
+      const attendee: CheckedInAttendee = {
+        id: scan.scanID.toString(),
+        name: `تذكرة رقم ${scan.ticketID}`,
+        company: 'تم التحقق من الخادم',
+        category: scan.scanDirection,
+        ticketNumber: scan.qrCode,
+        checkInTime: new Date(scan.scanTime).toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' }),
+        boothLocation: scan.scanLocation || gateName,
+      };
 
-    setCurrentAttendee(attendee);
-    setIsSuccessFlash(true);
-    setTodayCount(prev => prev + 1);
-    setRecentList(prev => [attendee, ...prev.slice(0, 5)]);
+      setCurrentAttendee(attendee);
+      setIsSuccessFlash(true);
+      setTodayCount(previous => previous + 1);
+      setRecentList(previous => [attendee, ...previous.slice(0, 5)]);
+      setScanCode('');
+      showToast('تم التحقق من التذكرة وتسجيل الدخول في الخادم.', 'success');
 
-    showToast(`تم تسجيل حضور: ${attendee.name} بنجاح!`, 'success');
-
-    if (autoPrint) {
-      setTimeout(() => {
-        showToast('جاري إرسال الشارة إلى طابعة البوابة تلقائياً...', 'info');
-      }, 800);
-    }
-
-    // Dismiss flash after 4 seconds
-    setTimeout(() => {
+      if (autoPrint) window.print();
+      window.setTimeout(() => setIsSuccessFlash(false), 4500);
+    } catch {
       setIsSuccessFlash(false);
-    }, 4500);
+      showToast('رُفضت عملية المسح. تحقق من الرمز أو حالة التذكرة.', 'danger');
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   return (
@@ -101,7 +104,7 @@ export const CheckInKioskPage: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div className="card" style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Users size={16} style={{ color: 'var(--success)' }} />
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>حضور اليوم:</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>عمليات هذه الجلسة:</span>
             <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>{todayCount}</span>
           </div>
 
@@ -265,31 +268,12 @@ export const CheckInKioskPage: React.FC = () => {
                 <button
                   type="submit"
                   className="btn-primary"
+                  disabled={isScanning}
                   style={{ height: '46px', padding: '0 20px', flexShrink: 0 }}
                 >
-                  <span>تحقق ودخول</span>
+                  <span>{isScanning ? 'جاري التحقق…' : 'تحقق ودخول'}</span>
                 </button>
               </form>
-
-              {/* Quick Simulator Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>أكواد تجريبية للمحاكاة:</span>
-                <button
-                  type="button"
-                  onClick={() => processCheckIn('TKT-VIP-9941')}
-                  style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}
-                >
-                  TKT-VIP-9941
-                </button>
-                <span style={{ color: 'var(--text-muted)' }}>•</span>
-                <button
-                  type="button"
-                  onClick={() => processCheckIn('TKT-EXPO-2026')}
-                  style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}
-                >
-                  TKT-EXPO-2026
-                </button>
-              </div>
             </>
           )}
 

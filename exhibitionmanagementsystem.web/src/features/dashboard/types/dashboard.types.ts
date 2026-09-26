@@ -1,9 +1,16 @@
 export interface DashboardStatsDto {
+  totalExhibitions: number;
   activeExhibitions: number;
   occupiedBooths: number;
   totalExhibitors: number;
   totalVisitors: number;
   totalRevenue: number;
+  pendingRevenue: number;
+  totalBooths: number;
+  occupancyRate: number;
+  pendingReservations: number;
+  currencyCode: string;
+  currencySymbol: string;
 }
 
 export interface MonthlyRevenuePoint {
@@ -28,9 +35,5 @@ export interface UpcomingExhibitionItem {
   startDate: string;
   endDate: string;
   venueName?: string;
-  city?: string;
-  totalBooths: number;
-  occupiedBooths: number;
-  boothOccupancyPercentage: number;
   status: string;
 }

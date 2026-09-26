@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Save, Shield, Globe, Moon, Sun, DollarSign, Building2 } from 'lucide-react';
+import { Settings, Save, Sun } from 'lucide-react';
 import { useToast } from '../../../app/providers/ToastContext';
 import { useAuth } from '../../../app/providers/AuthContext';
 
@@ -10,11 +10,10 @@ export const SettingsPage: React.FC = () => {
   const [companyName, setCompanyName] = useState(user?.tenantName || 'الهيئة العامة للمعارض الليبية');
   const [currency, setCurrency] = useState('LYD');
   const [defaultLanguage, setDefaultLanguage] = useState('ar');
-  const [enableKioskSound, setEnableKioskSound] = useState(true);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    showToast('تم حفظ إعدادات المنظومة وتثبيت النمط الفاتح بنجاح!', 'success');
+    showToast('هذه الإعدادات غير موصولة بعقد حفظ في الخادم بعد؛ لم تُحفظ أي تغييرات.', 'warning');
   };
 
   return (

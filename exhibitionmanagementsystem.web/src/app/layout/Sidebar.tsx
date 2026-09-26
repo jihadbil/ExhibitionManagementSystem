@@ -30,6 +30,7 @@ interface NavItem {
   to: string;
   label: string;
   icon: React.ElementType;
+  roles?: readonly string[];
 }
 
 interface NavCategory {
@@ -40,6 +41,7 @@ interface NavCategory {
 export const Sidebar: React.FC = () => {
   const { logout, user } = useAuth();
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+  const hasAnyRole = (roles?: readonly string[]) => !roles || roles.some(role => user?.roles.includes(role));
 
   const toggleCategory = (title: string) => {
     setCollapsedCategories(prev => ({
@@ -53,7 +55,7 @@ export const Sidebar: React.FC = () => {
       title: 'الرئيسية والمؤشرات',
       items: [
         { to: '/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
-        { to: '/analytics', label: 'التحليلات المتقدمة', icon: TrendingUp },
+        { to: '/analytics', label: 'التحليلات المتقدمة', icon: TrendingUp, roles: ['Admin', 'TenantAdmin', 'Finance'] },
       ]
     },
     {
@@ -61,7 +63,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { to: '/exhibitions', label: 'إدارة المعارض', icon: Building2 },
         { to: '/booths', label: 'سجل الأجنحة', icon: Store },
-        { to: '/booths/designer', label: 'مصمم المخططات 2D', icon: Compass },
+        { to: '/booths/designer', label: 'مصمم المخططات 2D', icon: Compass, roles: ['Admin', 'TenantAdmin'] },
         { to: '/venues', label: 'المواقع والقاعات', icon: MapPin },
       ]
     },
@@ -69,28 +71,28 @@ export const Sidebar: React.FC = () => {
       title: 'العمليات والزوار',
       items: [
         { to: '/companies', label: 'الشركات العارضة', icon: Building },
-        { to: '/events', label: 'جدول الفعاليات', icon: Calendar },
-        { to: '/tickets', label: 'التذاكر والزوار', icon: Ticket },
-        { to: '/badges/designer', label: 'مصمم الشارات', icon: IdCard },
-        { to: '/kiosk', label: 'كشك الاستقبال الذاتي', icon: QrCode },
+        { to: '/events', label: 'جدول الفعاليات', icon: Calendar, roles: ['Admin', 'TenantAdmin', 'EventManager'] },
+        { to: '/tickets', label: 'التذاكر والزوار', icon: Ticket, roles: ['Admin', 'TenantAdmin', 'EventManager', 'GateOperator'] },
+        { to: '/badges/designer', label: 'مصمم الشارات', icon: IdCard, roles: ['Admin', 'TenantAdmin', 'EventManager'] },
+        { to: '/kiosk', label: 'كشك الاستقبال الذاتي', icon: QrCode, roles: ['Admin', 'TenantAdmin', 'EventManager', 'GateOperator'] },
       ]
     },
     {
       title: 'المالية والتسويق',
       items: [
-        { to: '/reservations', label: 'الحجوزات والعقود', icon: FileCheck2 },
-        { to: '/financial', label: 'الفواتير والمالية', icon: Receipt },
-        { to: '/sponsorship', label: 'الرعاة والمساحات', icon: Sparkles },
-        { to: '/services-mgmt', label: 'الخدمات المساندة', icon: Layers },
+        { to: '/reservations', label: 'الحجوزات والعقود', icon: FileCheck2, roles: ['Admin', 'TenantAdmin', 'EventManager'] },
+        { to: '/financial', label: 'الفواتير والمالية', icon: Receipt, roles: ['Admin', 'TenantAdmin', 'Finance'] },
+        { to: '/sponsorship', label: 'الرعاة والمساحات', icon: Sparkles, roles: ['Admin', 'TenantAdmin', 'EventManager'] },
+        { to: '/services-mgmt', label: 'الخدمات المساندة', icon: Layers, roles: ['Admin', 'TenantAdmin'] },
       ]
     },
     {
       title: 'الإدارة والرقابة',
       items: [
-        { to: '/users', label: 'المستخدمون والصلاحيات', icon: Users },
-        { to: '/tenants', label: 'إدارة المستأجرين', icon: Shield },
-        { to: '/admin/audit', label: 'سجلات الرقابة', icon: FileText },
-        { to: '/settings', label: 'إعدادات النظام', icon: Settings },
+        { to: '/users', label: 'المستخدمون والصلاحيات', icon: Users, roles: ['Admin', 'TenantAdmin'] },
+        { to: '/tenants', label: 'إدارة المستأجرين', icon: Shield, roles: ['SuperAdmin'] },
+        { to: '/admin/audit', label: 'سجلات الرقابة', icon: FileText, roles: ['Admin', 'TenantAdmin'] },
+        { to: '/settings', label: 'إعدادات النظام', icon: Settings, roles: ['Admin', 'TenantAdmin'] },
       ]
     }
   ];
@@ -169,6 +171,8 @@ export const Sidebar: React.FC = () => {
         }}
       >
         {navCategories.map(cat => {
+          const visibleItems = cat.items.filter(item => hasAnyRole(item.roles));
+          if (visibleItems.length === 0) return null;
           const isCollapsed = collapsedCategories[cat.title];
 
           return (
@@ -203,7 +207,7 @@ export const Sidebar: React.FC = () => {
               {/* Items */}
               {!isCollapsed && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-                  {cat.items.map(item => {
+                  {visibleItems.map(item => {
                     const Icon = item.icon;
                     return (
                       <NavLink
@@ -243,19 +247,21 @@ export const Sidebar: React.FC = () => {
           backgroundColor: '#fafbfc'
         }}
       >
-        <NavLink
-          to="/exhibitions?action=create"
-          className="btn-primary"
-          style={{
-            width: '100%',
-            marginBottom: '10px',
-            fontSize: '13px',
-            padding: '8px 12px'
-          }}
-        >
-          <PlusCircle size={16} />
-          <span>معرض جديد</span>
-        </NavLink>
+        {hasAnyRole(['Admin', 'TenantAdmin']) && (
+          <NavLink
+            to="/exhibitions?action=create"
+            className="btn-primary"
+            style={{
+              width: '100%',
+              marginBottom: '10px',
+              fontSize: '13px',
+              padding: '8px 12px'
+            }}
+          >
+            <PlusCircle size={16} />
+            <span>معرض جديد</span>
+          </NavLink>
+        )}
 
         <button
           onClick={logout}

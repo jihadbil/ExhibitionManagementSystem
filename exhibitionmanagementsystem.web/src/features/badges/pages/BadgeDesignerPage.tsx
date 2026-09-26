@@ -2,14 +2,8 @@ import React, { useState } from 'react';
 import {
   IdCard,
   Printer,
-  Sparkles,
-  QrCode,
   Building2,
-  Calendar,
   Save,
-  Palette,
-  Check,
-  Award
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useToast } from '../../../app/providers/ToastContext';
@@ -22,30 +16,29 @@ export const BadgeDesignerPage: React.FC = () => {
   const [participantType, setParticipantType] = useState('VIP');
   const [orientation, setOrientation] = useState<'Vertical' | 'Horizontal'>('Vertical');
   const [headerColor, setHeaderColor] = useState('#6366f1');
-  const [headerTextColor, setHeaderTextColor] = useState('#ffffff');
-  const [accentColor, setAccentColor] = useState('#4f46e5');
+  const [headerTextColor] = useState('#ffffff');
   const [categoryText, setCategoryText] = useState('شخصية هامة / VIP GUEST');
   const [showLogo, setShowLogo] = useState(true);
   const [showQR, setShowQR] = useState(true);
   const [showCompany, setShowCompany] = useState(true);
   const [showJobTitle, setShowJobTitle] = useState(true);
   const [showHall, setShowHall] = useState(true);
-  const [footerText, setFooterText] = useState('ExpoManager — بطاقة دخول رقمية معتمدة');
+  const [footerText] = useState('ExpoManager — بطاقة دخول رقمية معتمدة');
 
   // Sample Attendee Data for Live Preview
-  const [attendeeName, setAttendeeName] = useState('د. طارق مصطفى المنصوري');
-  const [companyName, setCompanyName] = useState('الشركة الليبية لتقنية المعلومات والاتصالات');
-  const [jobTitle, setJobTitle] = useState('الرئيس التنفيذي للابتكار الرقمي');
-  const [exhibitionName, setExhibitionName] = useState('معرض طرابلس الدولي للتقنية 2026');
-  const [boothLocation, setBoothLocation] = useState('القاعة الكبرى | جناح VIP-01');
-  const [qrPayload, setQrPayload] = useState('EXPO-2026-VIP-9941');
+  const [attendeeName] = useState('د. طارق مصطفى المنصوري');
+  const [companyName] = useState('الشركة الليبية لتقنية المعلومات والاتصالات');
+  const [jobTitle] = useState('الرئيس التنفيذي للابتكار الرقمي');
+  const [exhibitionName] = useState('معرض طرابلس الدولي للتقنية 2026');
+  const [boothLocation] = useState('القاعة الكبرى | جناح VIP-01');
+  const [qrPayload] = useState('EXPO-2026-VIP-9941');
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleSave = () => {
-    showToast('تم حفظ قالب الشارة بنجاح في قاعدة بيانات المستأجر!', 'success');
+    showToast('المعاينة محلية حالياً؛ لم يُحفظ قالب الشارة في الخادم.', 'warning');
   };
 
   return (

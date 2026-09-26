@@ -1,6 +1,13 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import type { RefreshTokenResponseDto } from '../features/auth/types/auth.types';
+import {
+  clearSession,
+  getAccessToken,
+  getRefreshToken,
+  updateSessionTokens,
+} from '../features/auth/services/auth.storage';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://exhibitionmanagementsystem.runasp.net';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -11,18 +18,13 @@ export const api = axios.create({
   }
 });
 
-// Request Interceptor: Attach JWT & Tenant ID
+// هوية المستأجر تأتي حصراً من JWT في الخادم، ولا تقبل الواجهة تغييرها محلياً.
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token');
-    const tenantId = localStorage.getItem('tenantId') || '1';
+    const token = getAccessToken();
 
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    if (tenantId && config.headers) {
-      config.headers['X-Tenant-Id'] = tenantId;
     }
 
     return config;
@@ -48,6 +50,11 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
   failedQueue = [];
 };
 
+const expireSession = (): void => {
+  clearSession();
+  window.dispatchEvent(new Event('auth:expired'));
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -70,42 +77,37 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refreshToken');
-      const currentToken = localStorage.getItem('token');
+      const refreshToken = getRefreshToken();
+      const currentToken = getAccessToken();
 
       if (!refreshToken || !currentToken) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        isRefreshing = false;
+        processQueue(error, null);
+        expireSession();
         return Promise.reject(error);
       }
 
       try {
-        const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh-token`, {
-          token: currentToken,
-          refreshToken: refreshToken
+        const response = await axios.post<RefreshTokenResponseDto>(`${API_BASE_URL}/api/auth/refresh-token`, {
+          accessToken: currentToken,
+          refreshToken
         });
 
-        const newAccessToken = response.data?.data?.token || response.data?.token;
-        const newRefreshToken = response.data?.data?.refreshToken || response.data?.refreshToken;
-
-        if (newAccessToken) {
-          localStorage.setItem('token', newAccessToken);
-          if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken);
-
-          api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
-          processQueue(null, newAccessToken);
-
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          }
-          return api(originalRequest);
+        const tokens = response.data;
+        if (!tokens.accessToken || !tokens.refreshToken) {
+          throw new Error('استجابة تجديد الجلسة غير صالحة.');
         }
+
+        updateSessionTokens(tokens);
+        processQueue(null, tokens.accessToken);
+
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
+        }
+        return api(originalRequest);
       } catch (refreshErr) {
         processQueue(refreshErr as AxiosError, null);
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        expireSession();
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;

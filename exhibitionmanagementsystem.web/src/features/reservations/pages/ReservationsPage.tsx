@@ -1,123 +1,143 @@
-import React, { useState } from 'react';
-import { FileCheck2, Search, Store, Building, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { FileCheck2 } from 'lucide-react';
 import { useToast } from '../../../app/providers/ToastContext';
+import { api } from '../../../services/api';
 
-interface ReservationItem {
-  id: number;
-  reservationCode: string;
-  companyName: string;
-  boothNumber: string;
-  exhibitionName: string;
-  requestDate: string;
-  status: 'Approved' | 'Pending' | 'Rejected';
-  totalPrice: number;
+interface ExhibitionSummary {
+  exhibitionID: number;
+  name: string;
 }
 
-const mockReservations: ReservationItem[] = [
-  { id: 1, reservationCode: 'RES-2026-001', companyName: 'الشركة الليبية للاتصالات', boothNumber: 'VIP-01', exhibitionName: 'معرض طرابلس للتقنية 2026', requestDate: '2026-09-12', status: 'Approved', totalPrice: 12000 },
-  { id: 2, reservationCode: 'RES-2026-002', companyName: 'شركة مسار للحلول الرقمية', boothNumber: 'A-102', exhibitionName: 'معرض طرابلس للتقنية 2026', requestDate: '2026-09-15', status: 'Approved', totalPrice: 5600 },
-  { id: 3, reservationCode: 'RES-2026-003', companyName: 'مؤسسة التقنية والشبكات', boothNumber: 'B-201', exhibitionName: 'معرض طرابلس للتقنية 2026', requestDate: '2026-09-18', status: 'Pending', totalPrice: 8000 },
-  { id: 4, reservationCode: 'RES-2026-004', companyName: 'شركة التقدم الهندسي', boothNumber: 'B-202', exhibitionName: 'معرض طرابلس للتقنية 2026', requestDate: '2026-09-19', status: 'Pending', totalPrice: 3600 },
-];
+interface ReservationSummary {
+  reservationID: number;
+  exhibitorName: string;
+  boothNumber: string;
+  exhibitionName: string;
+  totalAmount: number;
+  currencyCode: string;
+  status: string;
+  reservationDate: string;
+}
 
-export const ReservationsPage: React.FC = () => {
+interface PagedResult<T> {
+  items: T[];
+}
+
+export const ReservationsPage = () => {
   const { showToast } = useToast();
-  const [reservations, setReservations] = useState<ReservationItem[]>(mockReservations);
-  const [filter, setFilter] = useState<'All' | 'Approved' | 'Pending'>('All');
+  const [exhibitions, setExhibitions] = useState<ExhibitionSummary[]>([]);
+  const [selectedExhibitionID, setSelectedExhibitionID] = useState('');
+  const [reservations, setReservations] = useState<ReservationSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const handleApprove = (id: number) => {
-    setReservations(prev => prev.map(r => r.id === id ? { ...r, status: 'Approved' } : r));
-    showToast('تم اعتماد طلب الحجز بنجاح وإصدار العقد المبدئي!', 'success');
+  useEffect(() => {
+    const loadExhibitions = async () => {
+      try {
+        const response = await api.get<PagedResult<ExhibitionSummary>>('/api/exhibitions?page=1&pageSize=100');
+        const items = response.data.items ?? [];
+        setExhibitions(items);
+        setSelectedExhibitionID(items[0]?.exhibitionID.toString() ?? '');
+      } catch {
+        setError('تعذر تحميل قائمة المعارض.');
+        setIsLoading(false);
+      }
+    };
+    void loadExhibitions();
+  }, []);
+
+  const loadReservations = useCallback(async () => {
+    await Promise.resolve();
+    if (!selectedExhibitionID) {
+      setReservations([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    try {
+      const response = await api.get<PagedResult<ReservationSummary>>(
+        `/api/reservations/exhibition/${selectedExhibitionID}?page=1&pageSize=100`,
+      );
+      setReservations(response.data.items ?? []);
+    } catch {
+      setError('تعذر تحميل حجوزات المعرض من الخادم.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedExhibitionID]);
+
+  useEffect(() => {
+    // إعادة التحميل مطلوبة عند تغيير المعرض المختار.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadReservations();
+  }, [loadReservations]);
+
+  const changeStatus = async (reservationID: number, action: 'approve' | 'cancel') => {
+    try {
+      await api.patch(`/api/reservations/${reservationID}/${action}`);
+      showToast(action === 'approve' ? 'تم اعتماد الحجز في الخادم.' : 'تم إلغاء الحجز في الخادم.', 'success');
+      await loadReservations();
+    } catch {
+      showToast('تعذر تحديث الحجز. تحقق من حالته وصلاحياتك.', 'danger');
+    }
   };
-
-  const handleReject = (id: number) => {
-    setReservations(prev => prev.map(r => r.id === id ? { ...r, status: 'Rejected' } : r));
-    showToast('تم رفض طلب الحجز وإشعار العارض', 'info');
-  };
-
-  const filtered = reservations.filter(r => filter === 'All' || r.status === filter);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <FileCheck2 size={24} style={{ color: 'var(--primary)' }} />
-            <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
-              طلبات الحجز وعقود الأجنحة
-            </h1>
-          </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-            مراجعة واعتماد طلبات حجز أجنحة المعارض وتوليد العقود الرسمية
-          </p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <FileCheck2 size={24} style={{ color: 'var(--primary)' }} />
+          <h1 style={{ fontSize: '24px', fontWeight: 800 }}>طلبات الحجز وعقود الأجنحة</h1>
         </div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>الاعتماد والإلغاء يُنفذان مباشرة في الخادم.</p>
       </div>
 
+      <div className="card">
+        <label className="form-label" htmlFor="reservation-exhibition">المعرض</label>
+        <select
+          id="reservation-exhibition"
+          className="input-field"
+          value={selectedExhibitionID}
+          onChange={event => setSelectedExhibitionID(event.target.value)}
+        >
+          {exhibitions.length === 0 && <option value="">لا توجد معارض</option>}
+          {exhibitions.map(exhibition => (
+            <option key={exhibition.exhibitionID} value={exhibition.exhibitionID}>{exhibition.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {error && <div role="alert" style={{ padding: '14px', background: 'var(--danger-bg)', color: 'var(--danger-text)', borderRadius: 'var(--radius-lg)' }}>{error}</div>}
+
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
+        <div className="table-container" style={{ border: 0 }}>
           <table className="data-table">
             <thead>
-              <tr>
-                <th>رقم الطلب</th>
-                <th>الشركة المتقدمة</th>
-                <th>الجناح المطلوب</th>
-                <th>المعرض</th>
-                <th>تاريخ التقديم</th>
-                <th>قيمة العقد</th>
-                <th>الحالة</th>
-                <th style={{ textAlign: 'center' }}>الإجراءات</th>
-              </tr>
+              <tr><th>رقم الطلب</th><th>العارض</th><th>الجناح</th><th>التاريخ</th><th>القيمة</th><th>الحالة</th><th>الإجراءات</th></tr>
             </thead>
             <tbody>
-              {filtered.map(res => (
-                <tr key={res.id}>
+              {reservations.map(reservation => (
+                <tr key={reservation.reservationID}>
+                  <td>#{reservation.reservationID}</td>
+                  <td>{reservation.exhibitorName}</td>
+                  <td>{reservation.boothNumber}</td>
+                  <td>{new Date(reservation.reservationDate).toLocaleDateString('ar-LY')}</td>
+                  <td>{reservation.totalAmount.toLocaleString()} {reservation.currencyCode}</td>
+                  <td><span className="badge badge-info">{reservation.status}</span></td>
                   <td>
-                    <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{res.reservationCode}</span>
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{res.companyName}</span>
-                  </td>
-                  <td>
-                    <span className="badge badge-featured">{res.boothNumber}</span>
-                  </td>
-                  <td>
-                    <span style={{ color: 'var(--text-secondary)' }}>{res.exhibitionName}</span>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{res.requestDate}</span>
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{res.totalPrice.toLocaleString()} د.ل</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${res.status === 'Approved' ? 'badge-success' : res.status === 'Pending' ? 'badge-warning' : 'badge-danger'}`}>
-                      {res.status === 'Approved' ? 'معتمد' : res.status === 'Pending' ? 'قيد المراجعة' : 'مرفوض'}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    {res.status === 'Pending' ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <button
-                          onClick={() => handleApprove(res.id)}
-                          className="btn-primary"
-                          style={{ padding: '6px 12px', fontSize: '12px' }}
-                        >
-                          اعتماد
-                        </button>
-                        <button
-                          onClick={() => handleReject(res.id)}
-                          className="btn-secondary"
-                          style={{ padding: '6px 12px', fontSize: '12px', color: 'var(--danger)' }}
-                        >
-                          رفض
-                        </button>
+                    {reservation.status.toLowerCase() === 'pending' ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="btn-primary" onClick={() => void changeStatus(reservation.reservationID, 'approve')}>اعتماد</button>
+                        <button className="btn-secondary" onClick={() => void changeStatus(reservation.reservationID, 'cancel')}>إلغاء</button>
                       </div>
-                    ) : (
-                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>—</span>
-                    )}
+                    ) : '—'}
                   </td>
                 </tr>
               ))}
+              {!isLoading && reservations.length === 0 && <tr><td colSpan={7} style={{ textAlign: 'center' }}>لا توجد حجوزات لهذا المعرض.</td></tr>}
+              {isLoading && <tr><td colSpan={7} style={{ textAlign: 'center' }}>جاري التحميل…</td></tr>}
             </tbody>
           </table>
         </div>
