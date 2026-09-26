@@ -1,0 +1,103 @@
+/* ==========================================================================
+   ExpoManager Design System - Pure Light Mode Tokens
+   Derived strictly from DESIGN.md (v1.0 & v2.1)
+   ========================================================================== */
+
+:root {
+  /* Surfaces & Backgrounds (Pure Light Mode) */
+  --bg-main: #f8f9fd;                 /* خلفية التطبيق العامة (رمادي فاتح مزرق) */
+  --bg-card: #ffffff;                 /* خلفية البطاقات والحاويات (أبيض نقي) */
+  --bg-secondary: #f1f5f9;            /* خلفية فرعية للحقول والعناصر الثانوية */
+  --surface: #fcf8ff;
+  --surface-dim: #dbd8e4;
+  --surface-bright: #fcf8ff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f5f2fe;
+  --surface-container: #efecf8;
+  --surface-container-high: #e9e6f3;
+  --surface-container-highest: #e4e1ed;
+  --border-main: #e2e8f0;             /* حدود العناصر 1px solid */
+  --border-light: #f1f5f9;
+
+  /* Primary Brand Gradients & Accents */
+  --primary-gradient: linear-gradient(to right, #6366f1, #8b5cf6);
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-light: #e0e7ff;
+  --primary-glow: 0 10px 20px -5px rgba(99, 102, 241, 0.3);
+
+  --secondary: #6b38d4;
+  --secondary-gradient: linear-gradient(to right, #8b5cf6, #a855f7);
+
+  /* Typography Colors (High Contrast Light Mode) */
+  --text-primary: #1a1d29;            /* العناوين والنصوص البارزة (أسود داكن) */
+  --text-secondary: #64748b;          /* النصوص الفرعية والتوضيحية (رمادي متوسط) */
+  --text-muted: #94a3b8;              /* النصوص الخفيفة وتلميحات الحقول (رمادي فاتح) */
+  --text-inverse: #ffffff;
+
+  /* Semantic / Functional Colors */
+  --success: #10b981;
+  --success-bg: #d1fae5;
+  --success-text: #059669;
+
+  --warning: #f59e0b;
+  --warning-bg: #fef3c7;
+  --warning-text: #d97706;
+
+  --danger: #ef4444;
+  --danger-bg: #fee2e2;
+  --danger-text: #dc2626;
+
+  --info: #3b82f6;
+  --info-bg: #dbeafe;
+  --info-text: #2563eb;
+
+  /* Exhibition Type Gradients */
+  --tech-gradient: linear-gradient(to right, #3b82f6, #06b6d4);
+  --medical-gradient: linear-gradient(to right, #10b981, #14b8a6);
+  --industrial-gradient: linear-gradient(to right, #f97316, #dc2626);
+  --commercial-gradient: linear-gradient(to right, #ec4899, #f43f5e);
+  --educational-gradient: linear-gradient(to right, #8b5cf6, #6366f1);
+  --automotive-gradient: linear-gradient(to right, #6b7280, #475569);
+
+  /* Booth Category Badges */
+  --badge-vip-bg: #f3e8ff;
+  --badge-vip-text: #7c3aed;
+  --badge-featured-bg: #dbeafe;
+  --badge-featured-text: #2563eb;
+  --badge-corner-bg: #fef3c7;
+  --badge-corner-text: #d97706;
+  --badge-standard-bg: #f3f4f6;
+  --badge-standard-text: #6b7280;
+
+  /* Elevation & Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+
+  /* Geometry & Border Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* Spacing Scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Dimensions */
+  --sidebar-width: 256px;
+  --topbar-height: 64px;
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
