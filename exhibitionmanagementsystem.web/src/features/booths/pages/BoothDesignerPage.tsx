@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Compass,
   Plus,
@@ -9,12 +10,17 @@ import {
   Grid,
   AlertTriangle,
   Save,
-  Sparkles
+  Sparkles,
+  Layers,
+  Building,
+  Store
 } from 'lucide-react';
 import { useToast } from '../../../app/providers/ToastContext';
+import { api } from '../../../services/api';
 
 interface VisualBooth {
-  id: string;
+  id: string; // string or number string
+  dbId?: number;
   number: string;
   x: number;
   y: number;
@@ -28,21 +34,48 @@ interface VisualBooth {
   hasCollision?: boolean;
 }
 
-const initialCanvasBooths: VisualBooth[] = [
-  { id: 'b1', number: 'A-101', x: 60, y: 60, width: 140, height: 100, category: 'VIP', status: 'Reserved', price: 4800, shape: 'Rectangle', companyName: 'الشركة الليبية للاتصالات' },
-  { id: 'b2', number: 'A-102', x: 230, y: 60, width: 110, height: 100, category: 'Featured', status: 'Reserved', price: 2800, shape: 'Rectangle', companyName: 'مسار للحلول' },
-  { id: 'b3', number: 'A-103', x: 370, y: 60, width: 100, height: 100, category: 'Standard', status: 'Available', price: 1800, shape: 'Rectangle' },
-  { id: 'b4', number: 'A-104', x: 500, y: 60, width: 100, height: 100, category: 'Standard', status: 'Available', price: 1800, shape: 'Rectangle' },
-  { id: 'b5', number: 'B-201', x: 60, y: 220, width: 120, height: 110, category: 'Corner', status: 'PendingReview', price: 3600, shape: 'Rectangle', companyName: 'مؤسسة التقنية العالمية' },
-  { id: 'b6', number: 'B-202', x: 210, y: 220, width: 100, height: 100, category: 'Standard', status: 'Available', price: 1800, shape: 'Rectangle' },
-  { id: 'b7', number: 'B-203', x: 340, y: 220, width: 100, height: 100, category: 'Standard', status: 'Available', price: 1800, shape: 'Rectangle' },
-  { id: 'b8', number: 'VIP-01', x: 480, y: 220, width: 160, height: 120, category: 'VIP', status: 'Reserved', price: 6200, shape: 'Rectangle', companyName: 'المجموعة المصرفية' },
-];
+interface Venue {
+  venueID: number;
+  name: string;
+}
+
+interface Hall {
+  hallID: number;
+  venueID: number;
+  hallName: string;
+  floorPlanWidth?: number;
+  floorPlanHeight?: number;
+}
+
+interface ApiBooth {
+  boothID: number;
+  hallID: number;
+  boothNumber: string;
+  currentAreaSqM: number;
+  width?: number;
+  height?: number;
+  posX?: number;
+  posY?: number;
+  shapeType?: string;
+  status: string;
+}
 
 export const BoothDesignerPage: React.FC = () => {
   const { showToast } = useToast();
-  const [booths, setBooths] = useState<VisualBooth[]>(initialCanvasBooths);
-  const [selectedBoothId, setSelectedBoothId] = useState<string | null>('b1');
+  const [searchParams] = useSearchParams();
+
+  // Venues and Halls
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [halls, setHalls] = useState<Hall[]>([]);
+  const [selectedVenueId, setSelectedVenueId] = useState<string>('');
+  const [selectedHallId, setSelectedHallId] = useState<string>('');
+  const [isLoadingHalls, setIsLoadingHalls] = useState(false);
+  const [isLoadingBooths, setIsLoadingBooths] = useState(false);
+  const [isSavingLayout, setIsSavingLayout] = useState(false);
+
+  // Canvas State
+  const [booths, setBooths] = useState<VisualBooth[]>([]);
+  const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null);
   const [zoomScale, setZoomScale] = useState(1.0);
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [showGrid] = useState(true);
@@ -55,7 +88,7 @@ export const BoothDesignerPage: React.FC = () => {
   const selectedBooth = booths.find(b => b.id === selectedBoothId) || null;
 
   // Collision detection between booths
-  const checkCollisions = (currentBooths: VisualBooth[]): VisualBooth[] => {
+  const checkCollisions = useCallback((currentBooths: VisualBooth[]): VisualBooth[] => {
     return currentBooths.map(b1 => {
       const collision = currentBooths.some(b2 => {
         if (b1.id === b2.id) return false;
@@ -68,8 +101,120 @@ export const BoothDesignerPage: React.FC = () => {
       });
       return { ...b1, hasCollision: collision };
     });
-  };
+  }, []);
 
+  // 1. Load Venues on mount
+  useEffect(() => {
+    const loadVenues = async () => {
+      try {
+        const response = await api.get<Venue[]>('/api/venues');
+        const data = response.data ?? [];
+        setVenues(data);
+        if (data.length > 0) {
+          setSelectedVenueId(data[0].venueID.toString());
+        }
+      } catch {
+        showToast('تعذر تحميل المواقع للمصمم.', 'danger');
+      }
+    };
+    void loadVenues();
+  }, [showToast]);
+
+  // 2. Load Halls when Venue changes
+  useEffect(() => {
+    if (!selectedVenueId) {
+      setHalls([]);
+      setSelectedHallId('');
+      return;
+    }
+
+    const loadHalls = async () => {
+      setIsLoadingHalls(true);
+      try {
+        const response = await api.get<Hall[]>(`/api/halls/venue/${selectedVenueId}`);
+        const data = response.data ?? [];
+        setHalls(data);
+        if (data.length > 0) {
+          const hallIdFromUrl = searchParams.get('hallId');
+          const matched = data.find(h => h.hallID.toString() === hallIdFromUrl);
+          setSelectedHallId(matched ? matched.hallID.toString() : data[0].hallID.toString());
+        } else {
+          setSelectedHallId('');
+          setBooths([]);
+        }
+      } catch {
+        showToast('تعذر تحميل قاعات الموقع المختار.', 'danger');
+      } finally {
+        setIsLoadingHalls(false);
+      }
+    };
+
+    void loadHalls();
+  }, [selectedVenueId, searchParams, showToast]);
+
+  // 3. Load Booths for selected Hall
+  const loadBoothsForHall = useCallback(async (hallId: string) => {
+    setIsLoadingBooths(true);
+    try {
+      const response = await api.get<ApiBooth[]>(`/api/booths/hall/${hallId}`);
+      const data = response.data ?? [];
+
+      if (data.length === 0) {
+        setBooths([]);
+        setSelectedBoothId(null);
+        return;
+      }
+
+      // Map ApiBooths to VisualBooths with default positions if not set
+      const mapped: VisualBooth[] = data.map((b, index) => {
+        const defaultX = 50 + (index % 5) * 140;
+        const defaultY = 50 + Math.floor(index / 5) * 130;
+        const width = b.width ? Math.round(b.width * 25) : 100;
+        const height = b.height ? Math.round(b.height * 25) : 100;
+
+        let category: VisualBooth['category'] = 'Standard';
+        if (b.shapeType === 'VIP') category = 'VIP';
+        else if (b.shapeType === 'Corner') category = 'Corner';
+        else if (b.shapeType === 'Premium') category = 'Featured';
+
+        let status: VisualBooth['status'] = 'Available';
+        if (b.status === 'Reserved' || b.status === 'Occupied') status = 'Reserved';
+        else if (b.status === 'PendingReview') status = 'PendingReview';
+
+        return {
+          id: `booth_${b.boothID}`,
+          dbId: b.boothID,
+          number: b.boothNumber,
+          x: b.posX !== undefined && b.posX !== null ? Number(b.posX) : defaultX,
+          y: b.posY !== undefined && b.posY !== null ? Number(b.posY) : defaultY,
+          width: width > 40 ? width : 100,
+          height: height > 40 ? height : 100,
+          category,
+          status,
+          price: Math.round(b.currentAreaSqM * 150) || 2000,
+          shape: 'Rectangle',
+        };
+      });
+
+      const checked = checkCollisions(mapped);
+      setBooths(checked);
+      if (checked.length > 0) {
+        setSelectedBoothId(checked[0].id);
+      }
+    } catch {
+      showToast('تعذر تحميل أجنحة القاعة من الخادم.', 'danger');
+    } finally {
+      setIsLoadingBooths(false);
+    }
+  }, [checkCollisions, showToast]);
+
+  useEffect(() => {
+    if (selectedHallId) {
+      void loadBoothsForHall(selectedHallId);
+    }
+  }, [selectedHallId, loadBoothsForHall]);
+
+  // Dragging event handlers
   const handleMouseDown = (e: React.MouseEvent, booth: VisualBooth) => {
     e.stopPropagation();
     setSelectedBoothId(booth.id);
@@ -103,8 +248,8 @@ export const BoothDesignerPage: React.FC = () => {
     }
 
     // Boundary constraints
-    newX = Math.max(10, Math.min(newX, 900));
-    newY = Math.max(10, Math.min(newY, 600));
+    newX = Math.max(10, Math.min(newX, 1200));
+    newY = Math.max(10, Math.min(newY, 800));
 
     setBooths(prev => {
       const updated = prev.map(b => (b.id === selectedBoothId ? { ...b, x: newX, y: newY } : b));
@@ -124,38 +269,101 @@ export const BoothDesignerPage: React.FC = () => {
     });
   };
 
-  const addNewBooth = () => {
-    const newNumber = `C-${100 + booths.length + 1}`;
-    const newId = `b_${Date.now()}`;
-    const newBooth: VisualBooth = {
-      id: newId,
-      number: newNumber,
-      x: 100,
-      y: 100,
-      width: 100,
-      height: 100,
-      category: 'Standard',
-      status: 'Available',
-      price: 2000,
-      shape: 'Rectangle'
-    };
+  // Add new booth
+  const addNewBooth = async () => {
+    if (!selectedHallId) {
+      showToast('يرجى اختيار قاعة أولاً.', 'warning');
+      return;
+    }
 
-    setBooths(prev => checkCollisions([...prev, newBooth]));
-    setSelectedBoothId(newId);
-    showToast(`تمت إضافة جناح جديد رقم ${newNumber}`, 'success');
+    const newNumber = `B-${100 + booths.length + 1}`;
+    try {
+      const response = await api.post<ApiBooth>('/api/booths', {
+        hallID: Number(selectedHallId),
+        boothNumber: newNumber,
+        originalAreaSqM: 12,
+        width: 4,
+        height: 3,
+        posX: 60,
+        posY: 60,
+        shapeType: 'Standard',
+      });
+
+      const b = response.data;
+      const newVisual: VisualBooth = {
+        id: `booth_${b.boothID}`,
+        dbId: b.boothID,
+        number: b.boothNumber,
+        x: 60,
+        y: 60,
+        width: 100,
+        height: 100,
+        category: 'Standard',
+        status: 'Available',
+        price: 1800,
+        shape: 'Rectangle',
+      };
+
+      setBooths(prev => checkCollisions([...prev, newVisual]));
+      setSelectedBoothId(newVisual.id);
+      showToast(`تم إنشاء الجناح رقم ${newNumber} في الخادم.`, 'success');
+    } catch {
+      showToast('فشل إنشاء الجناح في الخادم.', 'danger');
+    }
   };
 
-  const deleteSelectedBooth = () => {
-    if (!selectedBoothId) return;
-    setBooths(prev => prev.filter(b => b.id !== selectedBoothId));
-    setSelectedBoothId(null);
-    showToast('تم حذف الجناح من المخطط', 'info');
+  // Delete selected booth
+  const deleteSelectedBooth = async () => {
+    if (!selectedBoothId || !selectedBooth) return;
+    if (!window.confirm(`هل تريد حذف الجناح «${selectedBooth.number}» من الخادم؟`)) return;
+
+    if (selectedBooth.dbId) {
+      try {
+        await api.delete(`/api/booths/${selectedBooth.dbId}`);
+        setBooths(prev => prev.filter(b => b.id !== selectedBoothId));
+        setSelectedBoothId(null);
+        showToast('تم حذف الجناح بنجاح من الخادم.', 'success');
+      } catch {
+        showToast('تعذر حذف الجناح؛ قد يكون مرتبطاً بحجز.', 'danger');
+      }
+    } else {
+      setBooths(prev => prev.filter(b => b.id !== selectedBoothId));
+      setSelectedBoothId(null);
+    }
   };
 
-  const saveLayout = () => {
-    showToast('هذا المصمم يعمل محلياً حالياً؛ لم يُحفظ المخطط في الخادم.', 'warning');
+  // Save all layout positions to server
+  const saveLayout = async () => {
+    if (booths.length === 0) {
+      showToast('لا توجد أجنحة لحفظها في هذا المخطط.', 'info');
+      return;
+    }
+
+    setIsSavingLayout(true);
+    try {
+      const updates = booths.map(b => {
+        if (!b.dbId) return Promise.resolve();
+        return api.put(`/api/booths/${b.dbId}`, {
+          boothNumber: b.number,
+          status: b.status,
+          posX: Math.round(b.x),
+          posY: Math.round(b.y),
+          width: Math.round(b.width / 25),
+          height: Math.round(b.height / 25),
+          shapeType: b.category,
+        });
+      });
+
+      await Promise.all(updates);
+      showToast('تم حفظ إحداثيات ومخطط الأجنحة في الخادم بنجاح!', 'success');
+    } catch {
+      showToast('فشل حفظ المخطط بالكامل. يرجى إعادة المحاولة.', 'danger');
+    } finally {
+      setIsSavingLayout(false);
+    }
   };
 
+  // Auto arrange booths in a tidy grid
   const autoArrange = () => {
     let startX = 60;
     let startY = 60;
@@ -173,7 +381,7 @@ export const BoothDesignerPage: React.FC = () => {
     });
 
     setBooths(checkCollisions(arranged));
-    showToast('تمت إعادة ترتيب الأجنحة تلقائياً في القاعة', 'info');
+    showToast('تمت إعادة ترتيب الأجنحة في القاعة.', 'info');
   };
 
   return (
@@ -188,27 +396,60 @@ export const BoothDesignerPage: React.FC = () => {
             </h1>
           </div>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-            قاعة المعارض الرئيسية (Hall 1) — معرض طرابلس الدولي للتقنية والابتكار 2026
+            تخطيط بصري تفاعلي مع كشف التصادم، حفظ الإحداثيات، وتوزيع الأجنحة في القاعة.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Location & Hall Selectors */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Building size={16} style={{ color: 'var(--primary)' }} />
+            <select
+              className="input-field"
+              style={{ width: '180px', height: '38px', padding: '0 10px', fontSize: '13px' }}
+              value={selectedVenueId}
+              onChange={e => setSelectedVenueId(e.target.value)}
+            >
+              {venues.map(v => (
+                <option key={v.venueID} value={v.venueID.toString()}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Layers size={16} style={{ color: 'var(--primary)' }} />
+            <select
+              className="input-field"
+              style={{ width: '180px', height: '38px', padding: '0 10px', fontSize: '13px' }}
+              value={selectedHallId}
+              onChange={e => setSelectedHallId(e.target.value)}
+              disabled={isLoadingHalls || halls.length === 0}
+            >
+              {halls.length === 0 && <option value="">لا توجد قاعات</option>}
+              {halls.map(h => (
+                <option key={h.hallID} value={h.hallID.toString()}>{h.hallName}</option>
+              ))}
+            </select>
+          </div>
+
           <button
             onClick={addNewBooth}
             className="btn-secondary"
-            style={{ height: '42px', padding: '0 16px' }}
+            style={{ height: '38px', padding: '0 14px' }}
+            disabled={!selectedHallId}
           >
             <Plus size={16} />
-            <span>إضافة جناح</span>
+            <span>جناح جديد</span>
           </button>
 
           <button
             onClick={saveLayout}
             className="btn-primary"
-            style={{ height: '42px', padding: '0 20px' }}
+            style={{ height: '38px', padding: '0 18px' }}
+            disabled={isSavingLayout || !selectedHallId}
           >
             <Save size={16} />
-            <span>حفظ المخطط</span>
+            <span>{isSavingLayout ? 'جاري الحفظ…' : 'حفظ المخطط'}</span>
           </button>
         </div>
       </div>
@@ -222,7 +463,7 @@ export const BoothDesignerPage: React.FC = () => {
           minHeight: '700px'
         }}
       >
-        {/* Center/Main Interactive Canvas Panel */}
+        {/* Main Interactive Canvas Panel */}
         <div
           className="card"
           style={{
@@ -245,53 +486,49 @@ export const BoothDesignerPage: React.FC = () => {
               zIndex: 20,
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-xl)',
-              backgroundColor: '#ffffff',
-              boxShadow: 'var(--shadow-md)',
-              border: '1px solid var(--border-main)'
+              gap: '6px',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(8px)',
+              padding: '6px 10px',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border-main)',
+              boxShadow: 'var(--shadow-md)'
             }}
           >
             <button
               onClick={() => setZoomScale(prev => Math.min(prev + 0.1, 1.8))}
               className="btn-icon"
-              title="تكبير"
-              style={{ width: '32px', height: '32px' }}
+              title="تكبير (+)"
             >
               <ZoomIn size={16} />
             </button>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', minWidth: '40px', textAlign: 'center' }}>
-              {(zoomScale * 100).toFixed(0)}%
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', minWidth: '40px', textAlign: 'center' }}>
+              {Math.round(zoomScale * 100)}%
             </span>
             <button
-              onClick={() => setZoomScale(prev => Math.max(prev - 0.1, 0.6))}
+              onClick={() => setZoomScale(prev => Math.max(prev - 0.1, 0.5))}
               className="btn-icon"
-              title="تصغير"
-              style={{ width: '32px', height: '32px' }}
+              title="تصغير (-)"
             >
               <ZoomOut size={16} />
             </button>
             <button
               onClick={() => setZoomScale(1.0)}
               className="btn-icon"
-              title="استعادة المقياس 100%"
-              style={{ width: '32px', height: '32px' }}
+              title="إعادة ضبط المقياس"
             >
-              <Maximize2 size={15} />
+              <Maximize2 size={16} />
             </button>
 
-            <span style={{ width: '1px', height: '18px', backgroundColor: 'var(--border-main)' }} />
+            <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--border-main)', margin: '0 4px' }} />
 
             <button
               onClick={() => setSnapToGrid(!snapToGrid)}
-              className="btn-icon"
-              title="الالتقاط التلقائي بالشبكة (Snap to Grid)"
+              className={`btn-icon ${snapToGrid ? 'btn-icon-active' : ''}`}
+              title="المحاذاة للشبكة (Snap to Grid)"
               style={{
-                width: '32px',
-                height: '32px',
                 color: snapToGrid ? 'var(--primary)' : 'var(--text-muted)',
-                backgroundColor: snapToGrid ? 'var(--primary-light)' : 'transparent'
+                backgroundColor: snapToGrid ? 'var(--primary-subtle, rgba(99,102,241,0.1))' : 'transparent'
               }}
             >
               <Grid size={16} />
@@ -301,32 +538,56 @@ export const BoothDesignerPage: React.FC = () => {
               onClick={autoArrange}
               className="btn-icon"
               title="ترتيب تلقائي للأجنحة"
-              style={{ width: '32px', height: '32px', color: 'var(--text-secondary)' }}
             >
               <Sparkles size={16} />
             </button>
+
+            {selectedBooth && (
+              <button
+                onClick={deleteSelectedBooth}
+                className="btn-icon"
+                title="حذف الجناح المختار"
+                style={{ color: 'var(--danger)' }}
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
 
-          {/* Canvas Workspace Area */}
+          {/* Interactive Canvas Area */}
           <div
             ref={canvasRef}
-            onClick={() => setSelectedBoothId(null)}
             style={{
               flex: 1,
               width: '100%',
-              minHeight: '660px',
+              minHeight: '680px',
               backgroundColor: '#f8fafc',
-              position: 'relative',
-              cursor: isDragging ? 'grabbing' : 'default',
-              overflow: 'hidden',
               backgroundImage: showGrid
-                ? 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)'
+                ? 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px), radial-gradient(#cbd5e1 1.2px, #f8fafc 1.2px)'
                 : 'none',
-              backgroundSize: `${20 * zoomScale}px ${20 * zoomScale}px`,
+              backgroundSize: '24px 24px',
+              backgroundPosition: '0 0, 12px 12px',
+              position: 'relative',
+              overflow: 'auto',
+              cursor: isDragging ? 'grabbing' : 'default',
               userSelect: 'none'
             }}
+            onClick={() => setSelectedBoothId(null)}
           >
-            {/* Inner Scaled Canvas Board */}
+            {isLoadingBooths ? (
+              <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.7)', zIndex: 10 }}>
+                جاري تحميل أجنحة القاعة…
+              </div>
+            ) : booths.length === 0 ? (
+              <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--text-secondary)', zIndex: 5 }}>
+                <div>
+                  <Store size={36} style={{ margin: '0 auto 8px', display: 'block', color: 'var(--text-muted)' }} />
+                  لا توجد أجنحة في هذه القاعة حتى الآن. اضغط "جناح جديد" لبدء التصميم.
+                </div>
+              </div>
+            ) : null}
+
+            {/* Scaled Container for Booths */}
             <div
               style={{
                 transform: `scale(${zoomScale})`,
@@ -334,117 +595,148 @@ export const BoothDesignerPage: React.FC = () => {
                 position: 'absolute',
                 top: 0,
                 right: 0,
-                width: '1000px',
-                height: '750px'
+                width: '1200px',
+                height: '800px',
+                transition: isDragging ? 'none' : 'transform 0.1s ease-out'
               }}
             >
-              {/* Hall Boundary Outline */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '20px',
-                  right: '20px',
-                  width: '960px',
-                  height: '710px',
-                  border: '2px dashed #94a3b8',
-                  borderRadius: '16px',
-                  pointerEvents: 'none',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'flex-start',
-                  padding: '12px'
-                }}
-              >
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', background: '#f8fafc', padding: '2px 8px', borderRadius: '4px' }}>
-                  حدود القاعة الرئيسية (50م × 40م)
-                </span>
-              </div>
+              {booths.map(booth => {
+                const isSelected = selectedBoothId === booth.id;
 
-              {/* Render Booths */}
-              {booths.map(b => {
-                const isSelected = b.id === selectedBoothId;
-                const isReserved = b.status === 'Reserved';
-                const isAvailable = b.status === 'Available';
+                let borderColor = '#94a3b8';
+                let bgColor = '#ffffff';
+                let textColor = '#0f172a';
 
-                // Colors from DESIGN.md
-                let border = isAvailable ? '#10b981' : isReserved ? '#6366f1' : '#f59e0b';
-                let bg = isAvailable ? '#ecfdf5' : isReserved ? '#f5f3ff' : '#fffbeb';
-                let textColor = isAvailable ? '#059669' : isReserved ? '#4f46e5' : '#d97706';
+                if (booth.status === 'Reserved') {
+                  borderColor = '#6366f1';
+                  bgColor = '#e0e7ff';
+                  textColor = '#3730a3';
+                } else if (booth.status === 'Available') {
+                  borderColor = '#10b981';
+                  bgColor = '#d1fae5';
+                  textColor = '#065f46';
+                } else if (booth.status === 'PendingReview') {
+                  borderColor = '#f59e0b';
+                  bgColor = '#fef3c7';
+                  textColor = '#92400e';
+                }
 
-                if (b.hasCollision) {
-                  border = '#ef4444';
-                  bg = '#fee2e2';
-                  textColor = '#dc2626';
+                if (booth.hasCollision) {
+                  borderColor = '#ef4444';
+                  bgColor = '#fee2e2';
                 }
 
                 return (
                   <div
-                    key={b.id}
-                    onMouseDown={(e) => handleMouseDown(e, b)}
+                    key={booth.id}
+                    onMouseDown={(e) => handleMouseDown(e, booth)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedBoothId(booth.id);
+                    }}
                     style={{
                       position: 'absolute',
-                      right: `${b.x}px`,
-                      top: `${b.y}px`,
-                      width: `${b.width}px`,
-                      height: `${b.height}px`,
-                      backgroundColor: bg,
-                      border: `2px solid ${border}`,
+                      right: `${booth.x}px`,
+                      top: `${booth.y}px`,
+                      width: `${booth.width}px`,
+                      height: `${booth.height}px`,
+                      backgroundColor: bgColor,
+                      border: `2px solid ${borderColor}`,
                       borderRadius: '8px',
-                      boxShadow: isSelected ? '0 0 0 3px rgba(99, 102, 241, 0.4), var(--shadow-lg)' : 'var(--shadow-sm)',
+                      boxShadow: isSelected
+                        ? '0 0 0 3px rgba(99, 102, 241, 0.4), var(--shadow-lg)'
+                        : 'var(--shadow-sm)',
+                      cursor: isDragging && isSelected ? 'grabbing' : 'grab',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
                       padding: '8px',
-                      cursor: 'grab',
-                      transition: isDragging ? 'none' : 'box-shadow 0.2s ease',
-                      zIndex: isSelected ? 15 : 5
+                      textAlign: 'center',
+                      zIndex: isSelected ? 15 : 5,
+                      transition: isDragging ? 'none' : 'box-shadow 0.15s, border-color 0.15s'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 800, fontSize: '13px', color: textColor }}>
-                      <span>{b.number}</span>
-                      {b.category === 'VIP' && (
-                        <span style={{ fontSize: '10px', background: '#7c3aed', color: '#fff', padding: '1px 4px', borderRadius: '3px' }}>
-                          VIP
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
-                      {((b.width / 20) * 1).toFixed(0)}م × {((b.height / 20) * 1).toFixed(0)}م
-                    </div>
-
-                    {b.companyName && (
+                    {booth.hasCollision && (
                       <div
                         style={{
-                          fontSize: '11px',
-                          color: textColor,
-                          fontWeight: 700,
-                          textAlign: 'center',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          maxWidth: '90%',
-                          marginTop: '4px'
+                          position: 'absolute',
+                          top: '-8px',
+                          left: '-8px',
+                          backgroundColor: '#ef4444',
+                          color: '#fff',
+                          borderRadius: '50%',
+                          padding: '2px',
+                          display: 'flex'
                         }}
+                        title="تحذير: تداخل مع جناح آخر!"
                       >
-                        {b.companyName}
+                        <AlertTriangle size={12} />
                       </div>
                     )}
 
-                    {b.hasCollision && (
-                      <div style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: '#fff', borderRadius: '50%', padding: '2px' }}>
-                        <AlertTriangle size={14} />
-                      </div>
+                    <span style={{ fontSize: '13px', fontWeight: 800, color: textColor, lineHeight: 1.2 }}>
+                      {booth.number}
+                    </span>
+
+                    <span style={{ fontSize: '10px', fontWeight: 600, color: textColor, opacity: 0.85, marginTop: '2px' }}>
+                      {Math.round((booth.width * booth.height) / 625)} م²
+                    </span>
+
+                    {booth.companyName && (
+                      <span
+                        style={{
+                          fontSize: '9px',
+                          color: textColor,
+                          marginTop: '4px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '90%'
+                        }}
+                      >
+                        {booth.companyName}
+                      </span>
                     )}
                   </div>
                 );
               })}
             </div>
           </div>
+
+          {/* Bottom Canvas Footer / Legend */}
+          <div
+            style={{
+              padding: '12px 20px',
+              backgroundColor: '#ffffff',
+              borderTop: '1px solid var(--border-main)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '12px',
+              color: 'var(--text-secondary)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: '#10b981' }} />
+                متاح للحجز ({booths.filter(b => b.status === 'Available').length})
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: '#6366f1' }} />
+                محجوز ومؤكد ({booths.filter(b => b.status === 'Reserved').length})
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: '#f59e0b' }} />
+                قيد المراجعة ({booths.filter(b => b.status === 'PendingReview').length})
+              </span>
+            </div>
+
+            <span>إجمالي الأجنحة بالمخطط: {booths.length}</span>
+          </div>
         </div>
 
-        {/* Left Side (320px): Booth Properties Panel */}
+        {/* Right Sidebar: Properties Panel */}
         <div
           className="card"
           style={{
@@ -455,41 +747,19 @@ export const BoothDesignerPage: React.FC = () => {
             height: 'fit-content'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-main)', paddingBottom: '14px' }}>
+          <div style={{ borderBottom: '1px solid var(--border-main)', paddingBottom: '12px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)' }}>
               خصائص الجناح المحدد
             </h3>
-            {selectedBooth && (
-              <span className={`badge ${selectedBooth.status === 'Available' ? 'badge-success' : selectedBooth.status === 'Reserved' ? 'badge-info' : 'badge-warning'}`}>
-                {selectedBooth.status === 'Available' ? 'متاح' : selectedBooth.status === 'Reserved' ? 'محجوز' : 'قيد المراجعة'}
-              </span>
-            )}
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              {selectedBooth ? `جناح رقم ${selectedBooth.number}` : 'اضغط على أي جناح في المخطط لتعديله'}
+            </p>
           </div>
 
           {selectedBooth ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {selectedBooth.hasCollision && (
-                <div
-                  style={{
-                    padding: '10px 14px',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--danger-bg)',
-                    color: 'var(--danger-text)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  <AlertTriangle size={16} />
-                  <span>تحذير: هذا الجناح يتصادم أو يتداخل مع جناح آخر!</span>
-                </div>
-              )}
-
-              {/* Booth ID/Number */}
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">معرف ورقم الجناح</label>
+                <label className="form-label">رقم الجناح / الرمز</label>
                 <input
                   type="text"
                   value={selectedBooth.number}
@@ -498,97 +768,99 @@ export const BoothDesignerPage: React.FC = () => {
                 />
               </div>
 
-              {/* Dimensions */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">العرض (متر)</label>
+                  <label className="form-label">العرض (px)</label>
                   <input
                     type="number"
-                    value={Math.round(selectedBooth.width / 20)}
-                    onChange={(e) => updateSelectedBooth('width', Math.max(40, (parseInt(e.target.value, 10) || 3) * 20))}
+                    value={selectedBooth.width}
+                    onChange={(e) => updateSelectedBooth('width', Math.max(40, Number(e.target.value)))}
                     className="input-field"
                   />
                 </div>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">الطول (متر)</label>
+                  <label className="form-label">الطول (px)</label>
                   <input
                     type="number"
-                    value={Math.round(selectedBooth.height / 20)}
-                    onChange={(e) => updateSelectedBooth('height', Math.max(40, (parseInt(e.target.value, 10) || 3) * 20))}
+                    value={selectedBooth.height}
+                    onChange={(e) => updateSelectedBooth('height', Math.max(40, Number(e.target.value)))}
                     className="input-field"
                   />
                 </div>
               </div>
 
-              {/* Category */}
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">فئة الجناح</label>
+                <label className="form-label">الفئة والنوع</label>
                 <select
                   value={selectedBooth.category}
                   onChange={(e) => updateSelectedBooth('category', e.target.value)}
                   className="input-field"
                 >
-                  <option value="VIP">VIP خاص</option>
-                  <option value="Featured">جناح مميز (Featured)</option>
-                  <option value="Corner">جناح زاوية (Corner)</option>
-                  <option value="Standard">جناح قياسي (Standard)</option>
+                  <option value="Standard">Standard — قياسي</option>
+                  <option value="Corner">Corner — ناصية</option>
+                  <option value="Featured">Featured — مميز</option>
+                  <option value="VIP">VIP — خاص فاخر</option>
                 </select>
               </div>
 
-              {/* Status */}
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">حالة الحجز</label>
+                <label className="form-label">حالة الجناح</label>
                 <select
                   value={selectedBooth.status}
                   onChange={(e) => updateSelectedBooth('status', e.target.value)}
                   className="input-field"
                 >
-                  <option value="Available">متاح للحجز (Available)</option>
-                  <option value="Reserved">محجوز ومعتمد (Reserved)</option>
-                  <option value="PendingReview">قيد المراجعة (Pending)</option>
+                  <option value="Available">متاح للحجز</option>
+                  <option value="Reserved">محجوز ومؤكد</option>
+                  <option value="PendingReview">قيد المراجعة والتدقيق</option>
                 </select>
               </div>
 
-              {/* Price */}
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">سعر الإيجار (د.ل)</label>
+                <label className="form-label">سعر الحجز التقديري (د.ل)</label>
                 <input
                   type="number"
                   value={selectedBooth.price}
-                  onChange={(e) => updateSelectedBooth('price', parseInt(e.target.value, 10) || 0)}
+                  onChange={(e) => updateSelectedBooth('price', Number(e.target.value))}
                   className="input-field"
                 />
               </div>
 
-              {/* Company Allocated */}
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">الشركة العارضة المخصصة</label>
-                <input
-                  type="text"
-                  value={selectedBooth.companyName || ''}
-                  onChange={(e) => updateSelectedBooth('companyName', e.target.value)}
-                  placeholder="لم يتم التخصيص بعد"
-                  className="input-field"
-                />
+              <div
+                style={{
+                  padding: '12px',
+                  backgroundColor: 'var(--bg-main)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>الإحداثيات:</span>
+                  <strong>X: {Math.round(selectedBooth.x)} | Y: {Math.round(selectedBooth.y)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>المساحة المحسوبة:</span>
+                  <strong>{Math.round((selectedBooth.width * selectedBooth.height) / 625)} م²</strong>
+                </div>
               </div>
 
-              {/* Delete Button */}
               <button
-                type="button"
                 onClick={deleteSelectedBooth}
-                className="btn-danger"
-                style={{ marginTop: '8px', fontSize: '13px' }}
+                className="btn-secondary"
+                style={{ color: 'var(--danger)', borderColor: 'var(--danger-border)' }}
               >
                 <Trash2 size={16} />
-                <span>حذف هذا الجناح من القاعة</span>
+                <span>حذف الجناح</span>
               </button>
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-muted)' }}>
-              <Compass size={40} style={{ margin: '0 auto 12px', strokeWidth: 1.5 }} />
-              <p style={{ fontSize: '13px' }}>
-                اضغط على أي جناح في المخطط لتعديل مقاساته وسعره وبياناته
-              </p>
+              <Compass size={32} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+              <p style={{ fontSize: '13px' }}>قم باختيار جناح من المخطط لعرض وتعديل أبعاده وبياناته</p>
             </div>
           )}
         </div>
