@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-يحوّل Vite طلبات `/api` إلى `https://localhost:7213` افتراضياً. يمكن تغيير الهدف عبر `VITE_DEV_API_URL`.
+يحوّل Vite طلبات `/api` إلى `https://localhost:7144` افتراضياً. يمكن تغيير الهدف عبر `VITE_DEV_API_URL`.
 
 ## التحقق قبل النشر
 

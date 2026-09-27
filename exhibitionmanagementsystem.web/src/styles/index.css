@@ -92,7 +92,7 @@ button:active {
 .btn-primary {
   background: var(--primary-gradient);
   color: #ffffff;
-  padding: 10px 20px;
+  padding: 12px 24px;
   border-radius: var(--radius-lg);
   font-weight: 600;
   display: inline-flex;
@@ -105,6 +105,7 @@ button:active {
 
 .btn-primary:hover {
   box-shadow: var(--primary-glow);
+  transform: scale(0.98);
   filter: brightness(1.05);
 }
 
@@ -113,7 +114,7 @@ button:active {
   background: #ffffff;
   border: 1px solid var(--border-main);
   color: var(--text-secondary);
-  padding: 10px 20px;
+  padding: 12px 24px;
   border-radius: var(--radius-lg);
   font-weight: 600;
   display: inline-flex;
@@ -127,6 +128,10 @@ button:active {
   background: var(--bg-secondary);
   color: var(--text-primary);
   border-color: #cbd5e1;
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
 }
 
 /* Icon Button */
@@ -151,17 +156,28 @@ button:active {
 .btn-danger {
   background: var(--danger);
   color: #ffffff;
-  padding: 10px 20px;
+  padding: 12px 24px;
   border-radius: var(--radius-lg);
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  transition: all var(--transition-normal);
 }
 
 .btn-danger:hover {
   background: #dc2626;
+  box-shadow: var(--danger-glow);
+  transform: scale(0.98);
+}
+
+/* Small Buttons (DataGrid inline actions) */
+.btn-sm {
+  height: 28px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: var(--radius-md);
 }
 
 /* ==========================================================================
@@ -208,8 +224,8 @@ button:active {
 
 .input-field {
   width: 100%;
-  height: 44px;
-  background: #f8fafc;
+  height: 48px;
+  background: var(--bg-input);
   border: 1px solid var(--border-main);
   border-radius: var(--radius-lg);
   padding: 0 16px;
@@ -221,8 +237,8 @@ button:active {
 
 .input-field:focus {
   background: #ffffff;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .input-field::placeholder {

@@ -5,7 +5,7 @@
   <Project Path="ExhibitionManagementSystem.Models.DTOs/ExhibitionManagementSystem.Models.DTOs.csproj" />
   <Project Path="ExhibitionManagementSystem.Models/ExhibitionManagementSystem.Models.csproj" />
   <Project Path="ExhibitionManagementSystem.Services/ExhibitionManagementSystem.Services.csproj" />
-  <Project Path="ExhibitionManagementSystem.Web/exhibitionmanagementsystem.web.esproj">
+  <Project Path="exhibitionmanagementsystem.web/exhibitionmanagementsystem.web.esproj">
     <Build />
     <Deploy />
   </Project>

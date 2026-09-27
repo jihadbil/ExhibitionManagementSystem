@@ -19,20 +19,23 @@
   --border-main: #e2e8f0;             /* حدود العناصر 1px solid */
   --border-light: #f1f5f9;
 
-  /* Primary Brand Gradients & Accents */
-  --primary-gradient: linear-gradient(to right, #6366f1, #8b5cf6);
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --primary-light: #e0e7ff;
-  --primary-glow: 0 10px 20px -5px rgba(99, 102, 241, 0.3);
-
-  --secondary: #6b38d4;
-  --secondary-gradient: linear-gradient(to right, #8b5cf6, #a855f7);
+  /* Primary Brand Gradients & Accents (Synchronized with Desktop Layer) */
+  --primary: #1e40af;                 /* PrimaryColor #1E40AF */
+  --primary-dark: #1e3a8a;            /* PrimaryDarkColor #1E3A8A */
+  --primary-hover: #1e3a8a;
+  --primary-light: #dbeafe;
+  --secondary: #0ea5e9;               /* SecondaryColor #0EA5E9 */
+  --secondary-hover: #0284c7;
+  --primary-gradient: linear-gradient(to right, #1e40af, #0ea5e9); /* PrimaryGradientBrush */
+  --secondary-gradient: linear-gradient(to right, #0ea5e9, #38bdf8);
+  --primary-glow: 0 10px 20px -5px rgba(30, 64, 175, 0.35);
+  --danger-glow: 0 10px 20px -5px rgba(239, 68, 68, 0.3);
 
   /* Typography Colors (High Contrast Light Mode) */
   --text-primary: #1a1d29;            /* العناوين والنصوص البارزة (أسود داكن) */
   --text-secondary: #64748b;          /* النصوص الفرعية والتوضيحية (رمادي متوسط) */
   --text-muted: #94a3b8;              /* النصوص الخفيفة وتلميحات الحقول (رمادي فاتح) */
+  --text-white: #ffffff;
   --text-inverse: #ffffff;
 
   /* Semantic / Functional Colors */
@@ -52,12 +55,16 @@
   --info-bg: #dbeafe;
   --info-text: #2563eb;
 
-  /* Exhibition Type Gradients */
+  /* Focus and Inputs */
+  --bg-input: #f8fafc;
+  --border-focus: #2563eb;
+
+  /* Exhibition Type Gradients (Synchronized with Desktop Layer) */
   --tech-gradient: linear-gradient(to right, #3b82f6, #06b6d4);
   --medical-gradient: linear-gradient(to right, #10b981, #14b8a6);
   --industrial-gradient: linear-gradient(to right, #f97316, #dc2626);
   --commercial-gradient: linear-gradient(to right, #ec4899, #f43f5e);
-  --educational-gradient: linear-gradient(to right, #8b5cf6, #6366f1);
+  --educational-gradient: linear-gradient(to right, #0284c7, #1e40af);
   --automotive-gradient: linear-gradient(to right, #6b7280, #475569);
 
   /* Booth Category Badges */
