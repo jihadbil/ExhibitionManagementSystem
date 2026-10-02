@@ -58,7 +58,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
         // Login & Registration
         public async Task<ServiceResult<LoginResponseDto>> LoginAsync(LoginRequestDto dto)
         {
-            var user = await _userManager.FindByEmailAsync(dto.Email);
+            var user = await _userManager.FindByEmailAsync(dto.Email)
+                    ?? await _userManager.FindByNameAsync(dto.Email);
             if (user == null || !user.IsActive)
             {
                 return InvalidLogin();

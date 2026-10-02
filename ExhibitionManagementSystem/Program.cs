@@ -22,6 +22,9 @@ using System.Threading.RateLimiting;
 using ExhibitionManagementSystem.Health;
 using ExhibitionManagementSystem.Services.Options;
 
+using Microsoft.EntityFrameworkCore;
+using ExhibitionManagementSystem.DataAccess.Seeder;
+
 var builder = WebApplication.CreateBuilder(args);
 var securityConfiguration = SecurityConfigurationLoader.Load(builder.Configuration);
 
@@ -134,6 +137,29 @@ builder.Services.AddDtoMapping();
 builder.Services.AddServiceLayer();
 
 var app = builder.Build();
+
+// Apply pending database migrations and seed initial superuser and system roles
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        logger.LogInformation("Applying pending database migrations...");
+        await dbContext.Database.MigrateAsync();
+        logger.LogInformation("Database migrations applied successfully.");
+
+        logger.LogInformation("Seeding initial data and super user (masoud)...");
+        await DataSeeder.SeedInitialDataAsync(services);
+        logger.LogInformation("Database initialization and seeding completed successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while applying database migrations or seeding initial data.");
+        throw;
+    }
+}
 
 if (!app.Environment.IsDevelopment())
 {
