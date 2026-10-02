@@ -7,5 +7,19 @@
     <ShouldRunBuildScript>false</ShouldRunBuildScript>
     <!-- Folder where production build objects will be placed -->
     <BuildOutputFolder>$(MSBuildProjectDirectory)\dist</BuildOutputFolder>
+
+    <!-- Prevent NuGet and Visual Studio from attempting .NET framework restore on this React project -->
+    <IsRestorable>false</IsRestorable>
+    <RestoreProjectStyle>None</RestoreProjectStyle>
+    <ResolveNuGetPackages>false</ResolveNuGetPackages>
+    <EnablePackageValidation>false</EnablePackageValidation>
+    <NoWarn>$(NoWarn);NU1503;NU1012;NU1605</NoWarn>
   </PropertyGroup>
+
+  <!-- Remove this project from NuGet restore candidates permanently -->
+  <Target Name="_IsProjectRestoreSupported" Returns="@(_ValidProjectsForRestore)">
+    <ItemGroup>
+      <_ValidProjectsForRestore Remove="$(MSBuildProjectFullPath)" />
+    </ItemGroup>
+  </Target>
 </Project>
