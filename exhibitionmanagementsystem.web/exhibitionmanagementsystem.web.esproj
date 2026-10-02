@@ -7,16 +7,5 @@
     <ShouldRunBuildScript>false</ShouldRunBuildScript>
     <!-- Folder where production build objects will be placed -->
     <BuildOutputFolder>$(MSBuildProjectDirectory)\dist</BuildOutputFolder>
-
-    <!-- Prevent NuGet / Visual Studio / Rider from treating frontend project as a NuGet package consumer -->
-    <RestoreProjectStyle>Unknown</RestoreProjectStyle>
-    <RestoreEnableGlobalPackageReference>false</RestoreEnableGlobalPackageReference>
-    <!-- Override default net6.0 and 'None' platform from JavaScript.Sdk to eliminate v6.0 and NU1012 errors permanently -->
-    <TargetFramework>net10.0</TargetFramework>
-    <TargetFrameworkVersion>v10.0</TargetFrameworkVersion>
-    <TargetFrameworkMoniker>.NETCoreApp,Version=v10.0</TargetFrameworkMoniker>
-    <TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
-    <TargetPlatformIdentifier></TargetPlatformIdentifier>
-    <TargetPlatformMoniker></TargetPlatformMoniker>
   </PropertyGroup>
 </Project>
