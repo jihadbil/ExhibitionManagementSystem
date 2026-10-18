@@ -91,14 +91,19 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<VisitorDto>> RegisterAsync(int tenantId, VisitorCreateDto dto)
         {
-            var existing = await _unitOfWork.Visitors.GetByEmailAsync(tenantId, dto.Email);
-            if (existing != null)
+            var normalizedEmail = dto.Email?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(normalizedEmail))
             {
-                return ServiceResult<VisitorDto>.Failure("البريد الإلكتروني مسجل بالفعل", "EMAIL_ALREADY_EXISTS");
+                var existing = await _unitOfWork.Visitors.GetByEmailAsync(tenantId, normalizedEmail);
+                if (existing != null)
+                {
+                    return ServiceResult<VisitorDto>.Failure("البريد الإلكتروني مسجل بالفعل", "EMAIL_ALREADY_EXISTS");
+                }
             }
 
             var visitor = _mapper.Map<Visitor>(dto);
             visitor.TenantID = tenantId;
+            visitor.Email = normalizedEmail;
             visitor.RegisteredAt = DateTime.UtcNow;
 
             await _unitOfWork.Visitors.AddAsync(visitor);
@@ -107,6 +112,45 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var resultDto = _mapper.Map<VisitorDto>(visitor);
             resultDto.TicketsCount = 0;
             return ServiceResult<VisitorDto>.Success(resultDto);
+        }
+
+        public async Task<ServiceResult<VisitorDto>> UpdateAsync(
+            int tenantId,
+            int visitorId,
+            VisitorUpdateDto dto)
+        {
+            var visitor = await _unitOfWork.Visitors.AsQueryable()
+                .Include(candidate => candidate.Tickets)
+                .FirstOrDefaultAsync(candidate =>
+                    candidate.VisitorID == visitorId && candidate.TenantID == tenantId);
+            if (visitor == null)
+            {
+                return ServiceResult<VisitorDto>.Failure("الزائر غير موجود", "VISITOR_NOT_FOUND");
+            }
+
+            var normalizedEmail = dto.Email?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(normalizedEmail))
+            {
+                var existing = await _unitOfWork.Visitors.GetByEmailAsync(tenantId, normalizedEmail);
+                if (existing != null && existing.VisitorID != visitorId)
+                {
+                    return ServiceResult<VisitorDto>.Failure(
+                        "البريد الإلكتروني مسجل لزائر آخر",
+                        "EMAIL_ALREADY_EXISTS");
+                }
+            }
+
+            visitor.FullName = dto.FullName.Trim();
+            visitor.Email = normalizedEmail;
+            visitor.Phone = dto.Phone?.Trim() ?? string.Empty;
+            visitor.Nationality = dto.Nationality?.Trim() ?? string.Empty;
+            visitor.VisitorType = dto.VisitorType?.Trim() ?? string.Empty;
+            visitor.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Visitors.Update(visitor);
+            await _unitOfWork.SaveChangesAsync();
+
+            return ServiceResult<VisitorDto>.Success(_mapper.Map<VisitorDto>(visitor));
         }
 
         public async Task<ServiceResult<VisitorRatingDto>> SubmitRatingAsync(int tenantId, int visitorId, int exhibitionId, int rating, string? comment)

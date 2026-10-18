@@ -25,6 +25,11 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task<Visitor?> GetByEmailAsync(int tenantId, string email)
         {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return null;
+            }
+
             return await FirstOrDefaultAsync(v => v.TenantID == tenantId && v.Email == email);
         }
 

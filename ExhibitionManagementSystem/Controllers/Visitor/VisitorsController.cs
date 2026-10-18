@@ -53,6 +53,17 @@ public class VisitorsController : BaseApiController
             new { visitorId = result.Data!.VisitorID }, result.Data);
     }
 
+    // PUT /api/visitors/{visitorId}
+    [HttpPut("{visitorId:int}")]
+    [Authorize(Policy = "EventManagement")]
+    public async Task<ActionResult<VisitorDto>> Update(
+        int visitorId,
+        [FromBody] VisitorUpdateDto dto)
+    {
+        var result = await _visitorService.UpdateAsync(TenantId, visitorId, dto);
+        return ToActionResult(result);
+    }
+
     // POST /api/visitors/{visitorId}/ratings
     // Body: { "exhibitionId": 1, "rating": 4, "comment": "رائع!" }
     [HttpPost("{visitorId:int}/ratings")]

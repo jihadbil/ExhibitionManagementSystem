@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
-  IdCard,
   Plus,
   Printer,
   QrCode,
   Search,
   Ticket,
-  UserCheck,
+  Pencil,
   UserPlus,
   Users,
   X
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useToast } from '../../../app/providers/ToastContext';
 import { api } from '../../../services/api';
+import { getAllItems } from '../../../services/pagination';
+import { getApiErrorMessage } from '../../../services/apiError';
+import { BadgeCard } from '../../badges/components/BadgeCard';
 
 interface Exhibition {
   exhibitionID: number;
@@ -46,6 +47,35 @@ interface TicketItem {
   status: string;
   issuedAt: string;
   scansCount: number;
+}
+
+interface BadgePrintPayload {
+  fullName: string;
+  companyName?: string;
+  jobTitle?: string;
+  participantTypeTitle: string;
+  qrCode: string;
+  barcode?: string;
+  exhibitionName: string;
+  venueAndHallName?: string;
+  datesText?: string;
+  boothNumber?: string;
+  headerBgColor: string;
+  headerTextColor: string;
+  accentColor: string;
+  categoryBadgeText: string;
+  showLogo: boolean;
+  showQRCode: boolean;
+  showBarcode: boolean;
+  showCompanyName: boolean;
+  showJobTitle: boolean;
+  showHallName: boolean;
+  showDates: boolean;
+  logoUrl?: string;
+  footerText?: string;
+  widthMm: number;
+  heightMm: number;
+  orientation: number;
 }
 
 interface VisitorFormData {
@@ -93,11 +123,13 @@ export const TicketsPage = () => {
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [visitorsLoading, setVisitorsLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Modals State
   const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
+  const [editingVisitor, setEditingVisitor] = useState<Visitor | null>(null);
   const [visitorForm, setVisitorForm] = useState<VisitorFormData>(emptyVisitorForm);
   const [isSavingVisitor, setIsSavingVisitor] = useState(false);
 
@@ -107,29 +139,47 @@ export const TicketsPage = () => {
 
   // Print/View Ticket Modal
   const [selectedTicketForPrint, setSelectedTicketForPrint] = useState<TicketItem | null>(null);
+  const [badgePrintPayload, setBadgePrintPayload] = useState<BadgePrintPayload | null>(null);
+  const [badgePreviewLoading, setBadgePreviewLoading] = useState(false);
+  const [badgePreviewError, setBadgePreviewError] = useState('');
 
-  // 1. Load Exhibitions on mount
+  // 1. Initial Load: Exhibitions & Visitors on mount
   useEffect(() => {
-    const loadExhibitions = async () => {
+    const initData = async () => {
+      setVisitorsLoading(true);
       try {
-        const response = await api.get<{ items: Exhibition[] }>('/api/exhibitions?page=1&pageSize=100');
-        const list = response.data.items ?? [];
-        setExhibitions(list);
-        if (list.length > 0) {
-          setSelectedExhibition(list[0].exhibitionID.toString());
-          setIssueForm(prev => ({ ...prev, exhibitionID: list[0].exhibitionID.toString() }));
+        const [exRes, visRes] = await Promise.allSettled([
+          getAllItems<Exhibition>('/api/exhibitions'),
+          getAllItems<Visitor>('/api/visitors')
+        ]);
+
+        if (exRes.status === 'fulfilled') {
+          const list = exRes.value;
+          setExhibitions(list);
+          if (list.length > 0) {
+            setSelectedExhibition(list[0].exhibitionID.toString());
+            setIssueForm(prev => ({ ...prev, exhibitionID: list[0].exhibitionID.toString() }));
+          }
+        }
+
+        if (visRes.status === 'fulfilled') {
+          setVisitors(visRes.value);
+        } else {
+          setError('تعذر تحميل دليل الزوار من الخادم.');
         }
       } catch {
-        setError('تعذر تحميل قائمة المعارض.');
+        setError('تعذر تحميل البيانات الأولية للمعرض والزوار.');
+      } finally {
+        setVisitorsLoading(false);
       }
     };
-    void loadExhibitions();
+    void initData();
   }, []);
 
   // 2. Load Tickets when Exhibition changes
   const loadTickets = useCallback(async (exId: string) => {
     if (!exId) return;
-    setLoading(true);
+    setTicketsLoading(true);
     setError('');
     try {
       const response = await api.get<TicketItem[]>(`/api/tickets/exhibition/${exId}`);
@@ -137,7 +187,7 @@ export const TicketsPage = () => {
     } catch {
       setError('تعذر تحميل تذاكر المعرض من الخادم.');
     } finally {
-      setLoading(false);
+      setTicketsLoading(false);
     }
   }, []);
 
@@ -149,15 +199,14 @@ export const TicketsPage = () => {
 
   // 3. Load Visitors
   const loadVisitors = useCallback(async () => {
-    setLoading(true);
+    setVisitorsLoading(true);
     setError('');
     try {
-      const response = await api.get<{ items: Visitor[] }>('/api/visitors?page=1&pageSize=100');
-      setVisitors(response.data.items ?? []);
+      setVisitors(await getAllItems<Visitor>('/api/visitors'));
     } catch {
       setError('تعذر تحميل دليل الزوار من الخادم.');
     } finally {
-      setLoading(false);
+      setVisitorsLoading(false);
     }
   }, []);
 
@@ -172,9 +221,9 @@ export const TicketsPage = () => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return tickets;
     return tickets.filter(t =>
-      t.visitorName.toLowerCase().includes(q) ||
-      t.ticketType.toLowerCase().includes(q) ||
-      t.qrCode.toLowerCase().includes(q) ||
+      (t.visitorName || '').toLowerCase().includes(q) ||
+      (t.ticketType || '').toLowerCase().includes(q) ||
+      (t.qrCode || '').toLowerCase().includes(q) ||
       t.ticketID.toString().includes(q)
     );
   }, [tickets, searchQuery]);
@@ -183,15 +232,65 @@ export const TicketsPage = () => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return visitors;
     return visitors.filter(v =>
-      v.fullName.toLowerCase().includes(q) ||
-      (v.email && v.email.toLowerCase().includes(q)) ||
-      (v.phone && v.phone.toLowerCase().includes(q)) ||
-      (v.nationality && v.nationality.toLowerCase().includes(q))
+      (v.fullName || '').toLowerCase().includes(q) ||
+      ((v.email || '') && (v.email || '').toLowerCase().includes(q)) ||
+      ((v.phone || '') && (v.phone || '').toLowerCase().includes(q)) ||
+      ((v.nationality || '') && (v.nationality || '').toLowerCase().includes(q)) ||
+      ((v.visitorType || '') && (v.visitorType || '').toLowerCase().includes(q))
     );
   }, [visitors, searchQuery]);
 
-  // Register New Visitor
-  const handleRegisterVisitor = async (e: FormEvent) => {
+  const closeTicketPreview = () => {
+    setSelectedTicketForPrint(null);
+    setBadgePrintPayload(null);
+    setBadgePreviewError('');
+  };
+
+  const openTicketPreview = async (ticket: TicketItem) => {
+    setSelectedTicketForPrint(ticket);
+    setBadgePrintPayload(null);
+    setBadgePreviewError('');
+    setBadgePreviewLoading(true);
+
+    try {
+      const response = await api.get<BadgePrintPayload>(
+        `/api/badges/render-by-qr/${encodeURIComponent(ticket.qrCode)}`
+      );
+      setBadgePrintPayload(response.data);
+    } catch {
+      setBadgePreviewError('تعذر إنشاء المعاينة من قالب الشارة المحفوظ. تأكد من وجود قالب مناسب لهذا النوع.');
+      showToast('تعذر تحميل قالب الشارة لهذه التذكرة.', 'danger');
+    } finally {
+      setBadgePreviewLoading(false);
+    }
+  };
+
+  const openCreateVisitor = () => {
+    setEditingVisitor(null);
+    setVisitorForm(emptyVisitorForm);
+    setIsVisitorModalOpen(true);
+  };
+
+  const openEditVisitor = (visitor: Visitor) => {
+    setEditingVisitor(visitor);
+    setVisitorForm({
+      fullName: visitor.fullName,
+      email: visitor.email ?? '',
+      phone: visitor.phone ?? '',
+      nationality: visitor.nationality ?? '',
+      visitorType: visitor.visitorType || 'Regular',
+    });
+    setIsVisitorModalOpen(true);
+  };
+
+  const closeVisitorModal = () => {
+    setIsVisitorModalOpen(false);
+    setEditingVisitor(null);
+    setVisitorForm(emptyVisitorForm);
+  };
+
+  // Register or update a visitor
+  const handleSaveVisitor = async (e: FormEvent) => {
     e.preventDefault();
     if (!visitorForm.fullName.trim()) {
       showToast('يرجى إدخال اسم الزائر.', 'warning');
@@ -200,20 +299,33 @@ export const TicketsPage = () => {
 
     setIsSavingVisitor(true);
     try {
-      await api.post('/api/visitors/register', {
+      const payload = {
         fullName: visitorForm.fullName.trim(),
-        email: visitorForm.email.trim(),
+        email: visitorForm.email.trim() || null,
         phone: visitorForm.phone.trim(),
         nationality: visitorForm.nationality.trim(),
         visitorType: visitorForm.visitorType,
-      });
+      };
 
-      showToast('تم تسجيل الزائر بنجاح.', 'success');
-      setIsVisitorModalOpen(false);
-      setVisitorForm(emptyVisitorForm);
+      if (editingVisitor) {
+        await api.put(`/api/visitors/${editingVisitor.visitorID}`, payload);
+      } else {
+        await api.post('/api/visitors/register', payload);
+      }
+
+      showToast(editingVisitor ? 'تم تحديث بيانات الزائر بنجاح.' : 'تم تسجيل الزائر بنجاح.', 'success');
+      closeVisitorModal();
       await loadVisitors();
-    } catch {
-      showToast('فشل تسجيل الزائر. تحقق من البيانات المدخلة.', 'danger');
+    } catch (error: unknown) {
+      showToast(
+        getApiErrorMessage(
+          error,
+          editingVisitor
+            ? 'فشل تحديث بيانات الزائر. تحقق من البيانات المدخلة.'
+            : 'فشل تسجيل الزائر. تحقق من البيانات المدخلة.',
+        ),
+        'danger',
+      );
     } finally {
       setIsSavingVisitor(false);
     }
@@ -243,7 +355,7 @@ export const TicketsPage = () => {
       if (selectedExhibition === issueForm.exhibitionID) {
         await loadTickets(selectedExhibition);
       }
-      setSelectedTicketForPrint(response.data);
+      await openTicketPreview(response.data);
     } catch {
       showToast('فشل إصدار التذكرة. تحقق من صحة البيانات.', 'danger');
     } finally {
@@ -278,7 +390,7 @@ export const TicketsPage = () => {
         <div style={{ display: 'flex', gap: '10px' }}>
           {canManage && (
             <>
-              <button className="btn-secondary" onClick={() => setIsVisitorModalOpen(true)}>
+              <button className="btn-secondary" onClick={openCreateVisitor}>
                 <UserPlus size={16} /> تسجيل زائر جديد
               </button>
               <button
@@ -304,7 +416,7 @@ export const TicketsPage = () => {
       <div style={{ display: 'flex', gap: '10px', borderBottom: '1px solid var(--border-main)', paddingBottom: '10px' }}>
         <button
           className={activeTab === 'tickets' ? 'btn-primary' : 'btn-secondary'}
-          onClick={() => setActiveTab('tickets')}
+          onClick={() => { setActiveTab('tickets'); setSearchQuery(''); }}
           style={{ height: '38px', padding: '0 18px', fontSize: '13px' }}
         >
           <Ticket size={16} />
@@ -312,7 +424,7 @@ export const TicketsPage = () => {
         </button>
         <button
           className={activeTab === 'visitors' ? 'btn-primary' : 'btn-secondary'}
-          onClick={() => setActiveTab('visitors')}
+          onClick={() => { setActiveTab('visitors'); setSearchQuery(''); }}
           style={{ height: '38px', padding: '0 18px', fontSize: '13px' }}
         >
           <Users size={16} />
@@ -382,25 +494,25 @@ export const TicketsPage = () => {
                       </span>
                     </td>
                     <td>
-                      <span className={`badge ${ticket.status === 'Valid' ? 'badge-success' : 'badge-danger'}`}>
-                        {ticket.status === 'Valid' ? 'صالحة' : ticket.status}
+                      <span className={`badge ${ticket.status === 'Active' ? 'badge-success' : ticket.status === 'Used' ? 'badge-info' : 'badge-danger'}`}>
+                        {{ Active: 'صالحة', Used: 'مستخدمة', Cancelled: 'ملغاة', Expired: 'منتهية' }[ticket.status] ?? ticket.status}
                       </span>
                     </td>
                     <td>
                       <button
                         className="btn-secondary"
                         style={{ height: '30px', padding: '0 10px', fontSize: '12px' }}
-                        onClick={() => setSelectedTicketForPrint(ticket)}
+                        onClick={() => void openTicketPreview(ticket)}
                       >
                         <QrCode size={14} /> عرض التذكرة
                       </button>
                     </td>
                   </tr>
                 ))}
-                {!loading && filteredTickets.length === 0 && (
+                {!ticketsLoading && filteredTickets.length === 0 && (
                   <tr><td colSpan={8} style={{ textAlign: 'center', padding: '30px' }}>لا توجد تذاكر مسجلة لهذا المعرض.</td></tr>
                 )}
-                {loading && (
+                {ticketsLoading && (
                   <tr><td colSpan={8} style={{ textAlign: 'center', padding: '30px' }}>جاري التحميل…</td></tr>
                 )}
               </tbody>
@@ -436,21 +548,30 @@ export const TicketsPage = () => {
                     <td>{new Date(visitor.registeredAt).toLocaleDateString('ar-LY')}</td>
                     {canManage && (
                       <td>
-                        <button
-                          className="btn-secondary"
-                          style={{ height: '30px', padding: '0 10px', fontSize: '12px' }}
-                          onClick={() => openIssueForVisitor(visitor)}
-                        >
-                          <Ticket size={14} /> إصدار تذكرة
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <button
+                            className="btn-secondary"
+                            style={{ height: '30px', padding: '0 10px', fontSize: '12px' }}
+                            onClick={() => openEditVisitor(visitor)}
+                          >
+                            <Pencil size={14} /> تعديل
+                          </button>
+                          <button
+                            className="btn-secondary"
+                            style={{ height: '30px', padding: '0 10px', fontSize: '12px' }}
+                            onClick={() => openIssueForVisitor(visitor)}
+                          >
+                            <Ticket size={14} /> إصدار تذكرة
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
                 ))}
-                {!loading && filteredVisitors.length === 0 && (
+                {!visitorsLoading && filteredVisitors.length === 0 && (
                   <tr><td colSpan={canManage ? 7 : 6} style={{ textAlign: 'center', padding: '30px' }}>لا يوجد زوار مسجلون.</td></tr>
                 )}
-                {loading && (
+                {visitorsLoading && (
                   <tr><td colSpan={canManage ? 7 : 6} style={{ textAlign: 'center', padding: '30px' }}>جاري التحميل…</td></tr>
                 )}
               </tbody>
@@ -459,13 +580,13 @@ export const TicketsPage = () => {
         </div>
       )}
 
-      {/* Modal: Register Visitor */}
+      {/* Modal: Register or edit visitor */}
       {isVisitorModalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(15,23,42,.45)', display: 'grid', placeItems: 'center', padding: '20px' }}>
-          <form className="card" onSubmit={handleRegisterVisitor} style={{ width: 'min(500px, 100%)', display: 'grid', gap: '14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2>تسجيل زائر جديد</h2>
-              <button type="button" className="btn-icon" onClick={() => setIsVisitorModalOpen(false)}><X size={18} /></button>
+          <form className="card" onSubmit={handleSaveVisitor} style={{ width: 'min(500px, 100%)', display: 'grid', gap: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <h2>{editingVisitor ? 'تعديل بيانات الزائر' : 'تسجيل زائر جديد'}</h2>
+              <button type="button" className="btn-icon" onClick={closeVisitorModal}><X size={18} /></button>
             </div>
 
             <div className="form-group" style={{ margin: 0 }}>
@@ -481,7 +602,7 @@ export const TicketsPage = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">البريد الإلكتروني</label>
+                <label className="form-label">البريد الإلكتروني (اختياري)</label>
                 <input
                   className="input-field"
                   type="email"
@@ -527,7 +648,9 @@ export const TicketsPage = () => {
             </div>
 
             <button className="btn-primary" type="submit" disabled={isSavingVisitor} style={{ marginTop: '8px' }}>
-              {isSavingVisitor ? 'جاري التسجيل…' : 'تسجيل الزائر'}
+              {isSavingVisitor
+                ? 'جاري الحفظ…'
+                : editingVisitor ? 'حفظ التعديلات' : 'تسجيل الزائر'}
             </button>
           </form>
         </div>
@@ -626,32 +749,62 @@ export const TicketsPage = () => {
       {/* Modal: View & Print Ticket */}
       {selectedTicketForPrint && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(15,23,42,.45)', display: 'grid', placeItems: 'center', padding: '20px' }}>
-          <div className="card" style={{ width: 'min(440px, 100%)', display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="card" style={{ width: 'min(560px, 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center', maxHeight: '95vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
               <h2 style={{ fontSize: '18px' }}>تذكرة الدخول الرسمية</h2>
-              <button type="button" className="btn-icon" onClick={() => setSelectedTicketForPrint(null)}><X size={18} /></button>
+              <button type="button" className="btn-icon" onClick={closeTicketPreview}><X size={18} /></button>
             </div>
 
-            <div style={{ border: '2px dashed var(--primary)', borderRadius: '12px', padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: '#ffffff' }}>
-              <span className="badge badge-primary">{selectedTicketForPrint.ticketType} PASS</span>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>{selectedTicketForPrint.visitorName}</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>{selectedTicketForPrint.exhibitionName}</p>
+            {badgePreviewLoading && (
+              <div style={{ padding: '48px 20px', color: 'var(--text-secondary)' }}>جاري تطبيق قالب الشارة المحفوظ…</div>
+            )}
 
-              <div style={{ padding: '12px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '6px' }}>
-                <QRCodeSVG value={selectedTicketForPrint.qrCode || `TICKET-${selectedTicketForPrint.ticketID}`} size={140} level="M" />
+            {badgePreviewError && (
+              <div role="alert" style={{ padding: '16px', background: 'var(--danger-bg)', color: 'var(--danger-text)', borderRadius: 'var(--radius-lg)' }}>
+                {badgePreviewError}
               </div>
+            )}
 
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                <div>رقم التذكرة: <strong>#{selectedTicketForPrint.ticketID}</strong></div>
-                <div dir="ltr">{selectedTicketForPrint.qrCode}</div>
-              </div>
-            </div>
+            {badgePrintPayload && (
+              <BadgeCard
+                className="ticket-print-target"
+                data={{
+                  fullName: badgePrintPayload.fullName,
+                  companyName: badgePrintPayload.companyName,
+                  jobTitle: badgePrintPayload.jobTitle,
+                  qrCode: badgePrintPayload.qrCode,
+                  barcode: badgePrintPayload.barcode,
+                  exhibitionName: badgePrintPayload.exhibitionName,
+                  venueAndHallName: badgePrintPayload.venueAndHallName,
+                  datesText: badgePrintPayload.datesText,
+                  boothNumber: badgePrintPayload.boothNumber,
+                }}
+                design={{
+                  widthMm: badgePrintPayload.widthMm,
+                  heightMm: badgePrintPayload.heightMm,
+                  orientation: badgePrintPayload.orientation,
+                  headerBgColor: badgePrintPayload.headerBgColor,
+                  headerTextColor: badgePrintPayload.headerTextColor,
+                  accentColor: badgePrintPayload.accentColor,
+                  categoryBadgeText: badgePrintPayload.categoryBadgeText || badgePrintPayload.participantTypeTitle,
+                  showLogo: badgePrintPayload.showLogo,
+                  logoUrl: badgePrintPayload.logoUrl,
+                  showQRCode: badgePrintPayload.showQRCode,
+                  showBarcode: badgePrintPayload.showBarcode,
+                  showCompanyName: badgePrintPayload.showCompanyName,
+                  showJobTitle: badgePrintPayload.showJobTitle,
+                  showHallName: badgePrintPayload.showHallName,
+                  showDates: badgePrintPayload.showDates,
+                  footerText: badgePrintPayload.footerText,
+                }}
+              />
+            )}
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setSelectedTicketForPrint(null)}>
+            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+              <button className="btn-secondary" style={{ flex: 1 }} onClick={closeTicketPreview}>
                 إغلاق
               </button>
-              <button className="btn-primary" style={{ flex: 1 }} onClick={() => window.print()}>
+              <button className="btn-primary" style={{ flex: 1 }} onClick={() => window.print()} disabled={!badgePrintPayload || badgePreviewLoading}>
                 <Printer size={16} /> طباعة
               </button>
             </div>

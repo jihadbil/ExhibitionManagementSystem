@@ -79,7 +79,16 @@ public class TicketsController : BaseApiController
     }
 }
 
-public sealed record ScanTicketRequest(
-    [property: Required, StringLength(500, MinimumLength = 1)] string QrCode,
-    [property: Required, RegularExpression("^(?i:In|Out)$")] string Direction,
-    [property: StringLength(100)] string? Location);
+public sealed class ScanTicketRequest
+{
+    public ScanTicketRequest(string qrCode, string direction, string? location)
+    {
+        QrCode = qrCode;
+        Direction = direction;
+        Location = location;
+    }
+
+    [Required, StringLength(500, MinimumLength = 1)] public string QrCode { get; set; }
+    [Required, RegularExpression("^(?i:In|Out)$")] public string Direction { get; set; }
+    [StringLength(100)] public string? Location { get; set; }
+}

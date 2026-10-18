@@ -15,7 +15,7 @@ public class VisitorCreateDto
 
     [StringLength(200)]
     [EmailAddress]
-    public string Email { get; set; } = string.Empty;
+    public string? Email { get; set; }
 
     [StringLength(100)]
     public string Nationality { get; set; } = string.Empty;

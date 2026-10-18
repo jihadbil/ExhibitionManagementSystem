@@ -27,6 +27,22 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<TicketDto>> IssueTicketAsync(int tenantId, TicketCreateDto dto)
         {
+            await _unitOfWork.BeginSerializableTransactionAsync();
+            try
+            {
+                var result = await IssueTicketCoreAsync(tenantId, dto);
+                if (result.IsSuccess) await _unitOfWork.CommitTransactionAsync();
+                return result;
+            }
+            catch (DbUpdateException)
+            { return ServiceResult<TicketDto>.Failure("تعارض إصدار التذكرة مع تعديل آخر", "TICKET_ISSUE_CONFLICT"); }
+            catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number is 1205 or 1222)
+            { return ServiceResult<TicketDto>.Failure("تعارض إصدار التذكرة مع تعديل آخر", "TICKET_ISSUE_CONFLICT"); }
+            finally { await _unitOfWork.RollbackTransactionAsync(); }
+        }
+
+        private async Task<ServiceResult<TicketDto>> IssueTicketCoreAsync(int tenantId, TicketCreateDto dto)
+        {
             var visitor = await _unitOfWork.Visitors.GetByIdAsync(dto.VisitorID);
             if (visitor == null || visitor.TenantID != tenantId)
             {
@@ -40,6 +56,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
 
             string qrCode = $"{dto.ExhibitionID}-{dto.VisitorID}-{Guid.NewGuid():N}";
+            if (exhibition.Status is ExhibitionStatus.Cancelled or ExhibitionStatus.Closed || exhibition.EndDate.Date < DateTime.UtcNow.Date)
+                return ServiceResult<TicketDto>.Failure("المعرض مغلق أو ملغى ولا يقبل إصدار تذاكر", "EXHIBITION_NOT_ACCEPTING_TICKETS");
+            if (dto.Price < 0 || (dto.ValidDate.HasValue &&
+                (dto.ValidDate.Value.Date < DateTime.UtcNow.Date || dto.ValidDate.Value.Date < exhibition.StartDate.Date || dto.ValidDate.Value.Date > exhibition.EndDate.Date)))
+                return ServiceResult<TicketDto>.Failure("سعر التذكرة أو يوم صلاحيتها غير صالح", "INVALID_TICKET_INPUT");
+            dto.CurrencyCode = dto.CurrencyCode.Trim().ToUpperInvariant();
+            if (!await _unitOfWork.Currencies.ExistsAsync(c => c.CurrencyCode == dto.CurrencyCode && c.IsActive))
+                return ServiceResult<TicketDto>.Failure("عملة التذكرة غير موجودة أو غير نشطة", "INVALID_CURRENCY");
             bool isUnique = await _unitOfWork.Tickets.IsQRCodeUniqueAsync(qrCode);
             while (!isUnique)
             {
@@ -120,6 +144,15 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<TicketScanDto>.Failure("التذكرة غير موجودة", "TICKET_NOT_FOUND");
             }
 
+            if (ticket.QRCode.StartsWith("STAFF-", StringComparison.Ordinal) && !await _unitOfWork.BoothStaffs.ExistsAsync(s =>
+                s.BadgeIssued && s.BadgeNumber == ticket.QRCode && s.Reservation.TenantID == tenantId && s.Reservation.Status == ReservationStatus.Confirmed))
+                return ServiceResult<TicketScanDto>.Failure("تصريح الطاقم أو الحجز غير فعال", "STAFF_ACCESS_NOT_ACTIVE");
+
+            if (ticket.Exhibition.Status != ExhibitionStatus.Open || ticket.Exhibition.StartDate.Date > DateTime.UtcNow.Date || ticket.Exhibition.EndDate.Date < DateTime.UtcNow.Date)
+                return ServiceResult<TicketScanDto>.Failure("المعرض غير مفتوح أو خارج فترة انعقاده", "EXHIBITION_NOT_OPEN");
+            if (ticket.ValidDate.HasValue && ticket.ValidDate.Value.Date > DateTime.UtcNow.Date)
+                return ServiceResult<TicketScanDto>.Failure("التذكرة غير صالحة للدخول قبل يومها المحدد", "TICKET_NOT_YET_VALID");
+
             if (ticket.Status is TicketStatus.Active or TicketStatus.Used &&
                 ticket.ValidDate.HasValue &&
                 ticket.ValidDate.Value.Date < DateTime.UtcNow.Date)
@@ -139,7 +172,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<TicketScanDto>.Failure("التذكرة منتهية الصلاحية", "TICKET_EXPIRED");
             }
 
-            if (!Enum.TryParse<ScanDirection>(direction, true, out var scanDirection))
+            if (!Enum.TryParse<ScanDirection>(direction, true, out var scanDirection) || !Enum.IsDefined(scanDirection))
             {
                 return ServiceResult<TicketScanDto>.Failure("اتجاه المسح غير صالح", "INVALID_SCAN_DIRECTION");
             }
