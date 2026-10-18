@@ -18,5 +18,9 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // Async data-loading effects are intentional throughout this client.
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ])
