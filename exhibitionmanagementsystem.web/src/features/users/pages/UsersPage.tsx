@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   Lock,
-  Mail,
   Plus,
   Search,
-  Shield,
   Trash2,
   UserCheck,
   UserX,
@@ -14,6 +12,7 @@ import {
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useToast } from '../../../app/providers/ToastContext';
 import { api } from '../../../services/api';
+import { getAllItems } from '../../../services/pagination';
 
 interface ManagedUser {
   userId: string;
@@ -79,12 +78,12 @@ export const UsersPage = () => {
     setError('');
     try {
       const [usersRes, rolesRes] = await Promise.allSettled([
-        api.get<{ items: ManagedUser[] }>('/api/users?page=1&pageSize=100'),
+        getAllItems<ManagedUser>('/api/users'),
         api.get<RoleItem[]>('/api/roles'),
       ]);
 
       if (usersRes.status === 'fulfilled') {
-        setUsers(usersRes.value.data.items ?? []);
+        setUsers(usersRes.value);
       } else {
         setError('تعذر تحميل قائمة المستخدمين من الخادم.');
       }

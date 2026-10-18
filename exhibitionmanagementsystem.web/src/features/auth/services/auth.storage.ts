@@ -2,10 +2,15 @@ import type { LoginResponseDto, RefreshTokenResponseDto } from '../types/auth.ty
 
 const STORAGE_KEY = 'expo.auth.session';
 const REMEMBERED_EMAIL_KEY = 'expo.auth.email';
+export const SESSION_CHANGED_EVENT = 'auth:session-changed';
 
 interface StoredSession {
   user: LoginResponseDto;
+  sessionId: string;
 }
+
+const newSessionId = (): string => globalThis.crypto?.randomUUID?.()
+  ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
 const readSession = (): StoredSession | null => {
   const rawSession = sessionStorage.getItem(STORAGE_KEY);
@@ -17,6 +22,10 @@ const readSession = (): StoredSession | null => {
       clearSession();
       return null;
     }
+    if (!session.sessionId) {
+      session.sessionId = newSessionId();
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    }
     return session;
   } catch {
     clearSession();
@@ -25,19 +34,30 @@ const readSession = (): StoredSession | null => {
 };
 
 export const saveSession = (user: LoginResponseDto): void => {
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ user } satisfies StoredSession));
+  const previous = readSession();
+  const sessionId = previous?.user.userId === user.userId
+    && previous.user.tenantID === user.tenantID
+    && previous.user.refreshToken === user.refreshToken
+    ? previous.sessionId : newSessionId();
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ user, sessionId } satisfies StoredSession));
+  window.dispatchEvent(new Event(SESSION_CHANGED_EVENT));
 };
 
-export const updateSessionTokens = (tokens: RefreshTokenResponseDto): void => {
-  const session = readSession();
-  if (!session) return;
+export const getSessionId = (): string | null => readSession()?.sessionId ?? null;
 
-  saveSession({
+export const updateSessionTokens = (tokens: RefreshTokenResponseDto, expectedSessionId?: string): boolean => {
+  const session = readSession();
+  if (!session || (expectedSessionId !== undefined && session.sessionId !== expectedSessionId)) return false;
+
+  session.user = {
     ...session.user,
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
     expiresAt: tokens.expiresAt,
-  });
+  };
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  window.dispatchEvent(new Event(SESSION_CHANGED_EVENT));
+  return true;
 };
 
 export const clearSession = (): void => {
@@ -48,6 +68,7 @@ export const clearSession = (): void => {
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
   localStorage.removeItem('tenantId');
+  window.dispatchEvent(new Event(SESSION_CHANGED_EVENT));
 };
 
 export const getStoredUser = (): LoginResponseDto | null => readSession()?.user ?? null;

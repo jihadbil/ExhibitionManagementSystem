@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   Settings,
   User,
@@ -12,7 +12,6 @@ import {
   Phone,
   Sun,
   CheckCircle2,
-  AlertCircle,
   Clock,
   Sparkles,
   Eye,
@@ -21,6 +20,8 @@ import {
 import { api } from '../../../services/api';
 import { useToast } from '../../../app/providers/ToastContext';
 import { useAuth } from '../../../app/providers/AuthContext';
+import { getApiErrorMessage } from '../../../services/apiError';
+import { ExchangeRatesPanel } from '../components/ExchangeRatesPanel';
 
 interface UserProfile {
   userId: string;
@@ -32,6 +33,7 @@ interface UserProfile {
   isActive: boolean;
   lastLogin?: string;
   roles: string[];
+  baseCurrency?: string;
 }
 
 interface AuditLog {
@@ -45,10 +47,10 @@ interface AuditLog {
 
 export const SettingsPage: React.FC = () => {
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { user, updateCurrentUser } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'audit' | 'appearance'>('profile');
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'audit' | 'appearance' | 'currency'>('profile');
+  const canManageRates = user?.roles?.includes('SuperAdmin') ?? false;
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
@@ -71,14 +73,14 @@ export const SettingsPage: React.FC = () => {
   const [loadingLogs, setLoadingLogs] = useState(false);
 
   // Fetch Profile
-  const loadProfile = async () => {
-    setLoading(true);
+  const loadProfile = useCallback(async () => {
     try {
       const res = await api.get<UserProfile>('/api/profile');
       if (res.data) {
         setProfile(res.data);
         setFullName(res.data.fullName || '');
         setPhoneNumber(res.data.phoneNumber || '');
+        setCurrency(res.data.baseCurrency || user?.baseCurrency || 'LYD');
       }
     } catch (err) {
       console.error('Failed to load profile:', err);
@@ -86,13 +88,11 @@ export const SettingsPage: React.FC = () => {
       if (user) {
         setFullName(user.fullName);
       }
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [user]);
 
   // Fetch Audit Logs
-  const loadAuditLogs = async () => {
+  const loadAuditLogs = useCallback(async () => {
     setLoadingLogs(true);
     try {
       const res = await api.get<{ items: AuditLog[] }>('/api/profile/audit-logs?pageNumber=1&pageSize=15');
@@ -102,17 +102,17 @@ export const SettingsPage: React.FC = () => {
     } finally {
       setLoadingLogs(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadProfile();
-  }, []);
+  }, [loadProfile]);
 
   useEffect(() => {
     if (activeTab === 'audit' && auditLogs.length === 0) {
       void loadAuditLogs();
     }
-  }, [activeTab]);
+  }, [activeTab, auditLogs.length, loadAuditLogs]);
 
   // Handle Save Profile
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -129,22 +129,13 @@ export const SettingsPage: React.FC = () => {
         phoneNumber: phoneNumber.trim()
       });
 
-      // Update local storage user object if exists
-      const stored = localStorage.getItem('auth_user');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          parsed.fullName = fullName.trim();
-          localStorage.setItem('auth_user', JSON.stringify(parsed));
-        } catch {}
-      }
+      updateCurrentUser({ fullName: fullName.trim() });
 
       showToast('تم حفظ تعديلات الملف الشخصي بنجاح ✓', 'success');
       await loadProfile();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to save profile:', err);
-      const msg = err.response?.data?.message || 'فشل حفظ الملف الشخصي.';
-      showToast(msg, 'danger');
+      showToast(getApiErrorMessage(err, 'فشل حفظ الملف الشخصي.'), 'danger');
     } finally {
       setSavingProfile(false);
     }
@@ -181,13 +172,12 @@ export const SettingsPage: React.FC = () => {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to change password:', err);
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.title ||
-        'فشل تغيير كلمة المرور. يرجى التأكد من صحة كلمة المرور الحالية.';
-      showToast(typeof msg === 'string' ? msg : 'فشل تغيير كلمة المرور', 'danger');
+      showToast(
+        getApiErrorMessage(err, 'فشل تغيير كلمة المرور. يرجى التأكد من صحة كلمة المرور الحالية.'),
+        'danger',
+      );
     } finally {
       setSavingPassword(false);
     }
@@ -305,6 +295,24 @@ export const SettingsPage: React.FC = () => {
           <Palette size={16} />
           <span>المظهر والنمط البصري</span>
         </button>
+        {canManageRates && (
+          <button
+            onClick={() => setActiveTab('currency')}
+            className={`tab-btn ${activeTab === 'currency' ? 'active' : ''}`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px',
+              borderRadius: '8px 8px 0 0', border: 'none',
+              background: activeTab === 'currency' ? 'var(--surface)' : 'transparent',
+              color: activeTab === 'currency' ? 'var(--primary)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'currency' ? 700 : 500,
+              borderBottom: activeTab === 'currency' ? '2px solid var(--primary)' : 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <Settings size={16} />
+            <span>أسعار الصرف</span>
+          </button>
+        )}
       </div>
 
       {/* Tab 1: Profile & Organization */}
@@ -402,13 +410,14 @@ export const SettingsPage: React.FC = () => {
                 <label className="form-label">العملة الافتراضية للتعاملات والفوترة</label>
                 <select
                   value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
+                  disabled
                   className="input-field"
                 >
-                  <option value="LYD">دينار ليبي (LYD)</option>
-                  <option value="USD">دولار أمريكي (USD)</option>
-                  <option value="EUR">يورو أوروبي (EUR)</option>
+                  <option value={currency}>{currency}</option>
                 </select>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  هذه عملة التقارير الموحدة وليست عملة إلزامية لفواتير العارضين.
+                </span>
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
@@ -695,6 +704,8 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {activeTab === 'currency' && canManageRates && <ExchangeRatesPanel />}
     </div>
   );
 };

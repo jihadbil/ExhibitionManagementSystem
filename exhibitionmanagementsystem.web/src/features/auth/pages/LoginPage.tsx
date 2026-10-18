@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Building2, Mail, Lock, LogIn, AlertCircle, CheckCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useToast } from '../../../app/providers/ToastContext';
@@ -7,11 +7,13 @@ import { getRememberedEmail } from '../services/auth.storage';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const { showToast } = useToast();
 
   const rememberedEmail = getRememberedEmail();
-  const [email, setEmail] = useState(rememberedEmail);
+  const registeredEmail = (location.state as { email?: string } | null)?.email;
+  const [email, setEmail] = useState(registeredEmail ?? rememberedEmail);
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(Boolean(rememberedEmail));
   const [isLoading, setIsLoading] = useState(false);
@@ -245,9 +247,9 @@ export const LoginPage: React.FC = () => {
                 <label className="form-label" htmlFor="password" style={{ margin: 0 }}>
                   كلمة المرور
                 </label>
-                <a href="#forgot" style={{ fontSize: '12px', fontWeight: 600 }}>
+                <Link to="/forgot-password" style={{ fontSize: '12px', fontWeight: 600 }}>
                   نسيت كلمة المرور؟
-                </a>
+                </Link>
               </div>
               <div style={{ position: 'relative' }}>
                 <Lock
@@ -309,6 +311,13 @@ export const LoginPage: React.FC = () => {
               )}
             </button>
           </form>
+
+          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-main)', textAlign: 'center' }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>تدير شركة معارض وليس لديك حساب؟ </span>
+            <Link to="/register" style={{ fontSize: '13px', fontWeight: 700 }}>
+              سجّل شركتك الآن
+            </Link>
+          </div>
 
         </div>
       </div>

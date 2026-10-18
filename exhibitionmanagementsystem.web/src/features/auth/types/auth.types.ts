@@ -17,6 +17,27 @@ export interface LoginResponseDto {
   roles: string[];
 }
 
+export interface CompanyRegistrationRequestDto {
+  companyName: string;
+  subdomain: string;
+  adminFullName: string;
+  adminEmail: string;
+  adminPhoneNumber?: string;
+  password: string;
+  confirmPassword: string;
+  baseCurrency: string;
+  acceptTerms: boolean;
+}
+
+export interface CompanyRegistrationResponseDto {
+  tenantID: number;
+  companyName: string;
+  subdomain: string;
+  adminEmail: string;
+  trialEndsAt: string;
+  message: string;
+}
+
 export interface RefreshTokenRequestDto {
   accessToken: string;
   refreshToken: string;

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { LoginRequestDto, LoginResponseDto } from '../../features/auth/types/auth.types';
 import { authService } from '../../features/auth/services/auth.service';
+import { getStoredUser, saveSession, SESSION_CHANGED_EVENT } from '../../features/auth/services/auth.storage';
 
 interface AuthContextType {
   user: LoginResponseDto | null;
@@ -8,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: LoginRequestDto) => Promise<void>;
   logout: () => Promise<void>;
+  updateCurrentUser: (changes: Partial<Pick<LoginResponseDto, 'fullName'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,8 +19,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const handleExpiredSession = () => setUser(null);
+    const handleSessionChanged = () => setUser(getStoredUser());
     window.addEventListener('auth:expired', handleExpiredSession);
-    return () => window.removeEventListener('auth:expired', handleExpiredSession);
+    window.addEventListener(SESSION_CHANGED_EVENT, handleSessionChanged);
+    return () => {
+      window.removeEventListener('auth:expired', handleExpiredSession);
+      window.removeEventListener(SESSION_CHANGED_EVENT, handleSessionChanged);
+    };
   }, []);
 
   const login = async (credentials: LoginRequestDto) => {
@@ -27,8 +34,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await authService.logout();
-    setUser(null);
+    try {
+      await authService.logout();
+    } finally {
+      setUser(null);
+    }
+  };
+
+  const updateCurrentUser = (changes: Partial<Pick<LoginResponseDto, 'fullName'>>) => {
+    const current = getStoredUser();
+    if (!current) { setUser(null); return; }
+    const updated = { ...current, ...changes };
+    saveSession(updated);
+    setUser(updated);
   };
 
   return (
@@ -38,7 +56,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         isLoading: false,
         login,
-        logout
+        logout,
+        updateCurrentUser,
       }}
     >
       {children}
