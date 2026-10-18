@@ -83,11 +83,31 @@ public class SponsorshipService : ISponsorshipService
 
     public async Task<ServiceResult> DeleteSponsorAsync(int tenantId, int sponsorId, string userId)
     {
+        await _unitOfWork.BeginSerializableTransactionAsync();
+        try
+        {
+            var result = await DeleteSponsorCoreAsync(tenantId, sponsorId, userId);
+            if (result.IsSuccess) await _unitOfWork.CommitTransactionAsync();
+            return result;
+        }
+        catch (DbUpdateException)
+        { return ServiceResult.Failure("تعارض حذف الراعي مع عملية أخرى", "SPONSOR_DELETE_CONFLICT"); }
+        catch (Exception ex) when (DatabaseConflict.IsLockConflict(ex))
+        { return ServiceResult.Failure("تعارض حذف الراعي مع عملية أخرى", "SPONSOR_DELETE_CONFLICT"); }
+        finally { await _unitOfWork.RollbackTransactionAsync(); }
+    }
+
+    private async Task<ServiceResult> DeleteSponsorCoreAsync(int tenantId, int sponsorId, string userId)
+    {
         var sponsor = await _unitOfWork.Sponsors.GetByIdAsync(sponsorId);
         if (sponsor == null || sponsor.TenantID != tenantId)
         {
             return ServiceResult.Failure("الراعي غير موجود", "SPONSOR_NOT_FOUND");
         }
+
+        if (await _unitOfWork.SponsorshipContracts.AsQueryable().IgnoreQueryFilters().AnyAsync(c =>
+            c.TenantID == tenantId && c.SponsorID == sponsorId))
+            return ServiceResult.Failure("لا يمكن حذف الراعي لوجود عقود مرتبطة به", "SPONSOR_HAS_CONTRACTS");
 
         await _unitOfWork.Sponsors.SoftDeleteAsync(sponsorId, userId);
         await _unitOfWork.SaveChangesAsync();
@@ -123,6 +143,9 @@ public class SponsorshipService : ISponsorshipService
     }
 
     public async Task<ServiceResult<SponsorshipPackageDto>> CreatePackageAsync(int tenantId, SponsorshipPackageCreateDto dto)
+        => await RunMutationAsync(() => CreatePackageCoreAsync(tenantId, dto));
+
+    private async Task<ServiceResult<SponsorshipPackageDto>> CreatePackageCoreAsync(int tenantId, SponsorshipPackageCreateDto dto)
     {
         var exhibition = await _unitOfWork.Exhibitions.GetByIdAsync(dto.ExhibitionID);
         if (exhibition == null || exhibition.TenantID != tenantId)
@@ -148,12 +171,27 @@ public class SponsorshipService : ISponsorshipService
     }
 
     public async Task<ServiceResult<SponsorshipPackageDto>> UpdatePackageAsync(int tenantId, int packageId, SponsorshipPackageUpdateDto dto)
+        => await RunMutationAsync(() => UpdatePackageCoreAsync(tenantId, packageId, dto));
+
+    private async Task<ServiceResult<SponsorshipPackageDto>> UpdatePackageCoreAsync(int tenantId, int packageId, SponsorshipPackageUpdateDto dto)
     {
         var package = await _unitOfWork.SponsorshipPackages.GetByIdAsync(packageId);
         if (package == null || package.TenantID != tenantId)
         {
             return ServiceResult<SponsorshipPackageDto>.Failure("باقة الرعاية غير موجودة", "PACKAGE_NOT_FOUND");
         }
+
+        var exhibition = await _unitOfWork.Exhibitions.GetByIdAsync(dto.ExhibitionID);
+        if (exhibition == null || exhibition.TenantID != tenantId)
+            return ServiceResult<SponsorshipPackageDto>.Failure("المعرض غير موجود", "EXHIBITION_NOT_FOUND");
+        if (dto.ExhibitionID != package.ExhibitionID && await _unitOfWork.SponsorshipContracts.AsQueryable()
+            .IgnoreQueryFilters().AnyAsync(c => c.TenantID == tenantId && c.PackageID == packageId))
+            return ServiceResult<SponsorshipPackageDto>.Failure("لا يمكن نقل باقة لها عقود إلى معرض آخر", "PACKAGE_HAS_CONTRACTS");
+        var allocated = await _unitOfWork.SponsorshipContracts.AsQueryable().CountAsync(c =>
+            c.TenantID == tenantId && c.PackageID == packageId &&
+            c.Status != SponsorshipStatus.Cancelled && c.Status != SponsorshipStatus.Completed);
+        if (dto.MaxSponsorsCount < 1 || dto.MaxSponsorsCount < allocated)
+            return ServiceResult<SponsorshipPackageDto>.Failure("سعة الباقة لا يمكن أن تقل عن عدد العقود القائمة", "PACKAGE_CAPACITY_CONFLICT");
 
         _mapper.Map(dto, package);
         package.UpdatedAt = DateTime.UtcNow;
@@ -172,12 +210,19 @@ public class SponsorshipService : ISponsorshipService
     }
 
     public async Task<ServiceResult> DeletePackageAsync(int tenantId, int packageId, string userId)
+        => await RunMutationAsync(() => DeletePackageCoreAsync(tenantId, packageId, userId));
+
+    private async Task<ServiceResult> DeletePackageCoreAsync(int tenantId, int packageId, string userId)
     {
         var package = await _unitOfWork.SponsorshipPackages.GetByIdAsync(packageId);
         if (package == null || package.TenantID != tenantId)
         {
             return ServiceResult.Failure("باقة الرعاية غير موجودة", "PACKAGE_NOT_FOUND");
         }
+
+        if (await _unitOfWork.SponsorshipContracts.AsQueryable().IgnoreQueryFilters()
+            .AnyAsync(c => c.TenantID == tenantId && c.PackageID == packageId))
+            return ServiceResult.Failure("لا يمكن حذف باقة مرتبطة بعقود رعاية أو تاريخ عقود", "PACKAGE_HAS_CONTRACTS");
 
         await _unitOfWork.SponsorshipPackages.SoftDeleteAsync(packageId, userId);
         await _unitOfWork.SaveChangesAsync();
@@ -217,12 +262,13 @@ public class SponsorshipService : ISponsorshipService
     }
 
     public async Task<ServiceResult<AdvertisingSpaceDto>> CreateSpaceAsync(int tenantId, AdvertisingSpaceCreateDto dto)
+        => await RunMutationAsync(() => CreateSpaceCoreAsync(tenantId, dto));
+
+    private async Task<ServiceResult<AdvertisingSpaceDto>> CreateSpaceCoreAsync(int tenantId, AdvertisingSpaceCreateDto dto)
     {
-        var exhibition = await _unitOfWork.Exhibitions.GetByIdAsync(dto.ExhibitionID);
-        if (exhibition == null || exhibition.TenantID != tenantId)
-        {
-            return ServiceResult<AdvertisingSpaceDto>.Failure("المعرض غير موجود", "EXHIBITION_NOT_FOUND");
-        }
+        var locationError = await ValidateSpaceLocationAsync(tenantId, dto);
+        if (locationError != null)
+            return ServiceResult<AdvertisingSpaceDto>.Failure(locationError.Value.Message, locationError.Value.Code);
 
         var existingCode = await _unitOfWork.AdvertisingSpaces.FirstOrDefaultAsync(
             a => a.ExhibitionID == dto.ExhibitionID && a.SpaceCode == dto.SpaceCode);
@@ -251,12 +297,25 @@ public class SponsorshipService : ISponsorshipService
     }
 
     public async Task<ServiceResult<AdvertisingSpaceDto>> UpdateSpaceAsync(int tenantId, int spaceId, AdvertisingSpaceUpdateDto dto)
+        => await RunMutationAsync(() => UpdateSpaceCoreAsync(tenantId, spaceId, dto));
+
+    private async Task<ServiceResult<AdvertisingSpaceDto>> UpdateSpaceCoreAsync(int tenantId, int spaceId, AdvertisingSpaceUpdateDto dto)
     {
         var space = await _unitOfWork.AdvertisingSpaces.GetByIdAsync(spaceId);
         if (space == null || space.TenantID != tenantId)
         {
             return ServiceResult<AdvertisingSpaceDto>.Failure("المساحة الإعلانية غير موجودة", "SPACE_NOT_FOUND");
         }
+
+        var locationError = await ValidateSpaceLocationAsync(tenantId, dto);
+        if (locationError != null)
+            return ServiceResult<AdvertisingSpaceDto>.Failure(locationError.Value.Message, locationError.Value.Code);
+        var hasAssignments = await _unitOfWork.SponsorAdAssignments.AsQueryable().IgnoreQueryFilters().AnyAsync(a =>
+            a.SpaceID == spaceId && a.Contract.TenantID == tenantId);
+        if (dto.ExhibitionID != space.ExhibitionID && hasAssignments)
+            return ServiceResult<AdvertisingSpaceDto>.Failure("لا يمكن نقل مساحة لها تخصيصات إلى معرض آخر", "SPACE_HAS_ASSIGNMENTS");
+        if (dto.IsAvailable && await _unitOfWork.SponsorAdAssignments.ExistsAsync(a => a.SpaceID == spaceId))
+            return ServiceResult<AdvertisingSpaceDto>.Failure("المساحة مخصصة لعقد قائم؛ ألغ التخصيص أولاً", "SPACE_ASSIGNMENT_CONFLICT");
 
         _mapper.Map(dto, space);
         space.UpdatedAt = DateTime.UtcNow;
@@ -276,12 +335,19 @@ public class SponsorshipService : ISponsorshipService
     }
 
     public async Task<ServiceResult> DeleteSpaceAsync(int tenantId, int spaceId, string userId)
+        => await RunMutationAsync(() => DeleteSpaceCoreAsync(tenantId, spaceId, userId));
+
+    private async Task<ServiceResult> DeleteSpaceCoreAsync(int tenantId, int spaceId, string userId)
     {
         var space = await _unitOfWork.AdvertisingSpaces.GetByIdAsync(spaceId);
         if (space == null || space.TenantID != tenantId)
         {
             return ServiceResult.Failure("المساحة الإعلانية غير موجودة", "SPACE_NOT_FOUND");
         }
+
+        if (await _unitOfWork.SponsorAdAssignments.AsQueryable().IgnoreQueryFilters()
+            .AnyAsync(a => a.SpaceID == spaceId && a.Contract.TenantID == tenantId))
+            return ServiceResult.Failure("لا يمكن حذف مساحة مرتبطة بتخصيصات عقود أو تاريخ تخصيصات", "SPACE_HAS_ASSIGNMENTS");
 
         await _unitOfWork.AdvertisingSpaces.SoftDeleteAsync(spaceId, userId);
         await _unitOfWork.SaveChangesAsync();
@@ -312,6 +378,9 @@ public class SponsorshipService : ISponsorshipService
     }
 
     public async Task<ServiceResult<SponsorshipContractDto>> CreateContractAsync(int tenantId, string userId, SponsorshipContractCreateDto dto)
+        => await RunMutationAsync(() => CreateContractCoreAsync(tenantId, userId, dto));
+
+    private async Task<ServiceResult<SponsorshipContractDto>> CreateContractCoreAsync(int tenantId, string userId, SponsorshipContractCreateDto dto)
     {
         if (dto.TotalAmount < 0)
         {
@@ -345,11 +414,24 @@ public class SponsorshipService : ISponsorshipService
                     "باقة الرعاية غير موجودة في هذا المعرض",
                     "PACKAGE_NOT_FOUND");
             }
+            if (!package.IsActive)
+                return ServiceResult<SponsorshipContractDto>.Failure("باقة الرعاية غير نشطة", "PACKAGE_INACTIVE");
+            if (dto.Status != SponsorshipStatus.Cancelled && dto.Status != SponsorshipStatus.Completed)
+            {
+                var allocated = await _unitOfWork.SponsorshipContracts.AsQueryable().CountAsync(c =>
+                    c.TenantID == tenantId && c.PackageID == package.PackageID &&
+                    c.Status != SponsorshipStatus.Cancelled && c.Status != SponsorshipStatus.Completed);
+                if (allocated >= package.MaxSponsorsCount)
+                    return ServiceResult<SponsorshipContractDto>.Failure("باقة الرعاية مكتملة السعة", "PACKAGE_CAPACITY_CONFLICT");
+            }
         }
 
         var requestedSpaceIds = dto.SpaceIDsToAssign
             .Distinct()
             .ToArray();
+        if (!Enum.IsDefined(dto.Status) ||
+            (dto.Status is SponsorshipStatus.Cancelled or SponsorshipStatus.Completed && requestedSpaceIds.Length > 0))
+            return ServiceResult<SponsorshipContractDto>.Failure("حالة العقد لا تقبل تخصيص المساحات", "CONTRACT_CLOSED");
         var spacesToAssign = requestedSpaceIds.Length == 0
             ? []
             : await _unitOfWork.AdvertisingSpaces.AsQueryable()
@@ -421,6 +503,16 @@ public class SponsorshipService : ISponsorshipService
             var resultDto = _mapper.Map<SponsorshipContractDto>(fullContract ?? contract);
             return ServiceResult<SponsorshipContractDto>.Success(resultDto);
         }
+        catch (DbUpdateException)
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            return ServiceResult<SponsorshipContractDto>.Failure("تعارض إنشاء العقد مع عملية أخرى", "SPONSORSHIP_CONFLICT");
+        }
+        catch (Exception ex) when (DatabaseConflict.IsLockConflict(ex))
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            return ServiceResult<SponsorshipContractDto>.Failure("تعارض إنشاء العقد مع عملية أخرى", "SPONSORSHIP_CONFLICT");
+        }
         catch (Exception)
         {
             await _unitOfWork.RollbackTransactionAsync();
@@ -436,16 +528,28 @@ public class SponsorshipService : ISponsorshipService
             return ServiceResult<SponsorshipContractDto>.Failure("عقد الرعاية غير موجود", "CONTRACT_NOT_FOUND");
         }
 
-        if (!Enum.TryParse<SponsorshipStatus>(status, true, out var newStatus))
+        if (!Enum.TryParse<SponsorshipStatus>(status, true, out var newStatus) || !Enum.IsDefined(newStatus))
         {
             return ServiceResult<SponsorshipContractDto>.Failure("حالة العقد غير صالحة", "INVALID_STATUS");
         }
 
-        contract.Status = newStatus;
-        contract.UpdatedAt = DateTime.UtcNow;
-
-        _unitOfWork.SponsorshipContracts.Update(contract);
-        await _unitOfWork.SaveChangesAsync();
+        if (contract.Status is SponsorshipStatus.Cancelled or SponsorshipStatus.Completed && newStatus != contract.Status)
+            return ServiceResult<SponsorshipContractDto>.Failure("لا يمكن إعادة فتح عقد منتهٍ؛ أنشئ عقداً جديداً", "INVALID_CONTRACT_TRANSITION");
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            contract.Status = newStatus;
+            contract.UpdatedAt = DateTime.UtcNow;
+            if (newStatus is SponsorshipStatus.Cancelled or SponsorshipStatus.Completed)
+                await ReleaseAssignmentsAsync(tenantId, contractId, "System");
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            return ServiceResult<SponsorshipContractDto>.Failure("تعذر تحديث عقد الرعاية", "CONTRACT_UPDATE_FAILED");
+        }
 
         var fullContract = await _unitOfWork.SponsorshipContracts.GetContractWithDetailsAsync(tenantId, contractId);
         var resultDto = _mapper.Map<SponsorshipContractDto>(fullContract ?? contract);
@@ -460,8 +564,19 @@ public class SponsorshipService : ISponsorshipService
             return ServiceResult.Failure("عقد الرعاية غير موجود", "CONTRACT_NOT_FOUND");
         }
 
-        await _unitOfWork.SponsorshipContracts.SoftDeleteAsync(contractId, userId);
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            await ReleaseAssignmentsAsync(tenantId, contractId, userId);
+            await _unitOfWork.SponsorshipContracts.SoftDeleteAsync(contractId, userId);
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            return ServiceResult.Failure("تعذر حذف عقد الرعاية", "CONTRACT_DELETE_FAILED");
+        }
         return ServiceResult.Success();
     }
 
@@ -469,13 +584,30 @@ public class SponsorshipService : ISponsorshipService
 
     #region Space Assignments
 
+    private async Task ReleaseAssignmentsAsync(int tenantId, int contractId, string userId)
+    {
+        var assignments = await _unitOfWork.SponsorAdAssignments.AsQueryable().Include(a => a.Space)
+            .Where(a => a.ContractID == contractId && a.Space.TenantID == tenantId).ToListAsync();
+        foreach (var assignment in assignments)
+        {
+            assignment.Space.IsAvailable = true;
+            await _unitOfWork.SponsorAdAssignments.SoftDeleteAsync(assignment.AssignmentID, userId);
+        }
+    }
+
     public async Task<ServiceResult<SponsorAdAssignmentDto>> AssignSpaceAsync(int tenantId, SponsorAdAssignmentCreateDto dto)
+        => await RunMutationAsync(() => AssignSpaceCoreAsync(tenantId, dto));
+
+    private async Task<ServiceResult<SponsorAdAssignmentDto>> AssignSpaceCoreAsync(int tenantId, SponsorAdAssignmentCreateDto dto)
     {
         var contract = await _unitOfWork.SponsorshipContracts.GetByIdAsync(dto.ContractID);
         if (contract == null || contract.TenantID != tenantId)
         {
             return ServiceResult<SponsorAdAssignmentDto>.Failure("عقد الرعاية غير موجود", "CONTRACT_NOT_FOUND");
         }
+
+        if (contract.Status is SponsorshipStatus.Cancelled or SponsorshipStatus.Completed)
+            return ServiceResult<SponsorAdAssignmentDto>.Failure("العقد منتهٍ ولا يقبل تخصيص مساحات", "CONTRACT_CLOSED");
 
         var space = await _unitOfWork.AdvertisingSpaces.GetByIdAsync(dto.SpaceID);
         if (space == null ||
@@ -553,4 +685,59 @@ public class SponsorshipService : ISponsorshipService
     }
 
     #endregion
+
+    private async Task<(string Message, string Code)?> ValidateSpaceLocationAsync(int tenantId, AdvertisingSpaceCreateDto dto)
+    {
+        var exhibition = await _unitOfWork.Exhibitions.GetByIdAsync(dto.ExhibitionID);
+        if (exhibition == null || exhibition.TenantID != tenantId)
+            return ("المعرض غير موجود", "EXHIBITION_NOT_FOUND");
+        if (dto.VenueID.HasValue)
+        {
+            var venue = await _unitOfWork.Venues.GetByIdAsync(dto.VenueID.Value);
+            if (venue == null || venue.TenantID != tenantId) return ("الموقع غير موجود", "VENUE_NOT_FOUND");
+            if (dto.VenueID != exhibition.VenueID)
+                return ("الموقع المحدد لا يتبع هذا المعرض", "SPACE_LOCATION_INVALID");
+        }
+        if (dto.HallID.HasValue)
+        {
+            var hall = await _unitOfWork.Halls.GetByIdWithIncludesAsync(dto.HallID.Value, h => h.Venue);
+            if (hall?.Venue == null || hall.Venue.TenantID != tenantId)
+                return ("القاعة غير موجودة", "HALL_NOT_FOUND");
+            if (hall.VenueID != exhibition.VenueID)
+                return ("القاعة لا تتبع موقع المعرض", "SPACE_LOCATION_INVALID");
+        }
+        return null;
+    }
+
+    private async Task<ServiceResult> RunMutationAsync(Func<Task<ServiceResult>> mutation)
+    {
+        await _unitOfWork.BeginSerializableTransactionAsync();
+        try
+        {
+            var result = await mutation();
+            if (result.IsSuccess) await _unitOfWork.CommitTransactionAsync();
+            return result;
+        }
+        catch (DbUpdateException)
+        { return ServiceResult.Failure("تعارضت عملية الرعاية مع تعديل آخر؛ أعد تحميل البيانات", "SPONSORSHIP_CONFLICT"); }
+        catch (Exception ex) when (DatabaseConflict.IsLockConflict(ex))
+        { return ServiceResult.Failure("تعارضت عملية الرعاية مع تعديل آخر؛ أعد تحميل البيانات", "SPONSORSHIP_CONFLICT"); }
+        finally { await _unitOfWork.RollbackTransactionAsync(); }
+    }
+
+    private async Task<ServiceResult<T>> RunMutationAsync<T>(Func<Task<ServiceResult<T>>> mutation)
+    {
+        await _unitOfWork.BeginSerializableTransactionAsync();
+        try
+        {
+            var result = await mutation();
+            if (result.IsSuccess) await _unitOfWork.CommitTransactionAsync();
+            return result;
+        }
+        catch (DbUpdateException)
+        { return ServiceResult<T>.Failure("تعارضت عملية الرعاية مع تعديل آخر؛ أعد تحميل البيانات", "SPONSORSHIP_CONFLICT"); }
+        catch (Exception ex) when (DatabaseConflict.IsLockConflict(ex))
+        { return ServiceResult<T>.Failure("تعارضت عملية الرعاية مع تعديل آخر؛ أعد تحميل البيانات", "SPONSORSHIP_CONFLICT"); }
+        finally { await _unitOfWork.RollbackTransactionAsync(); }
+    }
 }

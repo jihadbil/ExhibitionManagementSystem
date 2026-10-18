@@ -1,21 +1,19 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   Building2,
-  DollarSign,
   Edit2,
   FileCheck,
-  Layers,
   Layout,
   Plus,
-  Search,
   Sparkles,
   Trash2,
-  Users,
   X
 } from 'lucide-react';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useToast } from '../../../app/providers/ToastContext';
 import { api } from '../../../services/api';
+import { getAllItems } from '../../../services/pagination';
+import { getApiErrorMessage } from '../../../services/apiError';
 
 interface Exhibition {
   exhibitionID: number;
@@ -39,10 +37,13 @@ interface SponsorshipPackage {
   packageName: string;
   price: number;
   currencyCode: string;
-  maxSponsors?: number;
-  benefitsDescription: string;
+  level: string;
+  levelName: string;
+  maxSponsorsCount: number;
+  allocatedSponsorsCount: number;
+  entitlementsDescription?: string;
+  isSoldOut: boolean;
   isActive: boolean;
-  contractsCount: number;
 }
 
 interface AdvertisingSpace {
@@ -59,15 +60,20 @@ interface AdvertisingSpace {
 interface SponsorshipContract {
   contractID: number;
   sponsorID: number;
-  sponsorName: string;
+  sponsorCompanyName: string;
   packageID?: number;
   packageName?: string;
   exhibitionID: number;
-  contractAmount: number;
+  totalAmount: number;
   currencyCode: string;
-  status: string;
-  signedAt: string;
+  status: number;
+  statusName: string;
+  signedDate: string;
 }
+
+const sponsorshipLevels: Record<string, number> = {
+  Platinum: 1, Gold: 2, Silver: 3, Bronze: 4, TitleSponsor: 5, Custom: 6,
+};
 
 export const SponsorshipPage = () => {
   const { user } = useAuth();
@@ -102,10 +108,11 @@ export const SponsorshipPage = () => {
   const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
   const [packageForm, setPackageForm] = useState({
     packageName: '',
+    level: 'Gold',
     price: '5000',
     currencyCode: 'LYD',
-    maxSponsors: '3',
-    benefitsDescription: '',
+    maxSponsorsCount: '3',
+    entitlementsDescription: '',
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -114,8 +121,7 @@ export const SponsorshipPage = () => {
   useEffect(() => {
     const loadExhibitions = async () => {
       try {
-        const response = await api.get<{ items: Exhibition[] }>('/api/exhibitions?page=1&pageSize=50');
-        const list = response.data.items ?? [];
+        const list = await getAllItems<Exhibition>('/api/exhibitions');
         setExhibitions(list);
         if (list.length > 0) {
           setSelectedExhibitionId(list[0].exhibitionID.toString());
@@ -237,8 +243,8 @@ export const SponsorshipPage = () => {
       await api.delete(`/api/sponsorship/sponsors/${s.sponsorID}`);
       showToast('تم حذف الراعي بنجاح.', 'success');
       await loadSponsors();
-    } catch {
-      showToast('تعذر حذف الراعي؛ قد يكون مرتبطاً بعقود سارية.', 'danger');
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'تعذر حذف الراعي لوجود عقود مرتبطة به.'), 'danger');
     }
   };
 
@@ -255,15 +261,17 @@ export const SponsorshipPage = () => {
       await api.post('/api/sponsorship/packages', {
         exhibitionID: Number(selectedExhibitionId),
         packageName: packageForm.packageName.trim(),
+        level: sponsorshipLevels[packageForm.level],
         price: Number(packageForm.price) || 0,
         currencyCode: packageForm.currencyCode,
-        maxSponsors: Number(packageForm.maxSponsors) || null,
-        benefitsDescription: packageForm.benefitsDescription.trim(),
+        maxSponsorsCount: Number(packageForm.maxSponsorsCount) || 1,
+        entitlementsDescription: packageForm.entitlementsDescription.trim(),
+        isActive: true,
       });
 
       showToast('تمت إضافة باقة الرعاية بنجاح.', 'success');
       setIsPackageModalOpen(false);
-      setPackageForm({ packageName: '', price: '5000', currencyCode: 'LYD', maxSponsors: '3', benefitsDescription: '' });
+      setPackageForm({ packageName: '', level: 'Gold', price: '5000', currencyCode: 'LYD', maxSponsorsCount: '3', entitlementsDescription: '' });
       await loadPackages(selectedExhibitionId);
     } catch {
       showToast('فشل إضافة باقة الرعاية.', 'danger');
@@ -371,6 +379,16 @@ export const SponsorshipPage = () => {
         </div>
       )}
 
+      {activeTab === 'sponsors' && (
+        <input
+          className="input-field"
+          value={searchQuery}
+          onChange={event => setSearchQuery(event.target.value)}
+          placeholder="ابحث باسم الشركة الراعية أو جهة الاتصال…"
+          style={{ maxWidth: '420px' }}
+        />
+      )}
+
       {error && <div role="alert" style={{ padding: '14px', background: 'var(--danger-bg)', color: 'var(--danger-text)', borderRadius: 'var(--radius-lg)' }}>{error}</div>}
 
       {/* Tab 1: Sponsors */}
@@ -449,17 +467,17 @@ export const SponsorshipPage = () => {
           {packages.map(pkg => (
             <article key={pkg.packageID} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="badge badge-primary">{pkg.packageName}</span>
+                <span className="badge badge-primary">{pkg.packageName} — {pkg.levelName}</span>
                 <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>
                   {pkg.price.toLocaleString()} {pkg.currencyCode}
                 </span>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                {pkg.benefitsDescription || 'تشمل الترويج في المواد الإعلانية، الشعار على بطاقات الدخول والموقع الرسمي.'}
+                {pkg.entitlementsDescription || 'لم تُسجل مزايا لهذه الباقة.'}
               </p>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-main)', paddingTop: '10px' }}>
-                <span>الحد الأقصى: {pkg.maxSponsors ? `${pkg.maxSponsors} رعاة` : 'غير محدود'}</span>
-                <span>العقود الموقعة: <strong>{pkg.contractsCount}</strong></span>
+                <span>السعة: {pkg.allocatedSponsorsCount} / {pkg.maxSponsorsCount}</span>
+                <span>{pkg.isSoldOut ? 'مكتملة' : 'متاحة'}</span>
               </div>
               {canManage && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
@@ -534,13 +552,13 @@ export const SponsorshipPage = () => {
                 {contracts.map(c => (
                   <tr key={c.contractID}>
                     <td><strong>#{c.contractID}</strong></td>
-                    <td>{c.sponsorName}</td>
+                    <td>{c.sponsorCompanyName}</td>
                     <td><span className="badge badge-info">{c.packageName || 'رعاية مخصصة'}</span></td>
-                    <td><strong>{c.contractAmount.toLocaleString()} {c.currencyCode}</strong></td>
-                    <td>{new Date(c.signedAt).toLocaleDateString('ar-LY')}</td>
+                    <td><strong>{c.totalAmount.toLocaleString()} {c.currencyCode}</strong></td>
+                    <td>{new Date(c.signedDate).toLocaleDateString('ar-LY')}</td>
                     <td>
-                      <span className={`badge ${c.status.toLowerCase() === 'active' ? 'badge-success' : 'badge-warning'}`}>
-                        {c.status}
+                      <span className={`badge ${c.statusName === 'Confirmed' || c.statusName === 'Active' ? 'badge-success' : c.statusName === 'Cancelled' ? 'badge-danger' : 'badge-warning'}`}>
+                        {c.statusName}
                       </span>
                     </td>
                   </tr>
@@ -644,6 +662,23 @@ export const SponsorshipPage = () => {
               />
             </div>
 
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">مستوى الرعاية *</label>
+              <select
+                className="input-field"
+                required
+                value={packageForm.level}
+                onChange={e => setPackageForm(prev => ({ ...prev, level: e.target.value }))}
+              >
+                <option value="Platinum">بلاتينية</option>
+                <option value="Gold">ذهبية</option>
+                <option value="Silver">فضية</option>
+                <option value="Bronze">برونزية</option>
+                <option value="TitleSponsor">الراعي الرسمي</option>
+                <option value="Custom">مخصصة</option>
+              </select>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group" style={{ margin: 0 }}>
                 <label className="form-label">قيمة الرعاية (د.ل)</label>
@@ -662,8 +697,8 @@ export const SponsorshipPage = () => {
                   className="input-field"
                   type="number"
                   min="1"
-                  value={packageForm.maxSponsors}
-                  onChange={e => setPackageForm(prev => ({ ...prev, maxSponsors: e.target.value }))}
+                  value={packageForm.maxSponsorsCount}
+                  onChange={e => setPackageForm(prev => ({ ...prev, maxSponsorsCount: e.target.value }))}
                 />
               </div>
             </div>
@@ -674,8 +709,8 @@ export const SponsorshipPage = () => {
                 className="input-field"
                 rows={3}
                 placeholder="وضع الشعار في شاشات القاعة، كلمة افتتاحية، بطاقات VIP مجانية…"
-                value={packageForm.benefitsDescription}
-                onChange={e => setPackageForm(prev => ({ ...prev, benefitsDescription: e.target.value }))}
+                value={packageForm.entitlementsDescription}
+                onChange={e => setPackageForm(prev => ({ ...prev, entitlementsDescription: e.target.value }))}
               />
             </div>
 
