@@ -1,12 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
-  AlertCircle,
-  CheckCircle,
-  CreditCard,
-  DollarSign,
   Eye,
-  FileText,
-  Plus,
+  Printer,
   Receipt,
   Search,
   X
@@ -14,6 +9,7 @@ import {
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useToast } from '../../../app/providers/ToastContext';
 import { api } from '../../../services/api';
+import { summarizeInvoiceTotals } from '../utils/invoiceSummary';
 
 interface Invoice {
   invoiceID: number;
@@ -22,11 +18,21 @@ interface Invoice {
   reservationID?: number;
   invoiceNumber: string;
   invoiceDate: string;
+  subTotal: number;
+  taxRate: number;
   totalAmount: number;
   discountAmount?: number;
   taxAmount?: number;
   adjustedTotalAmount: number;
   refundedAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  baseCurrencyCode: string;
+  adjustedTotalAmountInBaseCurrency: number;
+  paidAmountInBaseCurrency: number;
+  remainingAmountInBaseCurrency: number;
+  isOverdue: boolean;
+  creditNotes: { creditNoteID: number; type: string; amount: number; reason: string; createdAt: string }[];
   currencyCode: string;
   currencySymbol?: string;
   status: string; // 'Pending' | 'Paid' | 'Overdue' | 'Cancelled'
@@ -35,21 +41,20 @@ interface Invoice {
 }
 
 interface InvoiceItem {
-  itemID: number;
+  invoiceItemID: number;
   invoiceID: number;
-  description: string;
-  itemType: string;
+  itemName: string;
   unitPrice: number;
   quantity: number;
-  lineTotal: number;
+  totalPrice: number;
 }
 
 interface Payment {
   paymentID: number;
   invoiceID: number;
   amount: number;
-  paymentMethod: string; // 'Cash' | 'BankTransfer' | 'Check'
-  paymentReference?: string;
+  method: string;
+  referenceNo?: string;
   paymentDate: string;
   status: string;
   notes?: string;
@@ -70,7 +75,9 @@ const emptyPaymentForm: PaymentFormData = {
 };
 
 const statusNames: Record<string, string> = {
-  Pending: 'قيد الانتظار',
+  Draft: 'مسودة',
+  Issued: 'صادرة ومستحقة',
+  PartiallyPaid: 'مدفوعة جزئياً',
   Paid: 'مدفوعة بالكامل',
   Overdue: 'متأخرة السداد',
   Cancelled: 'ملغاة',
@@ -79,8 +86,16 @@ const statusNames: Record<string, string> = {
 const paymentMethodNames: Record<string, string> = {
   Cash: 'نقداً (كاش)',
   BankTransfer: 'تحويل مصرفي',
-  Check: 'شيك مصدق',
+  Cheque: 'شيك مصدق',
+  Online: 'دفع إلكتروني',
 };
+
+const asAmount = (value: unknown): number => {
+  const amount = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(amount) ? amount : 0;
+};
+
+const formatAmount = (value: unknown): string => asAmount(value).toLocaleString('ar-LY');
 
 export const InvoicesPage = () => {
   const { user } = useAuth();
@@ -98,6 +113,11 @@ export const InvoicesPage = () => {
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const detailsRequest = useRef(0);
+  const closeInvoiceDetails = () => {
+    detailsRequest.current++;
+    setSelectedInvoice(null);
+  };
 
   // Record Payment Form State
   const [paymentForm, setPaymentForm] = useState<PaymentFormData>(emptyPaymentForm);
@@ -108,8 +128,14 @@ export const InvoicesPage = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get<{ items: Invoice[] }>('/api/financial/invoices?page=1&pageSize=150');
-      setInvoices(response.data.items ?? []);
+      const all: Invoice[] = [];
+      for (let page = 1; ; page++) {
+        const response = await api.get<{ items: Invoice[]; totalCount: number }>(`/api/financial/invoices?page=${page}&pageSize=200`);
+        const items = response.data.items ?? [];
+        all.push(...items);
+        if (items.length < 200 || all.length >= response.data.totalCount) break;
+      }
+      setInvoices(all);
     } catch {
       setError('تعذر تحميل الفواتير المالية من الخادم.');
     } finally {
@@ -122,35 +148,19 @@ export const InvoicesPage = () => {
   }, [loadInvoices]);
 
   // Financial Statistics
-  const stats = useMemo(() => {
-    let totalBilled = 0;
-    let totalCollected = 0;
-    let overdueCount = 0;
-    let pendingCount = 0;
+  const stats = useMemo(() => summarizeInvoiceTotals(invoices), [invoices]);
 
-    invoices.forEach(inv => {
-      const amount = inv.adjustedTotalAmount || inv.totalAmount;
-      totalBilled += amount;
-      if (inv.status === 'Paid') {
-        totalCollected += amount;
-      } else if (inv.status === 'Overdue') {
-        overdueCount++;
-      } else if (inv.status === 'Pending') {
-        pendingCount++;
-      }
-    });
-
-    const remainingBalance = Math.max(0, totalBilled - totalCollected);
-    const currency = invoices[0]?.currencyCode || 'LYD';
-
-    return { totalBilled, totalCollected, remainingBalance, overdueCount, pendingCount, currency };
-  }, [invoices]);
+  const displayTotal = (field: 'totalBilled' | 'totalCollected' | 'remainingBalance') => stats.totals.length === 0
+    ? formatAmount(0)
+    : stats.totals.map(group => <span key={group.currency} style={{ display: 'block' }}>
+      {formatAmount(group[field])} <small style={{ fontSize: '13px' }}>{group.currency}</small>
+    </span>);
 
   // Filtered Invoices
   const filteredInvoices = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return invoices.filter(inv => {
-      const matchesStatus = statusFilter === 'All' || inv.status.toLowerCase() === statusFilter.toLowerCase();
+      const matchesStatus = statusFilter === 'All' || (statusFilter === 'Overdue' ? inv.isOverdue : inv.status === statusFilter);
       const matchesSearch = !q ||
         inv.invoiceNumber.toLowerCase().includes(q) ||
         inv.exhibitorName.toLowerCase().includes(q);
@@ -160,29 +170,19 @@ export const InvoicesPage = () => {
 
   // Open Invoice Details Modal & Load Payments/Items
   const openInvoiceDetails = async (invoice: Invoice) => {
+    const request = ++detailsRequest.current;
     setSelectedInvoice(invoice);
     setLoadingDetails(true);
     setInvoiceItems([]);
     setPayments([]);
 
     try {
-      const [itemsRes, paymentsRes] = await Promise.allSettled([
-        api.get<InvoiceItem[]>(`/api/invoiceitems/invoice/${invoice.invoiceID}`),
-        api.get<Payment[]>(`/api/financial/payments/invoice/${invoice.invoiceID}`),
-      ]);
-
-      if (itemsRes.status === 'fulfilled') {
-        setInvoiceItems(itemsRes.value.data ?? []);
-      }
-      if (paymentsRes.status === 'fulfilled') {
-        setPayments(paymentsRes.value.data ?? []);
-      }
-
-      // Pre-fill payment form with remaining amount
-      const paid = (paymentsRes.status === 'fulfilled' && paymentsRes.value.data)
-        ? paymentsRes.value.data.reduce((sum, p) => sum + p.amount, 0)
-        : 0;
-      const remaining = Math.max(0, (invoice.adjustedTotalAmount || invoice.totalAmount) - paid);
+      const response = await api.get<Invoice & { items: InvoiceItem[]; payments: Payment[] }>(`/api/financial/invoices/${invoice.invoiceID}`);
+      if (request !== detailsRequest.current) return;
+      setSelectedInvoice(response.data);
+      setInvoiceItems(response.data.items ?? []);
+      setPayments(response.data.payments ?? []);
+      const remaining = asAmount(response.data.remainingAmount);
       setPaymentForm({
         amount: remaining > 0 ? remaining.toString() : '',
         paymentMethod: 'Cash',
@@ -190,9 +190,12 @@ export const InvoicesPage = () => {
         notes: '',
       });
     } catch {
-      showToast('تعذر تحميل تفاصيل الفاتورة كاملة.', 'warning');
+      if (request === detailsRequest.current) {
+        setSelectedInvoice(null);
+        showToast('تعذر تحميل تفاصيل الفاتورة كاملة.', 'warning');
+      }
     } finally {
-      setLoadingDetails(false);
+      if (request === detailsRequest.current) setLoadingDetails(false);
     }
   };
 
@@ -207,21 +210,21 @@ export const InvoicesPage = () => {
     }
 
     setIsSavingPayment(true);
+    const activeRequest = detailsRequest.current;
     try {
       await api.post('/api/financial/payments', {
         invoiceID: selectedInvoice.invoiceID,
         amount: amountNum,
-        paymentMethod: paymentForm.paymentMethod,
-        paymentReference: paymentForm.paymentReference.trim(),
+        currencyCode: selectedInvoice.currencyCode,
+        method: paymentForm.paymentMethod,
+        referenceNo: paymentForm.paymentReference.trim(),
         notes: paymentForm.notes.trim(),
       });
 
       showToast('تم تسجيل سند القبض والدفعة بنجاح.', 'success');
       await loadInvoices();
       // Reload current modal payments
-      const paymentsRes = await api.get<Payment[]>(`/api/financial/payments/invoice/${selectedInvoice.invoiceID}`);
-      setPayments(paymentsRes.data ?? []);
-      setPaymentForm(emptyPaymentForm);
+      if (activeRequest === detailsRequest.current) await openInvoiceDetails(selectedInvoice);
     } catch {
       showToast('فشل تسجيل الدفعة. تحقق من صلاحيات المالية والمبلغ.', 'danger');
     } finally {
@@ -231,6 +234,28 @@ export const InvoicesPage = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <style>{`
+        @media print {
+          @page { size: A4; margin: 14mm; }
+          body { background: #fff !important; }
+          body * { visibility: hidden !important; }
+          .invoice-print-area, .invoice-print-area * { visibility: visible !important; }
+          .invoice-print-area {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            max-height: none !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+            border: 0 !important;
+            color: #111827 !important;
+            background: #fff !important;
+          }
+          .invoice-print-hide { display: none !important; }
+          .invoice-print-area table { width: 100% !important; border-collapse: collapse !important; }
+          .invoice-print-area th, .invoice-print-area td { border: 1px solid #d1d5db !important; color: #111827 !important; }
+        }
+      `}</style>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
         <div>
@@ -247,19 +272,19 @@ export const InvoicesPage = () => {
         <div className="card" style={{ padding: '16px 20px' }}>
           <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>إجمالي الفواتير الصادرة</span>
           <h2 style={{ fontSize: '22px', fontWeight: 800, marginTop: '4px', color: 'var(--text-primary)' }}>
-            {stats.totalBilled.toLocaleString()} <small style={{ fontSize: '13px', fontWeight: 600 }}>{stats.currency}</small>
+            {displayTotal('totalBilled')}
           </h2>
         </div>
         <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid var(--success)' }}>
           <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>المحصل فعلياً</span>
           <h2 style={{ fontSize: '22px', fontWeight: 800, marginTop: '4px', color: 'var(--success)' }}>
-            {stats.totalCollected.toLocaleString()} <small style={{ fontSize: '13px', fontWeight: 600 }}>{stats.currency}</small>
+            {displayTotal('totalCollected')}
           </h2>
         </div>
         <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid var(--primary)' }}>
           <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>المتبقي قيد التحصيل</span>
           <h2 style={{ fontSize: '22px', fontWeight: 800, marginTop: '4px', color: 'var(--primary)' }}>
-            {stats.remainingBalance.toLocaleString()} <small style={{ fontSize: '13px', fontWeight: 600 }}>{stats.currency}</small>
+            {displayTotal('remainingBalance')}
           </h2>
         </div>
         <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid var(--danger)' }}>
@@ -284,8 +309,8 @@ export const InvoicesPage = () => {
         </div>
 
         {/* Status Filters */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {['All', 'Pending', 'Paid', 'Overdue'].map(st => (
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {['All', 'Draft', 'Issued', 'PartiallyPaid', 'Paid', 'Overdue', 'Cancelled'].map(st => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
@@ -322,14 +347,14 @@ export const InvoicesPage = () => {
                   <td><strong>{invoice.invoiceNumber}</strong></td>
                   <td>{invoice.exhibitorName}</td>
                   <td>{new Date(invoice.invoiceDate).toLocaleDateString('ar-LY')}</td>
-                  <td><strong>{(invoice.adjustedTotalAmount || invoice.totalAmount).toLocaleString()} {invoice.currencyCode}</strong></td>
-                  <td>{invoice.refundedAmount ? `${invoice.refundedAmount.toLocaleString()} ${invoice.currencyCode}` : '—'}</td>
+                  <td><strong>{formatAmount(invoice.adjustedTotalAmount)} {invoice.currencyCode}</strong></td>
+                  <td>{asAmount(invoice.refundedAmount) > 0 ? `${formatAmount(invoice.refundedAmount)} ${invoice.currencyCode}` : '—'}</td>
                   <td>{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('ar-LY') : '—'}</td>
                   <td>
                     <span className={`badge ${
                       invoice.status === 'Paid' ? 'badge-success' :
-                      invoice.status === 'Pending' ? 'badge-warning' :
-                      invoice.status === 'Overdue' ? 'badge-danger' : 'badge-info'
+                      invoice.isOverdue ? 'badge-danger' :
+                      invoice.status === 'Issued' ? 'badge-warning' : 'badge-info'
                     }`}>
                       {statusNames[invoice.status] ?? invoice.status}
                     </span>
@@ -359,13 +384,23 @@ export const InvoicesPage = () => {
       {/* Modal: Invoice Details & Record Payment */}
       {selectedInvoice && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(15,23,42,.45)', display: 'grid', placeItems: 'center', padding: '20px' }}>
-          <div className="card" style={{ width: 'min(720px, 100%)', display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="card invoice-print-area" dir="rtl" style={{ width: 'min(720px, 100%)', display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-main)', paddingBottom: '14px' }}>
               <div>
                 <h2>فاتورة رقم {selectedInvoice.invoiceNumber}</h2>
                 <small style={{ color: 'var(--text-secondary)' }}>العارض: {selectedInvoice.exhibitorName}</small>
               </div>
-              <button type="button" className="btn-icon" onClick={() => setSelectedInvoice(null)}><X size={18} /></button>
+              <div className="invoice-print-hide" style={{ display: 'flex', gap: '8px' }}>
+                <button type="button" className="btn-secondary" onClick={() => window.print()} disabled={loadingDetails}>
+                  <Printer size={16} /> طباعة الفاتورة
+                </button>
+                <button type="button" className="btn-icon" onClick={closeInvoiceDetails}><X size={18} /></button>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '12px' }}>
+              <div><strong>تاريخ الفاتورة:</strong> {new Date(selectedInvoice.invoiceDate).toLocaleDateString('ar-LY')}</div>
+              <div><strong>تاريخ الاستحقاق:</strong> {selectedInvoice.dueDate ? new Date(selectedInvoice.dueDate).toLocaleDateString('ar-LY') : '—'}</div>
             </div>
 
             {loadingDetails ? (
@@ -376,18 +411,18 @@ export const InvoicesPage = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', background: 'var(--bg-main)', padding: '14px', borderRadius: 'var(--radius-md)' }}>
                   <div>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>إجمالي الفاتورة</span>
-                    <strong>{(selectedInvoice.adjustedTotalAmount || selectedInvoice.totalAmount).toLocaleString()} {selectedInvoice.currencyCode}</strong>
+                    <strong>{formatAmount(selectedInvoice.adjustedTotalAmount)} {selectedInvoice.currencyCode}</strong>
                   </div>
                   <div>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>إجمالي المدفوع</span>
                     <strong style={{ color: 'var(--success)' }}>
-                      {payments.reduce((s, p) => s + p.amount, 0).toLocaleString()} {selectedInvoice.currencyCode}
+                      {formatAmount(selectedInvoice.paidAmount)} {selectedInvoice.currencyCode}
                     </strong>
                   </div>
                   <div>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>المتبقي للسداد</span>
                     <strong style={{ color: 'var(--primary)' }}>
-                      {Math.max(0, (selectedInvoice.adjustedTotalAmount || selectedInvoice.totalAmount) - payments.reduce((s, p) => s + p.amount, 0)).toLocaleString()} {selectedInvoice.currencyCode}
+                      {formatAmount(selectedInvoice.remainingAmount)} {selectedInvoice.currencyCode}
                     </strong>
                   </div>
                 </div>
@@ -407,14 +442,29 @@ export const InvoicesPage = () => {
                       </thead>
                       <tbody>
                         {invoiceItems.map(item => (
-                          <tr key={item.itemID}>
-                            <td>{item.description}</td>
-                            <td>{item.unitPrice.toLocaleString()}</td>
-                            <td>{item.quantity}</td>
-                            <td><strong>{item.lineTotal.toLocaleString()}</strong></td>
+                          <tr key={item.invoiceItemID}>
+                            <td>{item.itemName || '—'}</td>
+                            <td>{formatAmount(item.unitPrice)}</td>
+                            <td>{formatAmount(item.quantity)}</td>
+                            <td><strong>{formatAmount(item.totalPrice)}</strong></td>
                           </tr>
                         ))}
                       </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {(selectedInvoice.creditNotes?.length ?? 0) > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: '14px', marginBottom: '8px' }}>الإشعارات الدائنة والاستردادات</h3>
+                    <table className="data-table" style={{ fontSize: '12px' }}>
+                      <thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>السبب</th></tr></thead>
+                      <tbody>{selectedInvoice.creditNotes.map(note => <tr key={note.creditNoteID}>
+                        <td>{new Date(note.createdAt).toLocaleDateString('ar-LY')}</td>
+                        <td>{note.type === 'Refund' ? 'استرداد' : 'إشعار دائن'}</td>
+                        <td>{formatAmount(note.amount)} {selectedInvoice.currencyCode}</td>
+                        <td>{note.reason}</td>
+                      </tr>)}</tbody>
                     </table>
                   </div>
                 )}
@@ -438,9 +488,9 @@ export const InvoicesPage = () => {
                         {payments.map(p => (
                           <tr key={p.paymentID}>
                             <td>{new Date(p.paymentDate).toLocaleDateString('ar-LY')}</td>
-                            <td><strong style={{ color: 'var(--success)' }}>{p.amount.toLocaleString()} {selectedInvoice.currencyCode}</strong></td>
-                            <td>{paymentMethodNames[p.paymentMethod] ?? p.paymentMethod}</td>
-                            <td dir="ltr">{p.paymentReference || '—'}</td>
+                            <td><strong style={{ color: 'var(--success)' }}>{formatAmount(p.amount)} {selectedInvoice.currencyCode}</strong></td>
+                            <td>{paymentMethodNames[p.method] ?? p.method}</td>
+                            <td dir="ltr">{p.referenceNo || '—'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -449,8 +499,8 @@ export const InvoicesPage = () => {
                 </div>
 
                 {/* Form to Record New Payment */}
-                {canManageFinance && selectedInvoice.status !== 'Paid' && (
-                  <form onSubmit={handleRecordPayment} style={{ borderTop: '1px solid var(--border-main)', paddingTop: '16px', display: 'grid', gap: '12px' }}>
+                {canManageFinance && ['Issued', 'PartiallyPaid'].includes(selectedInvoice.status) && selectedInvoice.remainingAmount > 0 && (
+                  <form className="invoice-print-hide" onSubmit={handleRecordPayment} style={{ borderTop: '1px solid var(--border-main)', paddingTop: '16px', display: 'grid', gap: '12px' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>تسجيل دفعة / سند قبض جديد</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div className="form-group" style={{ margin: 0 }}>
@@ -473,7 +523,8 @@ export const InvoicesPage = () => {
                         >
                           <option value="Cash">نقداً (كاش)</option>
                           <option value="BankTransfer">تحويل مصرفي</option>
-                          <option value="Check">شيك مصدق</option>
+                          <option value="Cheque">شيك مصدق</option>
+                          <option value="Online">دفع إلكتروني</option>
                         </select>
                       </div>
                     </div>
