@@ -21,6 +21,8 @@ import { UpcomingExhibitionsTable } from '../components/UpcomingExhibitionsTable
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
+  const canCreateExhibition = user?.roles.some(role => role === 'Admin' || role === 'TenantAdmin' || role === 'SuperAdmin') ?? false;
+  const canViewFinancials = user?.roles.some(role => ['Admin', 'TenantAdmin', 'Finance'].includes(role)) ?? false;
 
   const [stats, setStats] = useState<DashboardStatsDto>({
     totalExhibitions: 0,
@@ -75,7 +77,7 @@ export const DashboardPage: React.FC = () => {
       try {
         const [statsData, revenueData, upcomingData] = await Promise.all([
           dashboardService.getStats(),
-          dashboardService.getMonthlyRevenue(),
+          canViewFinancials ? dashboardService.getMonthlyRevenue() : Promise.resolve([]),
           dashboardService.getUpcomingExhibitions()
         ]);
 
@@ -92,7 +94,7 @@ export const DashboardPage: React.FC = () => {
     };
 
     loadDashboardData();
-  }, []);
+  }, [canViewFinancials]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -144,14 +146,16 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <NavLink
-            to="/exhibitions?action=create"
-            className="btn-primary"
-            style={{ height: '42px', fontSize: '13px' }}
-          >
-            <PlusCircle size={16} />
-            <span>معرض جديد</span>
-          </NavLink>
+          {canCreateExhibition && (
+            <NavLink
+              to="/exhibitions?action=create"
+              className="btn-primary"
+              style={{ height: '42px', fontSize: '13px' }}
+            >
+              <PlusCircle size={16} />
+              <span>معرض جديد</span>
+            </NavLink>
+          )}
         </div>
       </div>
 
@@ -169,8 +173,7 @@ export const DashboardPage: React.FC = () => {
           icon={Building2}
           iconColor="#3b82f6"
           iconBg="#dbeafe"
-          trend={{ value: '+12.5%', isPositive: true }}
-          subtitle="مقارنة بالربع الماضي"
+          subtitle={`من أصل ${stats.totalExhibitions} معرض`}
         />
 
         <StatCard
@@ -179,8 +182,7 @@ export const DashboardPage: React.FC = () => {
           icon={Store}
           iconColor="#6366f1"
           iconBg="#e0e7ff"
-          trend={{ value: '+8.3%', isPositive: true }}
-          subtitle="نسبة إشغال إجمالية 84%"
+          subtitle={`نسبة إشغال إجمالية ${stats.occupancyRate.toLocaleString('ar-LY')}%`}
         />
 
         <StatCard
@@ -189,8 +191,7 @@ export const DashboardPage: React.FC = () => {
           icon={Building}
           iconColor="#f59e0b"
           iconBg="#fef3c7"
-          trend={{ value: '+15.2%', isPositive: true }}
-          subtitle="من 12 قطاع تجاري"
+          subtitle="إجمالي الشركات المسجلة"
         />
 
         <StatCard
@@ -199,13 +200,13 @@ export const DashboardPage: React.FC = () => {
           icon={Users}
           iconColor="#10b981"
           iconBg="#d1fae5"
-          trend={{ value: '+24.1%', isPositive: true }}
           subtitle="تذاكر وبطاقات مصدرة"
         />
       </div>
 
       {/* Quick Launchpad Strip */}
       <div
+        className="dashboard-charts"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
@@ -292,7 +293,7 @@ export const DashboardPage: React.FC = () => {
           <span style={{ fontSize: '18px', color: 'var(--success)' }}>←</span>
         </NavLink>
 
-        <NavLink
+        {canViewFinancials && <NavLink
           to="/analytics"
           className="card"
           style={{
@@ -330,18 +331,18 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
           <span style={{ fontSize: '18px', color: 'var(--warning)' }}>←</span>
-        </NavLink>
+        </NavLink>}
       </div>
 
       {/* Charts Section: 2/3 Monthly Revenue Bar Chart + 1/3 Type Distribution Donut Chart */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '2fr 1fr',
+          gridTemplateColumns: canViewFinancials ? '2fr 1fr' : '1fr',
           gap: '24px'
         }}
       >
-        <MonthlyRevenueBarChart data={monthlyRevenue} />
+        {canViewFinancials && <MonthlyRevenueBarChart data={monthlyRevenue} />}
         <TypeDistributionDonutChart data={typeDistribution} />
       </div>
 

@@ -16,5 +16,5 @@ public class ExpenseRepository : GenericRepository<Expense>, IExpenseRepository
 
     public async Task<decimal> GetTotalExpensesAsync(int exhibitionId)
         => await _dbSet.Where(e => e.ExhibitionID == exhibitionId)
-                       .SumAsync(e => e.Amount);
+                       .SumAsync(e => e.AmountInBaseCurrency);
 }

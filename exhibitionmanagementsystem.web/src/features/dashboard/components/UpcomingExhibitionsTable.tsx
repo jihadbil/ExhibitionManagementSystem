@@ -8,6 +8,13 @@ interface UpcomingExhibitionsTableProps {
 }
 
 export const UpcomingExhibitionsTable: React.FC<UpcomingExhibitionsTableProps> = ({ exhibitions }) => {
+  const statusPresentation: Record<string, { label: string; className: string }> = {
+    Planning: { label: 'قيد التخطيط', className: 'badge-warning' },
+    Open: { label: 'مفتوح', className: 'badge-success' },
+    Closed: { label: 'مغلق', className: 'badge-info' },
+    Cancelled: { label: 'ملغي', className: 'badge-danger' },
+  };
+  const formatDate = (date: string) => new Date(date).toLocaleDateString('ar-LY');
   const getGradientByType = (type: string) => {
     switch (type.toLowerCase()) {
       case 'technical': return 'var(--tech-gradient)';
@@ -81,7 +88,7 @@ export const UpcomingExhibitionsTable: React.FC<UpcomingExhibitionsTableProps> =
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
                           <Calendar size={13} />
-                          <span>{ex.startDate} إلى {ex.endDate}</span>
+                          <span>{formatDate(ex.startDate)} إلى {formatDate(ex.endDate)}</span>
                         </div>
                       </div>
                     </div>
@@ -98,15 +105,9 @@ export const UpcomingExhibitionsTable: React.FC<UpcomingExhibitionsTableProps> =
                   {/* Status Badge */}
                   <td>
                     <span
-                      className={`badge ${
-                        ex.status === 'Active'
-                          ? 'badge-success'
-                          : ex.status === 'Upcoming'
-                          ? 'badge-info'
-                          : 'badge-warning'
-                      }`}
+                      className={`badge ${statusPresentation[ex.status]?.className ?? 'badge-info'}`}
                     >
-                      {ex.status === 'Active' ? 'نشط حالياً' : ex.status === 'Upcoming' ? 'قريباً' : 'مكتمل'}
+                      {statusPresentation[ex.status]?.label ?? ex.status}
                     </span>
                   </td>
 
@@ -114,9 +115,9 @@ export const UpcomingExhibitionsTable: React.FC<UpcomingExhibitionsTableProps> =
                   <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                       <NavLink
-                        to={`/exhibitions?id=${ex.exhibitionID}`}
+                        to={`/exhibitions/${ex.exhibitionID}/booths`}
                         className="btn-icon"
-                        title="عرض التفاصيل"
+                        title="إدارة أجنحة وتسعير المعرض"
                       >
                         <ExternalLink size={16} />
                       </NavLink>

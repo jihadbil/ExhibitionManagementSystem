@@ -32,8 +32,31 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<FinancialReportDto>.Failure("المعرض غير موجود", "EXHIBITION_NOT_FOUND");
             }
 
-            decimal totalRevenue = await _unitOfWork.BoothReservations.GetTotalRevenueAsync(exhibitionId);
-            int totalVisitors = await _unitOfWork.Tickets.GetActiveTicketCountAsync(exhibitionId);
+            var tenant = await _unitOfWork.Tenants.GetByIdAsync(tenantId);
+            var baseCurrency = tenant?.BaseCurrency ?? "LYD";
+            var invoices = await _unitOfWork.Invoices.AsQueryable()
+                .Include(i => i.Payments).Include(i => i.CreditNotes)
+                .Where(i => i.Reservation.ExhibitionID == exhibitionId &&
+                    i.Status != InvoiceStatus.Draft && i.Status != InvoiceStatus.Cancelled).ToListAsync();
+            var expenses = await _unitOfWork.Expenses.AsQueryable()
+                .Where(e => e.ExhibitionID == exhibitionId).ToListAsync();
+            if (invoices.Any(i => i.BaseCurrencyCode != baseCurrency) || expenses.Any(e => e.BaseCurrencyCode != baseCurrency))
+                return ServiceResult<FinancialReportDto>.Failure("توجد معاملات بعملات أساسية مختلفة؛ يجب تسويتها قبل إصدار التقرير", "FINANCIAL_CURRENCY_MISMATCH");
+            foreach (var expense in expenses.Where(e => e.ExchangeRateUsed <= 0))
+            {
+                var conversion = await _unitOfWork.ExchangeRates.ConvertWithDetailsAsync(
+                    expense.CurrencyCode, baseCurrency, expense.Amount, expense.ExpenseDate);
+                if (conversion == null)
+                    return ServiceResult<FinancialReportDto>.Failure(
+                        $"سعر الصرف التاريخي للمصروف #{expense.ExpenseID} من {expense.CurrencyCode} إلى {baseCurrency} غير متوفر", "UNCONVERTED_EXPENSE");
+                expense.ExchangeRateUsed = conversion.ExchangeRate;
+                expense.ExchangeRateDate = conversion.RateDate;
+                expense.AmountInBaseCurrency = conversion.TargetAmount;
+            }
+            decimal totalRevenue = invoices.Sum(i => InvoiceFinancialSummary.Calculate(i).AdjustedBaseTotal);
+            int totalVisitors = await _unitOfWork.TicketScans.AsQueryable()
+                .Where(s => s.Ticket.TenantID == tenantId && s.Ticket.ExhibitionID == exhibitionId && s.Direction == ScanDirection.In)
+                .Select(s => s.Ticket.VisitorID).Distinct().CountAsync();
 
             var venueHalls = await _unitOfWork.Halls.FindAsync(h => h.VenueID == exhibition.VenueID);
             var hallIds = venueHalls.Select(h => h.HallID).ToList();
@@ -61,7 +84,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
             decimal occupancyRate = totalBooths > 0 ? (decimal)reservedBoothsCount / totalBooths * 100 : 0m;
 
-            decimal totalExpenses = await _unitOfWork.Expenses.GetTotalExpensesAsync(exhibitionId);
+            decimal totalExpenses = expenses.Sum(e => e.AmountInBaseCurrency);
             decimal netProfit = totalRevenue - totalExpenses;
 
             var report = new FinancialReport
@@ -75,7 +98,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 TotalExhibitors = totalExhibitors,
                 TotalBooths = totalBooths,
                 OccupancyRate = occupancyRate,
-                CurrencyCode = string.IsNullOrWhiteSpace(exhibition.EntryCurrency) ? "USD" : exhibition.EntryCurrency,
+                CurrencyCode = baseCurrency,
                 GeneratedAt = DateTime.UtcNow,
                 GeneratedByUserId = userId,
                 ReportPeriodFrom = exhibition.StartDate,

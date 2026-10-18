@@ -8,14 +8,21 @@ namespace ExhibitionManagementSystem.Models.DTOs.Dashboard
         public int ActiveExhibitions { get; set; }
         public int TotalExhibitors { get; set; }
         public int TotalVisitors { get; set; }
-        public double TotalRevenue { get; set; }
-        public double PendingRevenue { get; set; }
+        public double? TotalRevenue { get; set; }
+        public double? PendingRevenue { get; set; }
+        public bool CanViewFinancials { get; set; }
         public int TotalBooths { get; set; }
         public int OccupiedBooths { get; set; }
         public double OccupancyRate { get; set; }
         public int PendingReservations { get; set; }
         public string CurrencyCode { get; set; } = "USD";
         public string CurrencySymbol { get; set; } = "$";
+    }
+
+    public class VisitorTrafficPointDto
+    {
+        public string Label { get; set; } = string.Empty;
+        public int Value { get; set; }
     }
 
     public class ActivityItemDto

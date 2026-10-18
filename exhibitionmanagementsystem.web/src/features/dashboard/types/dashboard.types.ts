@@ -4,8 +4,9 @@ export interface DashboardStatsDto {
   occupiedBooths: number;
   totalExhibitors: number;
   totalVisitors: number;
-  totalRevenue: number;
-  pendingRevenue: number;
+  totalRevenue: number | null;
+  pendingRevenue: number | null;
+  canViewFinancials?: boolean;
   totalBooths: number;
   occupancyRate: number;
   pendingReservations: number;
