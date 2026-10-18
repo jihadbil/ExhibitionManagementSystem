@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <!-- The application must not roll back to the vulnerable 10.0.12 runtime. -->
+    <RuntimeFrameworkVersion>10.0.13</RuntimeFrameworkVersion>
+    <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+  </PropertyGroup>
+</Project>
