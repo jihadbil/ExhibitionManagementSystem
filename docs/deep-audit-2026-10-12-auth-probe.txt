@@ -1,0 +1,3 @@
+After refresh: synthetic-new-access synthetic-new-refresh
+After profile update: synthetic-old-access synthetic-old-refresh
+CONFIRMED: updating the profile restores a revoked refresh token from React state.

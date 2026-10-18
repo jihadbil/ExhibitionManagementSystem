@@ -1,0 +1,10 @@
+  ExhibitionManagementSystem.Models -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Models\bin\Debug\net10.0\ExhibitionManagementSystem.Models.dll
+  ExhibitionManagementSystem.Models.DTOs -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Models.DTOs\bin\Debug\net10.0\ExhibitionManagementSystem.Models.DTOs.dll
+  ExhibitionManagementSystem.DataAccess -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.DataAccess\bin\Debug\net10.0\ExhibitionManagementSystem.DataAccess.dll
+  ExhibitionManagementSystem.Services -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Services\bin\Debug\net10.0\ExhibitionManagementSystem.Services.dll
+  ExhibitionManagementSystem -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem\bin\Debug\net10.0\ExhibitionManagementSystem.dll
+  ExhibitionManagementSystem.Api.Tests -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\bin\Debug\net10.0\ExhibitionManagementSystem.Api.Tests.dll
+Test run for C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\bin\Debug\net10.0\ExhibitionManagementSystem.Api.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   247, Skipped:     0, Total:   247, Duration: 55 s - ExhibitionManagementSystem.Api.Tests.dll (net10.0)

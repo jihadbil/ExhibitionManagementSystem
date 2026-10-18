@@ -1,0 +1,404 @@
+
+> exhibitionmanagementsystem.web@0.0.0 test
+> node --experimental-strip-types --test tests/*.test.mjs
+
+TAP version 13
+# Subtest: loads actual linked hall outline even without DB dimensions
+ok 1 - loads actual linked hall outline even without DB dimensions
+  ---
+  duration_ms: 8.4201
+  type: 'test'
+  ...
+# Subtest: rejects concave boundary crossings through vertices and permits touching edges
+ok 2 - rejects concave boundary crossings through vertices and permits touching edges
+  ---
+  duration_ms: 1.325
+  type: 'test'
+  ...
+# Subtest: actual concave booth polygons do not collide through empty bounding-box notches
+ok 3 - actual concave booth polygons do not collide through empty bounding-box notches
+  ---
+  duration_ms: 3.3611
+  type: 'test'
+  ...
+# Subtest: site walls and columns cannot be crossed and are not duplicated on save reload
+ok 4 - site walls and columns cannot be crossed and are not duplicated on save reload
+  ---
+  duration_ms: 3.1101
+  type: 'test'
+  ...
+# Subtest: row builder rejects footprints outside concave halls, duplicate numbers and unsafe counts
+ok 5 - row builder rejects footprints outside concave halls, duplicate numbers and unsafe counts
+  ---
+  duration_ms: 3.7129
+  type: 'test'
+  ...
+# Subtest: copy, undo and deletion retain identities and never clone database IDs or reservation state
+ok 6 - copy, undo and deletion retain identities and never clone database IDs or reservation state
+  ---
+  duration_ms: 1.5249
+  type: 'test'
+  ...
+# Subtest: split and merge preserve accurate area after decimal rounding and track replaced IDs
+ok 7 - split and merge preserve accurate area after decimal rounding and track replaced IDs
+  ---
+  duration_ms: 8.8136
+  type: 'test'
+  ...
+# Subtest: unpositioned database booths need explicit placement and maintain existing record IDs
+ok 8 - unpositioned database booths need explicit placement and maintain existing record IDs
+  ---
+  duration_ms: 1.2226
+  type: 'test'
+  ...
+# Subtest: locks, groups, legacy extras, architecture and annotations survive server-assigned IDs
+ok 9 - locks, groups, legacy extras, architecture and annotations survive server-assigned IDs
+  ---
+  duration_ms: 0.9022
+  type: 'test'
+  ...
+# Subtest: invalid polygon drafts, duplicate booth labels and malformed stored plans stay explicit errors
+ok 10 - invalid polygon drafts, duplicate booth labels and malformed stored plans stay explicit errors
+  ---
+  duration_ms: 2.0692
+  type: 'test'
+  ...
+# Subtest: confirming a legacy unpositioned booth marks a real save even when suggested geometry stays the same
+ok 11 - confirming a legacy unpositioned booth marks a real save even when suggested geometry stays the same
+  ---
+  duration_ms: 1.0627
+  type: 'test'
+  ...
+# Subtest: legacy booth doors follow their owner through move, resize, rotation and renaming
+ok 12 - legacy booth doors follow their owner through move, resize, rotation and renaming
+  ---
+  duration_ms: 1.0152
+  type: 'test'
+  ...
+# Subtest: saving an untouched protected polygon preserves its database JSON representation
+ok 13 - saving an untouched protected polygon preserves its database JSON representation
+  ---
+  duration_ms: 0.4471
+  type: 'test'
+  ...
+# Subtest: uses base snapshots and includes partial collections without mixing base currencies
+ok 14 - uses base snapshots and includes partial collections without mixing base currencies
+  ---
+  duration_ms: 3.7391
+  type: 'test'
+  ...
+# Subtest: preserves zero after full credit and excludes drafts and cancellations
+ok 15 - preserves zero after full credit and excludes drafts and cancellations
+  ---
+  duration_ms: 0.3759
+  type: 'test'
+  ...
+# Subtest: adds money using integer cents
+ok 16 - adds money using integer cents
+  ---
+  duration_ms: 0.3573
+  type: 'test'
+  ...
+# Subtest: adds monthly movements but does not add repeated outstanding snapshots
+ok 17 - adds monthly movements but does not add repeated outstanding snapshots
+  ---
+  duration_ms: 1.8501
+  type: 'test'
+  ...
+# Subtest: uses last balance after collection and sums money in cents
+ok 18 - uses last balance after collection and sums money in cents
+  ---
+  duration_ms: 0.1862
+  type: 'test'
+  ...
+# Subtest: empty chart has zero totals
+ok 19 - empty chart has zero totals
+  ---
+  duration_ms: 0.1247
+  type: 'test'
+  ...
+# Subtest: loads entries beyond the first page even when the server caps page size
+ok 20 - loads entries beyond the first page even when the server caps page size
+  ---
+  duration_ms: 1.35
+  type: 'test'
+  ...
+# Subtest: a failed subsequent page rejects instead of displaying an incomplete directory
+ok 21 - a failed subsequent page rejects instead of displaying an incomplete directory
+  ---
+  duration_ms: 0.4522
+  type: 'test'
+  ...
+# Subtest: empty and full last pages stop without requesting nonexistent pages
+ok 22 - empty and full last pages stop without requesting nonexistent pages
+  ---
+  duration_ms: 0.1923
+  type: 'test'
+  ...
+# Subtest: profile updates preserve rotated tokens and cannot revive a cleared session
+ok 23 - profile updates preserve rotated tokens and cannot revive a cleared session
+  ---
+  duration_ms: 60.0653
+  type: 'test'
+  ...
+# Subtest: drawing snaps to off-grid vertices and shows both coordinate matches
+ok 24 - drawing snaps to off-grid vertices and shows both coordinate matches
+  ---
+  duration_ms: 5.1118
+  type: 'test'
+  ...
+# Subtest: smart attraction stays eight screen pixels across zoom levels
+ok 25 - smart attraction stays eight screen pixels across zoom levels
+  ---
+  duration_ms: 1.6416
+  type: 'test'
+  ...
+# Subtest: hidden and excluded shapes do not attract drawing; locked references still do
+ok 26 - hidden and excluded shapes do not attract drawing; locked references still do
+  ---
+  duration_ms: 0.5415
+  type: 'test'
+  ...
+# Subtest: Alt bypasses grid and smart references; disabling smart alignment preserves grid
+ok 27 - Alt bypasses grid and smart references; disabling smart alignment preserves grid
+  ---
+  duration_ms: 0.2869
+  type: 'test'
+  ...
+# Subtest: drawing automatically locks horizontal and vertical directions without Shift
+ok 28 - drawing automatically locks horizontal and vertical directions without Shift
+  ---
+  duration_ms: 0.5274
+  type: 'test'
+  ...
+# Subtest: parallel drawing follows actual rotated world segments and marks the reference
+ok 29 - parallel drawing follows actual rotated world segments and marks the reference
+  ---
+  duration_ms: 0.7503
+  type: 'test'
+  ...
+# Subtest: Shift constraint wins over nearby angled segments and survives Alt bypass
+ok 30 - Shift constraint wins over nearby angled segments and survives Alt bypass
+  ---
+  duration_ms: 0.3344
+  type: 'test'
+  ...
+# Subtest: a line not close in angle is not falsely declared parallel
+ok 31 - a line not close in angle is not falsely declared parallel
+  ---
+  duration_ms: 0.2546
+  type: 'test'
+  ...
+# Subtest: moving uses raw pointer proximity before the grid and retains a group delta
+ok 32 - moving uses raw pointer proximity before the grid and retains a group delta
+  ---
+  duration_ms: 1.2039
+  type: 'test'
+  ...
+# Subtest: page clamping removes alignment guides that cannot actually be reached
+ok 33 - page clamping removes alignment guides that cannot actually be reached
+  ---
+  duration_ms: 0.6349
+  type: 'test'
+  ...
+# Subtest: six alignment commands align real bounds including rotated shapes
+ok 34 - six alignment commands align real bounds including rotated shapes
+  ---
+  duration_ms: 1.0983
+  type: 'test'
+  ...
+# Subtest: distribution uses equal edge gaps with unequal sizes and fixes outer shapes
+ok 35 - distribution uses equal edge gaps with unequal sizes and fixes outer shapes
+  ---
+  duration_ms: 1.0788
+  type: 'test'
+  ...
+# Subtest: alignment refuses locked selections and distribution refuses insufficient room
+ok 36 - alignment refuses locked selections and distribution refuses insufficient room
+  ---
+  duration_ms: 0.1908
+  type: 'test'
+  ...
+# Subtest: alignment treats groups as a unit and preserves their internal offsets
+ok 37 - alignment treats groups as a unit and preserves their internal offsets
+  ---
+  duration_ms: 0.1877
+  type: 'test'
+  ...
+# Subtest: concave hall area uses its actual outline rather than bounding rectangle
+ok 38 - concave hall area uses its actual outline rather than bounding rectangle
+  ---
+  duration_ms: 3.1092
+  type: 'test'
+  ...
+# Subtest: rejects crossed, zero-area and duplicate-vertex hall outlines
+ok 39 - rejects crossed, zero-area and duplicate-vertex hall outlines
+  ---
+  duration_ms: 1.4961
+  type: 'test'
+  ...
+# Subtest: local and world transforms round trip at arbitrary angles
+ok 40 - local and world transforms round trip at arbitrary angles
+  ---
+  duration_ms: 0.6142
+  type: 'test'
+  ...
+# Subtest: resizing from a rotated handle without moving it preserves geometry
+ok 41 - resizing from a rotated handle without moving it preserves geometry
+  ---
+  duration_ms: 0.796
+  type: 'test'
+  ...
+# Subtest: resizing rotated geometry anchors its opposite corner
+ok 42 - resizing rotated geometry anchors its opposite corner
+  ---
+  duration_ms: 0.2685
+  type: 'test'
+  ...
+# Subtest: rotated elements cannot escape site bounds unnoticed
+ok 43 - rotated elements cannot escape site bounds unnoticed
+  ---
+  duration_ms: 0.2014
+  type: 'test'
+  ...
+# Subtest: ellipse bounds use rotated ellipse extents rather than rectangle corners
+ok 44 - ellipse bounds use rotated ellipse extents rather than rectangle corners
+  ---
+  duration_ms: 0.2523
+  type: 'test'
+  ...
+# Subtest: editing an angled polygon vertex bakes the transform without moving other vertices
+ok 45 - editing an angled polygon vertex bakes the transform without moving other vertices
+  ---
+  duration_ms: 0.2443
+  type: 'test'
+  ...
+# Subtest: moving several shapes clamps the entire selection as one unit
+ok 46 - moving several shapes clamps the entire selection as one unit
+  ---
+  duration_ms: 0.6034
+  type: 'test'
+  ...
+# Subtest: shape and layer locks prevent movement and retain selection membership
+ok 47 - shape and layer locks prevent movement and retain selection membership
+  ---
+  duration_ms: 1.3485
+  type: 'test'
+  ...
+# Subtest: history is pure, ignores no-op commits and clears redo on a new edit
+ok 48 - history is pure, ignores no-op commits and clears redo on a new edit
+  ---
+  duration_ms: 1.3436
+  type: 'test'
+  ...
+# Subtest: save/reload preserves custom hall outline independently of source rectangle dimensions
+ok 49 - save/reload preserves custom hall outline independently of source rectangle dimensions
+  ---
+  duration_ms: 1.6962
+  type: 'test'
+  ...
+# Subtest: serialization exports hall ownership and rotated world bounds for the API
+ok 50 - serialization exports hall ownership and rotated world bounds for the API
+  ---
+  duration_ms: 0.5464
+  type: 'test'
+  ...
+# Subtest: legacy site plans migrate halls, partitions and hall doors without losing them
+ok 51 - legacy site plans migrate halls, partitions and hall doors without losing them
+  ---
+  duration_ms: 0.4748
+  type: 'test'
+  ...
+# Subtest: removed or foreign hall records are not resurrected when a plan is imported
+ok 52 - removed or foreign hall records are not resurrected when a plan is imported
+  ---
+  duration_ms: 0.2616
+  type: 'test'
+  ...
+# Subtest: corrupt imports fail explicitly instead of replacing saved plans with defaults
+ok 53 - corrupt imports fail explicitly instead of replacing saved plans with defaults
+  ---
+  duration_ms: 0.5877
+  type: 'test'
+  ...
+# Subtest: grid precision preserves quarter-meter coordinates and Alt bypasses snapping
+ok 54 - grid precision preserves quarter-meter coordinates and Alt bypasses snapping
+  ---
+  duration_ms: 0.3299
+  type: 'test'
+  ...
+# Subtest: two drawings cannot claim the same hall record
+ok 55 - two drawings cannot claim the same hall record
+  ---
+  duration_ms: 1.2176
+  type: 'test'
+  ...
+# Subtest: overlapping halls warn while halls sharing only an edge do not
+ok 56 - overlapping halls warn while halls sharing only an edge do not
+  ---
+  duration_ms: 0.3458
+  type: 'test'
+  ...
+# Subtest: corrupt zero-length paths and out-of-box vertices are rejected
+ok 57 - corrupt zero-length paths and out-of-box vertices are rejected
+  ---
+  duration_ms: 0.242
+  type: 'test'
+  ...
+# Subtest: renaming a hall preserves drawing history while synchronizing its source name
+ok 58 - renaming a hall preserves drawing history while synchronizing its source name
+  ---
+  duration_ms: 0.229
+  type: 'test'
+  ...
+# Subtest: marquee direction supports containment and crossing selection
+ok 59 - marquee direction supports containment and crossing selection
+  ---
+  duration_ms: 0.2822
+  type: 'test'
+  ...
+# Subtest: direct editing chooses polygon vertices or labels without bypassing locks
+ok 60 - direct editing chooses polygon vertices or labels without bypassing locks
+  ---
+  duration_ms: 0.1682
+  type: 'test'
+  ...
+# Subtest: expanding the page preserves hall geometry and locked/hidden objects
+ok 61 - expanding the page preserves hall geometry and locked/hidden objects
+  ---
+  duration_ms: 0.3654
+  type: 'test'
+  ...
+# Subtest: page minimum dimensions include transformed bounds of hidden elements
+ok 62 - page minimum dimensions include transformed bounds of hidden elements
+  ---
+  duration_ms: 0.5886
+  type: 'test'
+  ...
+# Subtest: existing imported errors do not prevent increasing an unaffected page axis
+ok 63 - existing imported errors do not prevent increasing an unaffected page axis
+  ---
+  duration_ms: 0.2382
+  type: 'test'
+  ...
+# Subtest: invalid page dimensions are rejected explicitly
+ok 64 - invalid page dimensions are rejected explicitly
+  ---
+  duration_ms: 0.2587
+  type: 'test'
+  ...
+# Subtest: page enlargement supports undo and save/reload without changing hall outlines
+ok 65 - page enlargement supports undo and save/reload without changing hall outlines
+  ---
+  duration_ms: 0.4206
+  type: 'test'
+  ...
+1..65
+# tests 65
+# suites 0
+# pass 65
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 668.3514

@@ -1,0 +1,444 @@
+  ExhibitionManagementSystem.Models -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Models\bin\Debug\net10.0\ExhibitionManagementSystem.Models.dll
+  ExhibitionManagementSystem.Models.DTOs -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Models.DTOs\bin\Debug\net10.0\ExhibitionManagementSystem.Models.DTOs.dll
+  ExhibitionManagementSystem.DataAccess -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.DataAccess\bin\Debug\net10.0\ExhibitionManagementSystem.DataAccess.dll
+  ExhibitionManagementSystem.Services -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Services\bin\Debug\net10.0\ExhibitionManagementSystem.Services.dll
+  ExhibitionManagementSystem -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem\bin\Debug\net10.0\ExhibitionManagementSystem.dll
+  ExhibitionManagementSystem.Api.Tests -> C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\bin\Debug\net10.0\ExhibitionManagementSystem.Api.Tests.dll
+Test run for C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\bin\Debug\net10.0\ExhibitionManagementSystem.Api.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.8.2+699d445a1a (64-bit .NET 10.0.12)
+[xUnit.net 00:00:00.12]   Discovering: ExhibitionManagementSystem.Api.Tests
+[xUnit.net 00:00:00.23]   Discovered:  ExhibitionManagementSystem.Api.Tests
+[xUnit.net 00:00:00.23]   Starting:    ExhibitionManagementSystem.Api.Tests
+[xUnit.net 00:00:08.98]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "ForeignAdvertisingHall") [FAIL]
+[xUnit.net 00:00:08.98]       Foreign hall references must be rejected before mapping confidential names.
+[xUnit.net 00:00:08.98]       Stack Trace:
+[xUnit.net 00:00:08.98]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(100,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:08.98]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:08.98]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:08.98]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:08.98]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:08.99]       Output:
+[xUnit.net 00:00:08.99]         Scenario=ForeignAdvertisingHall; disposable database=EMS_DeepAudit_20261012_af7be409ce214429ab6e4d6c910794a5
+[xUnit.net 00:00:08.99]         Accepted=True; leaked hall name=Foreign confidential hall
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "ForeignAdvertisingHall") [8 s]
+  Error Message:
+   Foreign hall references must be rejected before mapping confidential names.
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 100
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=ForeignAdvertisingHall; disposable database=EMS_DeepAudit_20261012_af7be409ce214429ab6e4d6c910794a5
+ Accepted=True; leaked hall name=Foreign confidential hall
+
+
+[xUnit.net 00:00:12.21]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "ForeignPackageExhibition") [FAIL]
+[xUnit.net 00:00:12.21]       Cross-tenant package reassignment must be rejected.
+[xUnit.net 00:00:12.21]       Stack Trace:
+[xUnit.net 00:00:12.21]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(93,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:12.21]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:12.21]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:12.21]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:12.21]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:12.21]       Output:
+[xUnit.net 00:00:12.21]         Scenario=ForeignPackageExhibition; disposable database=EMS_DeepAudit_20261012_755c864b1195488aa6835e1cce3630fa
+[xUnit.net 00:00:12.21]         Accepted=True; foreign exhibition ID=2; stored exhibition ID=2
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "ForeignPackageExhibition") [3 s]
+  Error Message:
+   Cross-tenant package reassignment must be rejected.
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 93
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=ForeignPackageExhibition; disposable database=EMS_DeepAudit_20261012_755c864b1195488aa6835e1cce3630fa
+ Accepted=True; foreign exhibition ID=2; stored exhibition ID=2
+
+
+[xUnit.net 00:00:14.85]       Hall update must validate plan syntax and dimensions.
+[xUnit.net 00:00:14.85]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "HallInvalidPlan") [FAIL]
+[xUnit.net 00:00:14.85]       Stack Trace:
+[xUnit.net 00:00:14.85]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(138,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:14.85]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:14.85]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:14.85]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:14.85]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:14.85]       Output:
+[xUnit.net 00:00:14.85]         Scenario=HallInvalidPlan; disposable database=EMS_DeepAudit_20261012_6bbd2d542a8746bab899366f9f6d7ee1
+[xUnit.net 00:00:14.85]         Accepted=True; width after=-1; stored plan=not-json
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "HallInvalidPlan") [2 s]
+  Error Message:
+   Hall update must validate plan syntax and dimensions.
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 138
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=HallInvalidPlan; disposable database=EMS_DeepAudit_20261012_6bbd2d542a8746bab899366f9f6d7ee1
+ Accepted=True; width after=-1; stored plan=not-json
+
+
+[xUnit.net 00:00:17.17]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "DeleteSponsorWithContract") [FAIL]
+[xUnit.net 00:00:17.17]       Assert.Single() Failure: The collection was empty
+[xUnit.net 00:00:17.17]       Stack Trace:
+[xUnit.net 00:00:17.17]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(109,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:17.17]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:17.17]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:17.17]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:17.17]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:17.17]       Output:
+[xUnit.net 00:00:17.17]         Scenario=DeleteSponsorWithContract; disposable database=EMS_DeepAudit_20261012_0de690410dbc483594e6a8cc552a5fae
+[xUnit.net 00:00:17.17]         Delete accepted=True; visible contracts=0; stored contracts=1
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "DeleteSponsorWithContract") [2 s]
+  Error Message:
+   Assert.Single() Failure: The collection was empty
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 109
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=DeleteSponsorWithContract; disposable database=EMS_DeepAudit_20261012_0de690410dbc483594e6a8cc552a5fae
+ Delete accepted=True; visible contracts=0; stored contracts=1
+
+
+[xUnit.net 00:00:19.53]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "FractionalCentPayment") [FAIL]
+[xUnit.net 00:00:19.53]       Unsupported currency precision must be rejected or normalized consistently before saving.
+[xUnit.net 00:00:19.53]       Stack Trace:
+[xUnit.net 00:00:19.53]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(173,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:19.53]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:19.53]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:19.53]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:19.53]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:19.53]       Output:
+[xUnit.net 00:00:19.53]         Scenario=FractionalCentPayment; disposable database=EMS_DeepAudit_20261012_97aa956f58284472bb8104c12651f00e
+[xUnit.net 00:00:19.53]         Accepted=True; requested=0.015; response=0.015; stored=0.02; stored base=0.08; status=PartiallyPaid
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "FractionalCentPayment") [2 s]
+  Error Message:
+   Unsupported currency precision must be rejected or normalized consistently before saving.
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 173
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=FractionalCentPayment; disposable database=EMS_DeepAudit_20261012_97aa956f58284472bb8104c12651f00e
+ Accepted=True; requested=0.015; response=0.015; stored=0.02; stored base=0.08; status=PartiallyPaid
+
+
+[xUnit.net 00:00:21.56]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "OversellSponsorshipPackage") [FAIL]
+[xUnit.net 00:00:21.56]       A fully allocated package must reject a second contract.
+[xUnit.net 00:00:21.56]       Stack Trace:
+[xUnit.net 00:00:21.56]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(116,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:21.56]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:21.56]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:21.56]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:21.56]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:21.56]       Output:
+[xUnit.net 00:00:21.56]         Scenario=OversellSponsorshipPackage; disposable database=EMS_DeepAudit_20261012_e2f5de48dd654355a4a9d29c416456f8
+[xUnit.net 00:00:21.56]         Second contract accepted=True; contracts=2; capacity=1
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "OversellSponsorshipPackage") [2 s]
+  Error Message:
+   A fully allocated package must reject a second contract.
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 116
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=OversellSponsorshipPackage; disposable database=EMS_DeepAudit_20261012_e2f5de48dd654355a4a9d29c416456f8
+ Second contract accepted=True; contracts=2; capacity=1
+
+
+[xUnit.net 00:00:23.65]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "ExhibitionDatesWithSchedule") [FAIL]
+[xUnit.net 00:00:23.65]       Exhibition dates cannot exclude an existing schedule.
+[xUnit.net 00:00:23.65]       Stack Trace:
+[xUnit.net 00:00:23.65]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(154,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:23.65]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:23.65]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:23.65]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:23.65]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:23.65]       Output:
+[xUnit.net 00:00:23.65]         Scenario=ExhibitionDatesWithSchedule; disposable database=EMS_DeepAudit_20261012_cfbeb5d2872148528daba3cbcf56706b
+[xUnit.net 00:00:23.65]         Accepted=True; schedule day=+4; exhibition end day=+1
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "ExhibitionDatesWithSchedule") [2 s]
+  Error Message:
+   Exhibition dates cannot exclude an existing schedule.
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 154
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=ExhibitionDatesWithSchedule; disposable database=EMS_DeepAudit_20261012_cfbeb5d2872148528daba3cbcf56706b
+ Accepted=True; schedule day=+4; exhibition end day=+1
+
+
+[xUnit.net 00:00:25.77]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "DesktopPolygonMetadata") [FAIL]
+[xUnit.net 00:00:25.77]       A polygon must not accept a desktop metadata object instead of its vertices.
+[xUnit.net 00:00:25.77]       Stack Trace:
+[xUnit.net 00:00:25.77]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(127,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:25.77]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:25.77]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:25.77]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:25.77]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:25.77]       Output:
+[xUnit.net 00:00:25.77]         Scenario=DesktopPolygonMetadata; disposable database=EMS_DeepAudit_20261012_dad4f9bf524c4bf2ab46fa59ade011f7
+[xUnit.net 00:00:25.77]         Accepted=True; area before=10; area after=20; reservation area=10.00
+[xUnit.net 00:00:25.77]         Polygon after={"IsVIP":false}
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "DesktopPolygonMetadata") [2 s]
+  Error Message:
+   A polygon must not accept a desktop metadata object instead of its vertices.
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 127
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=DesktopPolygonMetadata; disposable database=EMS_DeepAudit_20261012_dad4f9bf524c4bf2ab46fa59ade011f7
+ Accepted=True; area before=10; area after=20; reservation area=10.00
+ Polygon after={"IsVIP":false}
+
+
+[xUnit.net 00:00:27.95]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "DeleteRegisteredSchedule") [FAIL]
+[xUnit.net 00:00:27.95]       Assert.Null() Failure: Value is not null
+[xUnit.net 00:00:27.95]       Expected: null
+[xUnit.net 00:00:27.95]       Actual:   Microsoft.EntityFrameworkCore.DbUpdateException: An error occurred while saving the entity changes. See the inner exception for details.
+[xUnit.net 00:00:27.95]        ---> Microsoft.Data.SqlClient.SqlException (0x80131904): The DELETE statement conflicted with the REFERENCE constraint "FK_ScheduleRegistrations_ExhibitionSchedules_ScheduleID". The conflict occurred in database "EMS_DeepAudit_20261012_d7e9c5b751934841bba0c51e857d34a2", table "dbo.ScheduleRegistrations", column 'ScheduleID'.
+[xUnit.net 00:00:27.95]          at Microsoft.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+[xUnit.net 00:00:27.95]          at Microsoft.Data.SqlClient.SqlInternalConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+[xUnit.net 00:00:27.95]          at Microsoft.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, SqlCommand command, Boolean callerHasConnectionLock, Boolean asyncClose)
+[xUnit.net 00:00:27.95]          at Microsoft.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+[xUnit.net 00:00:27.95]          at Microsoft.Data.SqlClient.SqlDataReader.TryHasMoreRows(Boolean& moreRows)
+[xUnit.net 00:00:27.95]          at Microsoft.Data.SqlClient.SqlDataReader.TryReadInternal(Boolean setTimeout, Boolean& more)
+[xUnit.net 00:00:27.95]          at Microsoft.Data.SqlClient.SqlDataReader.ReadAsyncExecute(Task task, Object state)
+[xUnit.net 00:00:27.95]          at Microsoft.Data.SqlClient.SqlDataReader.InvokeAsyncCall[T](SqlDataReaderBaseAsyncCallContext`1 context)
+[xUnit.net 00:00:27.95]       --- End of stack trace from previous location ---
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.Update.AffectedCountModificationCommandBatch.ConsumeResultSetWithRowsAffectedOnlyAsync(Int32 commandIndex, RelationalDataReader reader, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.Update.AffectedCountModificationCommandBatch.ConsumeAsync(RelationalDataReader reader, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]       ClientConnectionId:1fe92df8-d5d5-45ba-8b1f-d831231f31a4
+[xUnit.net 00:00:27.95]       Error Number:547,State:0,Class:16
+[xUnit.net 00:00:27.95]          --- End of inner exception stack trace ---
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.Update.AffectedCountModificationCommandBatch.ConsumeAsync(RelationalDataReader reader, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.SqlServer.Update.Internal.SqlServerModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.Storage.RelationalDatabase.SaveChangesAsync(IList`1 entries, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(IList`1 entriesToSave, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(StateManager stateManager, Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+[xUnit.net 00:00:27.95]          at ExhibitionManagementSystem.DataAccess.Repositories.Implementations.UnitOfWork.SaveChangesAsync() in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.DataAccess\Repositories\Implementations\UnitOfWork.cs:line 215
+[xUnit.net 00:00:27.95]          at ExhibitionManagementSystem.DataAccess.Repositories.Implementations.UnitOfWork.SaveChangesAsync() in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.DataAccess\Repositories\Implementations\UnitOfWork.cs:line 243
+[xUnit.net 00:00:27.95]          at ExhibitionManagementSystem.DataAccess.Repositories.Implementations.UnitOfWork.SaveChangesAsync() in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.DataAccess\Repositories\Implementations\UnitOfWork.cs:line 251
+[xUnit.net 00:00:27.95]          at ExhibitionManagementSystem.Services.Implementations.ExhibitionService.RemoveScheduleAsync(Int32 tenantId, Int32 scheduleId) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Services\Implementations\ExhibitionService.cs:line 358
+[xUnit.net 00:00:27.95]          at Xunit.Record.ExceptionAsync(Func`1 testCode) in /_/src/xunit.core/Record.cs:line 76
+[xUnit.net 00:00:27.95]       Stack Trace:
+[xUnit.net 00:00:27.95]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(163,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:27.95]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:27.95]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:27.95]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:27.95]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:27.95]       Output:
+[xUnit.net 00:00:27.95]         Scenario=DeleteRegisteredSchedule; disposable database=EMS_DeepAudit_20261012_d7e9c5b751934841bba0c51e857d34a2
+[xUnit.net 00:00:27.95]         Exception=DbUpdateException; registrations=1
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "DeleteRegisteredSchedule") [2 s]
+  Error Message:
+   Assert.Null() Failure: Value is not null
+Expected: null
+Actual:   Microsoft.EntityFrameworkCore.DbUpdateException: An error occurred while saving the entity changes. See the inner exception for details.
+ ---> Microsoft.Data.SqlClient.SqlException (0x80131904): The DELETE statement conflicted with the REFERENCE constraint "FK_ScheduleRegistrations_ExhibitionSchedules_ScheduleID". The conflict occurred in database "EMS_DeepAudit_20261012_d7e9c5b751934841bba0c51e857d34a2", table "dbo.ScheduleRegistrations", column 'ScheduleID'.
+   at Microsoft.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at Microsoft.Data.SqlClient.SqlInternalConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at Microsoft.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, SqlCommand command, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at Microsoft.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at Microsoft.Data.SqlClient.SqlDataReader.TryHasMoreRows(Boolean& moreRows)
+   at Microsoft.Data.SqlClient.SqlDataReader.TryReadInternal(Boolean setTimeout, Boolean& more)
+   at Microsoft.Data.SqlClient.SqlDataReader.ReadAsyncExecute(Task task, Object state)
+   at Microsoft.Data.SqlClient.SqlDataReader.InvokeAsyncCall[T](SqlDataReaderBaseAsyncCallContext`1 context)
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Update.AffectedCountModificationCommandBatch.ConsumeResultSetWithRowsAffectedOnlyAsync(Int32 commandIndex, RelationalDataReader reader, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.AffectedCountModificationCommandBatch.ConsumeAsync(RelationalDataReader reader, CancellationToken cancellationToken)
+ClientConnectionId:1fe92df8-d5d5-45ba-8b1f-d831231f31a4
+Error Number:547,State:0,Class:16
+   --- End of inner exception stack trace ---
+   at Microsoft.EntityFrameworkCore.Update.AffectedCountModificationCommandBatch.ConsumeAsync(RelationalDataReader reader, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.ReaderModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Update.Internal.SqlServerModificationCommandBatch.ExecuteAsync(IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Update.Internal.BatchExecutor.ExecuteAsync(IEnumerable`1 commandBatches, IRelationalConnection connection, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalDatabase.SaveChangesAsync(IList`1 entries, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(IList`1 entriesToSave, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChangesAsync(StateManager stateManager, Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal.SqlServerExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChangesAsync(Boolean acceptAllChangesOnSuccess, CancellationToken cancellationToken)
+   at ExhibitionManagementSystem.DataAccess.Repositories.Implementations.UnitOfWork.SaveChangesAsync() in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.DataAccess\Repositories\Implementations\UnitOfWork.cs:line 215
+   at ExhibitionManagementSystem.DataAccess.Repositories.Implementations.UnitOfWork.SaveChangesAsync() in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.DataAccess\Repositories\Implementations\UnitOfWork.cs:line 243
+   at ExhibitionManagementSystem.DataAccess.Repositories.Implementations.UnitOfWork.SaveChangesAsync() in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.DataAccess\Repositories\Implementations\UnitOfWork.cs:line 251
+   at ExhibitionManagementSystem.Services.Implementations.ExhibitionService.RemoveScheduleAsync(Int32 tenantId, Int32 scheduleId) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Services\Implementations\ExhibitionService.cs:line 358
+   at Xunit.Record.ExceptionAsync(Func`1 testCode) in /_/src/xunit.core/Record.cs:line 76
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 163
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=DeleteRegisteredSchedule; disposable database=EMS_DeepAudit_20261012_d7e9c5b751934841bba0c51e857d34a2
+ Exception=DbUpdateException; registrations=1
+
+
+[xUnit.net 00:00:30.10]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "VenueShrinkAroundBooths") [FAIL]
+[xUnit.net 00:00:30.10]       Shrinking a hall around its existing reserved booth must be rejected.
+[xUnit.net 00:00:30.10]       Stack Trace:
+[xUnit.net 00:00:30.10]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(147,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:30.10]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:30.10]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:30.10]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:30.10]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:30.10]       Output:
+[xUnit.net 00:00:30.10]         Scenario=VenueShrinkAroundBooths; disposable database=EMS_DeepAudit_20261012_58eb4b6afdbd46a4be5b9e7b54e4af5d
+[xUnit.net 00:00:30.10]         Accepted=True; hall bounds after=1x1; existing reserved booth bounds=2x10
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "VenueShrinkAroundBooths") [2 s]
+  Error Message:
+   Shrinking a hall around its existing reserved booth must be rejected.
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 147
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=VenueShrinkAroundBooths; disposable database=EMS_DeepAudit_20261012_58eb4b6afdbd46a4be5b9e7b54e4af5d
+ Accepted=True; hall bounds after=1x1; existing reserved booth bounds=2x10
+
+
+[xUnit.net 00:00:31.98]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "PolygonBoothUnchangedUpdate") [FAIL]
+[xUnit.net 00:00:31.98]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:31.98]       Expected: 10
+[xUnit.net 00:00:31.98]       Actual:   20
+[xUnit.net 00:00:31.98]       Stack Trace:
+[xUnit.net 00:00:31.98]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(131,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:31.98]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:31.98]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:31.98]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:31.98]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:31.98]       Output:
+[xUnit.net 00:00:31.98]         Scenario=PolygonBoothUnchangedUpdate; disposable database=EMS_DeepAudit_20261012_c9b8179ee65941698f2bef9712f17d1c
+[xUnit.net 00:00:31.98]         Accepted=True; area before=10; area after=20; reservation area=10.00
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "PolygonBoothUnchangedUpdate") [1 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 10
+Actual:   20
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 131
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=PolygonBoothUnchangedUpdate; disposable database=EMS_DeepAudit_20261012_c9b8179ee65941698f2bef9712f17d1c
+ Accepted=True; area before=10; area after=20; reservation area=10.00
+
+
+  Passed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "DeletePackageWithContract") [1 s]
+[xUnit.net 00:00:35.88]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "CancelledPackageCapacity") [FAIL]
+[xUnit.net 00:00:35.88]       Cancelled contracts must release package capacity.
+[xUnit.net 00:00:35.88]       Stack Trace:
+[xUnit.net 00:00:35.88]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(182,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:35.88]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:35.88]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:35.88]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:35.88]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:35.88]       Output:
+[xUnit.net 00:00:35.88]         Scenario=CancelledPackageCapacity; disposable database=EMS_DeepAudit_20261012_b55b6047fd7e42fab31cd76ea9321be8
+[xUnit.net 00:00:35.88]         Cancelled contract; allocated=1; sold out=True
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "CancelledPackageCapacity") [1 s]
+  Error Message:
+   Cancelled contracts must release package capacity.
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 182
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=CancelledPackageCapacity; disposable database=EMS_DeepAudit_20261012_b55b6047fd7e42fab31cd76ea9321be8
+ Cancelled contract; allocated=1; sold out=True
+
+
+[xUnit.net 00:00:37.99]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "FractionalCentFullPayment") [FAIL]
+[xUnit.net 00:00:37.99]       Unsupported currency precision must be rejected or normalized consistently before saving.
+[xUnit.net 00:00:37.99]       Stack Trace:
+[xUnit.net 00:00:37.99]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(173,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:37.99]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(183,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:37.99]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:37.99]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(192,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario)
+[xUnit.net 00:00:37.99]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:37.99]       Output:
+[xUnit.net 00:00:37.99]         Scenario=FractionalCentFullPayment; disposable database=EMS_DeepAudit_20261012_7f1b8ed2f0484c4e8e297e9993ef8531
+[xUnit.net 00:00:37.99]         Accepted=True; requested=99.995; response=99.995; stored=100.00; stored base=499.98; status=PartiallyPaid
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(scenario: "FractionalCentFullPayment") [2 s]
+  Error Message:
+   Unsupported currency precision must be rejected or normalized consistently before saving.
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 173
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 183
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.SafetyInvariant(String scenario) in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 192
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Scenario=FractionalCentFullPayment; disposable database=EMS_DeepAudit_20261012_7f1b8ed2f0484c4e8e297e9993ef8531
+ Accepted=True; requested=99.995; response=99.995; stored=100.00; stored base=499.98; status=PartiallyPaid
+
+
+[xUnit.net 00:00:39.31]     ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.GateOperatorMustNotReadFinancialReservationAmounts [FAIL]
+[xUnit.net 00:00:39.31]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:39.31]       Expected: Forbidden
+[xUnit.net 00:00:39.31]       Actual:   OK
+[xUnit.net 00:00:39.31]       Stack Trace:
+[xUnit.net 00:00:39.31]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(209,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.GateOperatorMustNotReadFinancialReservationAmounts()
+[xUnit.net 00:00:39.31]         C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs(209,0): at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.GateOperatorMustNotReadFinancialReservationAmounts()
+[xUnit.net 00:00:39.31]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:39.31]       Output:
+[xUnit.net 00:00:39.31]         Financial HTTP=403; exhibitor reservations HTTP=200; body=[{"reservationID":1,"exhibitorName":"Exhibitor","boothNumber":"B-1","exhibitionName":"Expo","totalAmount":100,"currencyCode":"USD","status":"Pending","reservationDate":"2026-10-12T07:28:34.1267076Z"}]
+[xUnit.net 00:00:39.32]   Finished:    ExhibitionManagementSystem.Api.Tests
+  Failed ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.GateOperatorMustNotReadFinancialReservationAmounts [1 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: Forbidden
+Actual:   OK
+  Stack Trace:
+     at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.GateOperatorMustNotReadFinancialReservationAmounts() in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 209
+   at ExhibitionManagementSystem.Api.Tests.Regression.DeepAudit20261012Probes.GateOperatorMustNotReadFinancialReservationAmounts() in C:\Users\Masoud\source\repos\ExhibitionManagementSystem\ExhibitionManagementSystem.Api.Tests\Regression\DeepAudit20261012Probes.cs:line 209
+--- End of stack trace from previous location ---
+  Standard Output Messages:
+ Financial HTTP=403; exhibitor reservations HTTP=200; body=[{"reservationID":1,"exhibitorName":"Exhibitor","boothNumber":"B-1","exhibitionName":"Expo","totalAmount":100,"currencyCode":"USD","status":"Pending","reservationDate":"2026-10-12T07:28:34.1267076Z"}]
+
+
+
+Test Run Failed.
+Total tests: 15
+     Passed: 1
+     Failed: 14
+ Total time: 40.0818 Seconds
