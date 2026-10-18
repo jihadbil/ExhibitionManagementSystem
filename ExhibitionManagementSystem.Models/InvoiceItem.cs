@@ -20,6 +20,11 @@ namespace ExhibitionManagementSystem.Models
         /// </summary>
         public int InvoiceID { get; set; }
 
+        public int? ReservationServiceID { get; set; }
+
+        [ForeignKey(nameof(ReservationServiceID))]
+        public virtual ReservationService? ReservationService { get; set; }
+
         /// <summary>
         /// اسم البند أو وصف الخدمة/الجناح المالي.
         /// </summary>
@@ -36,7 +41,7 @@ namespace ExhibitionManagementSystem.Models
         /// <summary>
         /// سعر وحدة البند.
         /// </summary>
-        [Column(TypeName = "decimal(18,2)")]
+        [Column(TypeName = "decimal(28,8)")]
         public decimal UnitPrice { get; set; }
 
         /// <summary>

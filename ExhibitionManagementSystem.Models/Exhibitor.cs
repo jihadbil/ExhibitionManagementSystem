@@ -59,6 +59,11 @@ public class Exhibitor : IAuditableEntity, ISoftDeletable, ITenantEntity
     public ExhibitorCategory ExhibitorCategory { get; set; }
 
     /// <summary>
+    /// عملة الفوترة المفضلة للعارض. يمكن تجاوزها على مستوى الحجز.
+    /// </summary>
+    [Required, StringLength(3)] public string PreferredCurrencyCode { get; set; } = "LYD";
+
+    /// <summary>
     /// رابط شعار الشركة العارضة.
     /// </summary>
     [StringLength(500)] public string LogoURL { get; set; } = string.Empty;
@@ -112,6 +117,8 @@ public class Exhibitor : IAuditableEntity, ISoftDeletable, ITenantEntity
     /// حساب المستخدم المرتبط بالعارض.
     /// </summary>
     [ForeignKey(nameof(UserId))] public virtual ApplicationUser? User { get; set; }
+
+    [ForeignKey(nameof(PreferredCurrencyCode))] public virtual Currency PreferredCurrency { get; set; } = null!;
 
     /// <summary>
     /// حجوزات الأجنحة الخاصة بالعارض.

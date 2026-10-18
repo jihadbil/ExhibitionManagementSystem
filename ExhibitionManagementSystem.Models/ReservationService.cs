@@ -34,7 +34,7 @@ public class ReservationService
     /// <summary>
     /// سعر وحدة الخدمة وقت إضافتها للحجز.
     /// </summary>
-    [Column(TypeName = "decimal(18,2)")] public decimal UnitPrice { get; set; }
+    [Column(TypeName = "decimal(28,8)")] public decimal UnitPrice { get; set; }
 
     /// <summary>
     /// رمز العملة المستخدمة في تسعير الخدمة.
@@ -45,6 +45,24 @@ public class ReservationService
     /// إجمالي سعر الخدمة بعد ضرب الكمية في سعر الوحدة.
     /// </summary>
     [Column(TypeName = "decimal(18,2)")] public decimal TotalPrice { get; set; }
+
+    /// <summary>سعر الوحدة كما ورد من قاعدة تسعير الخدمة قبل التحويل.</summary>
+    [Column(TypeName = "decimal(18,2)")] public decimal SourceUnitPrice { get; set; }
+
+    /// <summary>الإجمالي الأصلي للخدمة قبل التحويل.</summary>
+    [Column(TypeName = "decimal(18,2)")] public decimal SourceTotalPrice { get; set; }
+
+    /// <summary>عملة المصدر لقاعدة تسعير الخدمة.</summary>
+    [Required, StringLength(3)] public string SourceCurrencyCode { get; set; } = "LYD";
+
+    /// <summary>سعر التحويل من عملة المصدر إلى عملة الحجز.</summary>
+    [Column(TypeName = "decimal(18,6)")] public decimal ExchangeRateUsed { get; set; } = 1;
+
+    public DateTime? ExchangeRateDate { get; set; }
+
+    [StringLength(100)] public string ExchangeRateSource { get; set; } = string.Empty;
+
+    public int? ServicePriceRuleID { get; set; }
 
     /// <summary>
     /// الحجز المرتبط بالخدمة.
@@ -60,5 +78,7 @@ public class ReservationService
     /// العملة المستخدمة في تسعير الخدمة.
     /// </summary>
     [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
+
+    [ForeignKey(nameof(SourceCurrencyCode))] public virtual Currency SourceCurrency { get; set; } = null!;
 
 }

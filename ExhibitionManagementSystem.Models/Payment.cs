@@ -41,6 +41,14 @@ public class Payment : IAuditableEntity, ITenantEntity
     /// </summary>
     [Required, StringLength(3)] public string CurrencyCode { get; set; } = string.Empty;
 
+    [Required, StringLength(3)] public string BaseCurrencyCode { get; set; } = "LYD";
+
+    [Column(TypeName = "decimal(18,6)")] public decimal ExchangeRateUsed { get; set; } = 1;
+
+    public DateTime? ExchangeRateDate { get; set; }
+
+    [Column(TypeName = "decimal(18,2)")] public decimal AmountInBaseCurrency { get; set; }
+
     /// <summary>
     /// طريقة الدفع المستخدمة.
     /// </summary>
@@ -87,6 +95,8 @@ public class Payment : IAuditableEntity, ITenantEntity
     /// العملة المستخدمة في الدفعة.
     /// </summary>
     [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
+
+    [ForeignKey(nameof(BaseCurrencyCode))] public virtual Currency BaseCurrency { get; set; } = null!;
 
     /// <summary>
     /// المستخدم الذي استلم أو سجل الدفعة.

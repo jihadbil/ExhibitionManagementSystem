@@ -88,6 +88,12 @@ public class Booth : IAuditableEntity, ISoftDeletable, ITenantEntity
     public BoothShapeType? ShapeType { get; set; } = BoothShapeType.Rect;
 
     /// <summary>
+    /// الفئة التجارية المستخدمة لاختيار قاعدة تسعير الجناح.
+    /// وهي مستقلة عن شكل الجناح على المخطط.
+    /// </summary>
+    public BoothType BoothType { get; set; } = BoothType.Standard;
+
+    /// <summary>
     /// تمثيل JSON لنقاط الشكل عندما يكون الجناح مضلعًا.
     /// </summary>
     public string ShapePolygonJSON { get; set; } = string.Empty;

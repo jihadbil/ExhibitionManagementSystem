@@ -44,6 +44,11 @@ public class Service : IAuditableEntity, ISoftDeletable, ITenantEntity
     [Column(TypeName = "decimal(18,2)")] public decimal? DefaultPrice { get; set; }
 
     /// <summary>
+    /// عملة السعر الافتراضي للخدمة.
+    /// </summary>
+    [Required, StringLength(3)] public string DefaultCurrencyCode { get; set; } = "LYD";
+
+    /// <summary>
     /// يحدد ما إذا كانت الخدمة إلزامية ضمن الحجز.
     /// </summary>
     public bool IsMandatory { get; set; } = false;
@@ -87,5 +92,7 @@ public class Service : IAuditableEntity, ISoftDeletable, ITenantEntity
     /// المستأجر المرتبط بالخدمة.
     /// </summary>
     [ForeignKey(nameof(TenantID))] public virtual Tenant Tenant { get; set; } = null!;
+
+    [ForeignKey(nameof(DefaultCurrencyCode))] public virtual Currency DefaultCurrency { get; set; } = null!;
 
 }

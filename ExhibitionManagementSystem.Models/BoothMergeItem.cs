@@ -21,6 +21,8 @@ public class BoothMergeItem
     /// </summary>
     public int MergeID { get; set; }
 
+    public int ExhibitionID { get; set; }
+
     /// <summary>
     /// معرف الجناح المضاف إلى عملية الدمج.
     /// </summary>

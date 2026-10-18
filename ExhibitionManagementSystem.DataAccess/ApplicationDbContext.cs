@@ -97,6 +97,9 @@ namespace ExhibitionManagementSystem.DataAccess
             builder.Entity<Booth>().Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
             builder.Entity<Booth>().Property(e => e.ShapeType).HasConversion<string>().HasMaxLength(20);
             builder.Entity<Booth>().Property(e => e.ShapeType).HasDefaultValue(BoothShapeType.Rect);
+            builder.Entity<Booth>().Property(e => e.BoothType).HasConversion<string>().HasMaxLength(50);
+            builder.Entity<Booth>().Property(e => e.BoothType).HasDefaultValue(BoothType.Standard);
+            builder.Entity<Venue>().Property(e => e.SitePlanVersion).IsConcurrencyToken();
             builder.Entity<ExhibitionSchedule>().Property(e => e.EventType).HasConversion<string>().HasMaxLength(50);
             builder.Entity<Exhibitor>().Property(e => e.ExhibitorCategory).HasConversion<string>().HasMaxLength(20);
 
@@ -165,6 +168,11 @@ namespace ExhibitionManagementSystem.DataAccess
                 t.HasCheckConstraint("CK_CreditNotes_Amount_Positive", "Amount > 0"));
             builder.Entity<Expense>().ToTable(t =>
                 t.HasCheckConstraint("CK_Expenses_Amount_Positive", "Amount > 0"));
+            builder.Entity<ExchangeRate>().ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_ExchangeRates_Rate_Positive", "Rate > 0");
+                t.HasCheckConstraint("CK_ExchangeRates_DifferentCurrencies", "FromCurrency <> ToCurrency");
+            });
             builder.Entity<Ticket>().ToTable(t =>
                 t.HasCheckConstraint("CK_Tickets_Price_NonNegative", "Price >= 0"));
             builder.Entity<SponsorshipPackage>().ToTable(t =>
@@ -279,6 +287,64 @@ namespace ExhibitionManagementSystem.DataAccess
                 .HasOne(s => s.Exhibition)
                 .WithMany(e => e.ExhibitionSchedules)
                 .HasForeignKey(s => s.ExhibitionID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Exhibitor>()
+                .HasOne(e => e.PreferredCurrency)
+                .WithMany()
+                .HasForeignKey(e => e.PreferredCurrencyCode)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Service>()
+                .HasOne(e => e.DefaultCurrency)
+                .WithMany()
+                .HasForeignKey(e => e.DefaultCurrencyCode)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<BoothReservation>()
+                .HasOne(e => e.BaseCurrency)
+                .WithMany()
+                .HasForeignKey(e => e.BaseCurrencyCode)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<BoothReservation>()
+                .HasOne(e => e.BoothSourceCurrency)
+                .WithMany()
+                .HasForeignKey(e => e.BoothSourceCurrencyCode)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ReservationService>()
+                .HasOne(e => e.SourceCurrency)
+                .WithMany()
+                .HasForeignKey(e => e.SourceCurrencyCode)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<InvoiceItem>().HasOne(i => i.ReservationService)
+                .WithMany().HasForeignKey(i => i.ReservationServiceID).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<BoothMerge>().HasAlternateKey(m => new { m.MergeID, m.ExhibitionID });
+            builder.Entity<BoothMergeItem>().HasOne(i => i.Merge).WithMany(m => m.MergeItems)
+                .HasForeignKey(i => new { i.MergeID, i.ExhibitionID })
+                .HasPrincipalKey(m => new { m.MergeID, m.ExhibitionID }).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<BoothMergeItem>().HasIndex(i => new { i.ExhibitionID, i.BoothID }).IsUnique();
+            builder.Entity<ServicePriceRule>().ToTable(t =>
+                t.HasCheckConstraint("CK_ServicePriceRules_Price_NonNegative", "UnitPrice >= 0"));
+
+            builder.Entity<Invoice>()
+                .HasOne(e => e.BaseCurrency)
+                .WithMany()
+                .HasForeignKey(e => e.BaseCurrencyCode)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Payment>()
+                .HasOne(e => e.BaseCurrency)
+                .WithMany()
+                .HasForeignKey(e => e.BaseCurrencyCode)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Expense>()
+                .HasOne(e => e.BaseCurrency)
+                .WithMany()
+                .HasForeignKey(e => e.BaseCurrencyCode)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<ExhibitionSchedule>()
@@ -402,6 +468,11 @@ namespace ExhibitionManagementSystem.DataAccess
                 .HasDatabaseName("UX_BoothReservations_ActiveMerge");
             builder.Entity<Booth>().HasIndex(b => new { b.HallID, b.IsDeleted, b.Status });
             builder.Entity<Booth>().HasIndex(b => new { b.TenantID, b.HallID });
+            builder.Entity<Booth>()
+                .HasIndex(b => new { b.HallID, b.BoothNumber })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0")
+                .HasDatabaseName("UX_Booths_ActiveNumberPerHall");
             builder.Entity<Ticket>().HasIndex(t => new { t.ExhibitionID, t.Status });
             builder.Entity<Ticket>().HasIndex(t => new { t.TenantID, t.ExhibitionID });
             builder.Entity<TicketScan>().HasIndex(ts => ts.TicketID);

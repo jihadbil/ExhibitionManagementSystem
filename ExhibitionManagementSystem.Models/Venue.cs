@@ -54,6 +54,16 @@ public class Venue : IAuditableEntity, ISoftDeletable, ITenantEntity
     [StringLength(500)] public string MapImageURL { get; set; } = string.Empty;
 
     /// <summary>
+    /// المخطط البصري الكامل للموقع، ويتضمن مواضع القاعات بأبعادها الحقيقية.
+    /// </summary>
+    public string SitePlanJSON { get; set; } = string.Empty;
+
+    /// <summary>
+    /// رقم نسخة مخطط الموقع المستخدم لمنع الكتابة فوق تعديلات جلسة أخرى.
+    /// </summary>
+    public long SitePlanVersion { get; set; }
+
+    /// <summary>
     /// يحدد ما إذا كان الموقع نشطًا ومتاحًا للاستخدام.
     /// </summary>
     public bool IsActive { get; set; } = true;

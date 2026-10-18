@@ -94,6 +94,30 @@ public class BoothReservation : IAuditableEntity, ISoftDeletable, ITenantEntity
     /// </summary>
     [Column(TypeName = "decimal(18,2)")] public decimal AmountInBaseCurrency { get; set; }
 
+    /// <summary>العملة الأساسية وقت إنشاء الحجز، حتى لا يتغير معنى السجل تاريخيًا.</summary>
+    [Required, StringLength(3)] public string BaseCurrencyCode { get; set; } = "LYD";
+
+    /// <summary>تاريخ سعر تحويل إجمالي الحجز إلى العملة الأساسية.</summary>
+    public DateTime? ExchangeRateDate { get; set; }
+
+    /// <summary>مصدر سعر تحويل إجمالي الحجز.</summary>
+    [StringLength(100)] public string ExchangeRateSource { get; set; } = string.Empty;
+
+    /// <summary>سعر الجناح قبل تحويله إلى عملة الفوترة.</summary>
+    [Column(TypeName = "decimal(18,2)")] public decimal BoothSourceAmount { get; set; }
+
+    /// <summary>عملة قاعدة تسعير الجناح.</summary>
+    [Required, StringLength(3)] public string BoothSourceCurrencyCode { get; set; } = "LYD";
+
+    /// <summary>سعر التحويل من عملة قاعدة الجناح إلى عملة الحجز.</summary>
+    [Column(TypeName = "decimal(18,6)")] public decimal BoothExchangeRateUsed { get; set; } = 1;
+
+    public DateTime? BoothExchangeRateDate { get; set; }
+
+    [StringLength(100)] public string BoothExchangeRateSource { get; set; } = string.Empty;
+
+    public int? BoothPriceRuleID { get; set; }
+
     /// <summary>
     /// حالة الحجز الحالية.
     /// </summary>
@@ -174,6 +198,10 @@ public class BoothReservation : IAuditableEntity, ISoftDeletable, ITenantEntity
     /// العملة المستخدمة في الحجز.
     /// </summary>
     [ForeignKey(nameof(CurrencyCode))] public virtual Currency Currency { get; set; } = null!;
+
+    [ForeignKey(nameof(BaseCurrencyCode))] public virtual Currency BaseCurrency { get; set; } = null!;
+
+    [ForeignKey(nameof(BoothSourceCurrencyCode))] public virtual Currency BoothSourceCurrency { get; set; } = null!;
 
     /// <summary>
     /// المستخدم الذي أنشأ الحجز.

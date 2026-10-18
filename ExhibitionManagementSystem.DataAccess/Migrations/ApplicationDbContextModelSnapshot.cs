@@ -418,6 +418,13 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("BoothType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Standard");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -487,6 +494,11 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.HasIndex("MergeID");
 
+                    b.HasIndex("HallID", "BoothNumber")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Booths_ActiveNumberPerHall")
+                        .HasFilter("[IsDeleted] = 0");
+
                     b.HasIndex("TenantID", "HallID");
 
                     b.HasIndex("HallID", "IsDeleted", "Status");
@@ -551,6 +563,9 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<int>("BoothID")
                         .HasColumnType("int");
 
+                    b.Property<int>("ExhibitionID")
+                        .HasColumnType("int");
+
                     b.Property<int>("MergeID")
                         .HasColumnType("int");
 
@@ -564,7 +579,10 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.HasIndex("BoothID");
 
-                    b.HasIndex("MergeID");
+                    b.HasIndex("ExhibitionID", "BoothID")
+                        .IsUnique();
+
+                    b.HasIndex("MergeID", "ExhibitionID");
 
                     b.ToTable("BoothMergeItems");
                 });
@@ -665,11 +683,38 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<decimal>("AmountInBaseCurrency")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("BaseCurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
                     b.Property<decimal>("BoothAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("BoothExchangeRateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("BoothExchangeRateSource")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("BoothExchangeRateUsed")
+                        .HasColumnType("decimal(18,6)");
+
                     b.Property<int?>("BoothID")
                         .HasColumnType("int");
+
+                    b.Property<int?>("BoothPriceRuleID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("BoothSourceAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BoothSourceCurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
 
                     b.Property<string>("BoothTypeSelected")
                         .IsRequired()
@@ -694,6 +739,14 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.Property<string>("DeletedByUserId")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ExchangeRateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ExchangeRateSource")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("ExchangeRateUsed")
                         .HasColumnType("decimal(18,6)");
@@ -750,7 +803,11 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.HasKey("ReservationID");
 
+                    b.HasIndex("BaseCurrencyCode");
+
                     b.HasIndex("BoothID");
+
+                    b.HasIndex("BoothSourceCurrencyCode");
 
                     b.HasIndex("CreatedByUserId");
 
@@ -976,7 +1033,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.HasIndex("FromCurrency", "ToCurrency", "RateDate")
                         .IsUnique();
 
-                    b.ToTable("ExchangeRates");
+                    b.ToTable("ExchangeRates", t =>
+                        {
+                            t.HasCheckConstraint("CK_ExchangeRates_DifferentCurrencies", "FromCurrency <> ToCurrency");
+
+                            t.HasCheckConstraint("CK_ExchangeRates_Rate_Positive", "Rate > 0");
+                        });
                 });
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Exhibition", b =>
@@ -1175,6 +1237,11 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("PreferredCurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
                     b.Property<string>("Sector")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1191,6 +1258,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("ExhibitorID");
+
+                    b.HasIndex("PreferredCurrencyCode");
 
                     b.HasIndex("UserId");
 
@@ -1209,6 +1278,14 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("AmountInBaseCurrency")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BaseCurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -1238,6 +1315,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<DateTime?>("ExchangeRateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("ExchangeRateUsed")
+                        .HasColumnType("decimal(18,6)");
+
                     b.Property<int>("ExhibitionID")
                         .HasColumnType("int");
 
@@ -1258,6 +1341,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("ExpenseID");
+
+                    b.HasIndex("BaseCurrencyCode");
 
                     b.HasIndex("CreatedByUserId");
 
@@ -1470,6 +1555,11 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InvoiceID"));
 
+                    b.Property<string>("BaseCurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1486,6 +1576,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("date");
+
+                    b.Property<DateTime?>("ExchangeRateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("ExchangeRateUsed")
+                        .HasColumnType("decimal(18,6)");
 
                     b.Property<DateTime>("InvoiceDate")
                         .HasColumnType("datetime2");
@@ -1532,10 +1628,15 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("TotalAmountInBaseCurrency")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("InvoiceID");
+
+                    b.HasIndex("BaseCurrencyCode");
 
                     b.HasIndex("CurrencyCode");
 
@@ -1567,15 +1668,20 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("ReservationServiceID")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(28,8)");
 
                     b.HasKey("InvoiceItemID");
 
                     b.HasIndex("InvoiceID");
+
+                    b.HasIndex("ReservationServiceID");
 
                     b.ToTable("InvoiceItems", t =>
                         {
@@ -1649,6 +1755,14 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("AmountInBaseCurrency")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BaseCurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1656,6 +1770,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .IsRequired()
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateTime?>("ExchangeRateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("ExchangeRateUsed")
+                        .HasColumnType("decimal(18,6)");
 
                     b.Property<int>("InvoiceID")
                         .HasColumnType("int");
@@ -1695,6 +1815,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("PaymentID");
+
+                    b.HasIndex("BaseCurrencyCode");
 
                     b.HasIndex("CurrencyCode");
 
@@ -1904,6 +2026,17 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
 
+                    b.Property<DateTime?>("ExchangeRateDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ExchangeRateSource")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("ExchangeRateUsed")
+                        .HasColumnType("decimal(18,6)");
+
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(10,2)");
 
@@ -1913,11 +2046,25 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<int>("ServiceID")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ServicePriceRuleID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceCurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<decimal>("SourceTotalPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SourceUnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(28,8)");
 
                     b.HasKey("ReservationServiceID");
 
@@ -1926,6 +2073,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.HasIndex("ReservationID");
 
                     b.HasIndex("ServiceID");
+
+                    b.HasIndex("SourceCurrencyCode");
 
                     b.ToTable("ReservationServices");
                 });
@@ -1984,6 +2133,11 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("DefaultCurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
                     b.Property<decimal?>("DefaultPrice")
                         .HasColumnType("decimal(18,2)");
 
@@ -2024,6 +2178,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("ServiceID");
+
+                    b.HasIndex("DefaultCurrencyCode");
 
                     b.HasIndex("TenantID");
 
@@ -2090,7 +2246,10 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.HasIndex("TenantID");
 
-                    b.ToTable("ServicePriceRules");
+                    b.ToTable("ServicePriceRules", t =>
+                        {
+                            t.HasCheckConstraint("CK_ServicePriceRules_Price_NonNegative", "UnitPrice >= 0");
+                        });
                 });
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Sponsor", b =>
@@ -2714,6 +2873,14 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("SitePlanJSON")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("SitePlanVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
                     b.Property<int>("TenantID")
                         .HasColumnType("int");
 
@@ -3102,7 +3269,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.HasOne("ExhibitionManagementSystem.Models.BoothMerge", "Merge")
                         .WithMany("MergeItems")
-                        .HasForeignKey("MergeID")
+                        .HasForeignKey("MergeID", "ExhibitionID")
+                        .HasPrincipalKey("MergeID", "ExhibitionID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -3138,9 +3306,21 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.BoothReservation", b =>
                 {
+                    b.HasOne("ExhibitionManagementSystem.Models.Currency", "BaseCurrency")
+                        .WithMany()
+                        .HasForeignKey("BaseCurrencyCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ExhibitionManagementSystem.Models.Booth", "Booth")
                         .WithMany()
                         .HasForeignKey("BoothID");
+
+                    b.HasOne("ExhibitionManagementSystem.Models.Currency", "BoothSourceCurrency")
+                        .WithMany()
+                        .HasForeignKey("BoothSourceCurrencyCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("ExhibitionManagementSystem.Models.ApplicationUser", "CreatedByUser")
                         .WithMany()
@@ -3177,9 +3357,13 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("BaseCurrency");
+
                     b.Navigation("Booth");
 
                     b.Navigation("BoothMerge");
+
+                    b.Navigation("BoothSourceCurrency");
 
                     b.Navigation("CreatedByUser");
 
@@ -3304,6 +3488,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Exhibitor", b =>
                 {
+                    b.HasOne("ExhibitionManagementSystem.Models.Currency", "PreferredCurrency")
+                        .WithMany()
+                        .HasForeignKey("PreferredCurrencyCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ExhibitionManagementSystem.Models.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantID")
@@ -3315,6 +3505,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.Navigation("PreferredCurrency");
+
                     b.Navigation("Tenant");
 
                     b.Navigation("User");
@@ -3322,6 +3514,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Expense", b =>
                 {
+                    b.HasOne("ExhibitionManagementSystem.Models.Currency", "BaseCurrency")
+                        .WithMany()
+                        .HasForeignKey("BaseCurrencyCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ExhibitionManagementSystem.Models.ApplicationUser", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId");
@@ -3343,6 +3541,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasForeignKey("TenantID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("BaseCurrency");
 
                     b.Navigation("CreatedByUser");
 
@@ -3401,6 +3601,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Invoice", b =>
                 {
+                    b.HasOne("ExhibitionManagementSystem.Models.Currency", "BaseCurrency")
+                        .WithMany()
+                        .HasForeignKey("BaseCurrencyCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ExhibitionManagementSystem.Models.Currency", "Currency")
                         .WithMany()
                         .HasForeignKey("CurrencyCode")
@@ -3419,6 +3625,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("BaseCurrency");
+
                     b.Navigation("Currency");
 
                     b.Navigation("Reservation");
@@ -3434,7 +3642,14 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("ExhibitionManagementSystem.Models.ReservationService", "ReservationService")
+                        .WithMany()
+                        .HasForeignKey("ReservationServiceID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Invoice");
+
+                    b.Navigation("ReservationService");
                 });
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.PackageService", b =>
@@ -3458,6 +3673,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Payment", b =>
                 {
+                    b.HasOne("ExhibitionManagementSystem.Models.Currency", "BaseCurrency")
+                        .WithMany()
+                        .HasForeignKey("BaseCurrencyCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ExhibitionManagementSystem.Models.Currency", "Currency")
                         .WithMany()
                         .HasForeignKey("CurrencyCode")
@@ -3481,6 +3702,8 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasForeignKey("TenantID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("BaseCurrency");
 
                     b.Navigation("Currency");
 
@@ -3560,11 +3783,19 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("ExhibitionManagementSystem.Models.Currency", "SourceCurrency")
+                        .WithMany()
+                        .HasForeignKey("SourceCurrencyCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Currency");
 
                     b.Navigation("Reservation");
 
                     b.Navigation("Service");
+
+                    b.Navigation("SourceCurrency");
                 });
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.ScheduleRegistration", b =>
@@ -3588,11 +3819,19 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Service", b =>
                 {
+                    b.HasOne("ExhibitionManagementSystem.Models.Currency", "DefaultCurrency")
+                        .WithMany()
+                        .HasForeignKey("DefaultCurrencyCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ExhibitionManagementSystem.Models.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("DefaultCurrency");
 
                     b.Navigation("Tenant");
                 });
