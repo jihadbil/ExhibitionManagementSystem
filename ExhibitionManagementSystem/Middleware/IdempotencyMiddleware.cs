@@ -56,7 +56,7 @@ public sealed class IdempotencyMiddleware
         }
 
         var requestHash = await ComputeRequestHashAsync(context.Request);
-        var operation = $"{context.Request.Method}:{context.Request.Path.Value?.ToLowerInvariant()}";
+        var operation = $"POST:{NormalizePath(context.Request.Path)}";
         var decision = await BeginAsync(tenantId, userId, operation, key, requestHash);
 
         if (decision.Kind == IdempotencyDecisionKind.Replay)
@@ -135,9 +135,12 @@ public sealed class IdempotencyMiddleware
             return false;
         }
 
-        return request.Path.Equals("/api/reservations", StringComparison.OrdinalIgnoreCase) ||
-               request.Path.Equals("/api/financial/payments", StringComparison.OrdinalIgnoreCase);
+        var path = NormalizePath(request.Path);
+        return path == "/api/reservations" || path == "/api/financial/payments";
     }
+
+    private static string NormalizePath(PathString path) =>
+        (path.Value ?? string.Empty).TrimEnd('/').ToLowerInvariant();
 
     private async Task<IdempotencyDecision> BeginAsync(
         int tenantId,
