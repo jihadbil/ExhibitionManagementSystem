@@ -8,6 +8,7 @@ using ExhibitionManagementSystem.DataAccess;
 using ExhibitionManagementSystem.DataAccess.Repositories.Interfaces;
 using ExhibitionManagementSystem.Models;
 using ExhibitionManagementSystem.Models.DTOs.Admin;
+using ExhibitionManagementSystem.Models.DTOs.Auth;
 using ExhibitionManagementSystem.Models.DTOs.Common;
 using ExhibitionManagementSystem.Models.DTOs.Tenant;
 using ExhibitionManagementSystem.Models.Enums;
@@ -56,7 +57,11 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<PagedResultDto<TenantDto>>> GetAllAsync(int page, int pageSize)
         {
-            var (items, totalCount) = await _unitOfWork.Tenants.GetPagedAsync(page, pageSize);
+            var query = _unitOfWork.Tenants.AsQueryable().AsNoTracking();
+            var totalCount = await query.CountAsync();
+            var items = await query.Include(t => t.Currency).Include(t => t.TenantSubscriptions)
+                .OrderBy(t => t.CompanyName).ThenBy(t => t.TenantID)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
             
             var dtos = _mapper.Map<List<TenantDto>>(items);
             
@@ -73,7 +78,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<TenantDto>> GetByIdAsync(int tenantId)
         {
-            var tenant = await _unitOfWork.Tenants.GetByIdAsync(tenantId);
+            var tenant = await _unitOfWork.Tenants.GetByIdWithIncludesAsync(tenantId,
+                t => t.Currency, t => t.TenantSubscriptions);
             if (tenant == null)
             {
                 return ServiceResult<TenantDto>.Failure("المستأجر غير موجود", "TENANT_NOT_FOUND");
@@ -81,6 +87,161 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
             var dto = _mapper.Map<TenantDto>(tenant);
             return ServiceResult<TenantDto>.Success(dto);
+        }
+
+        public async Task<ServiceResult<CompanyRegistrationResponseDto>> RegisterCompanyAsync(
+            CompanyRegistrationRequestDto dto)
+        {
+            var companyName = dto.CompanyName.Trim();
+            var subdomain = dto.Subdomain.Trim().ToLowerInvariant();
+            var adminEmail = dto.AdminEmail.Trim();
+            var normalizedEmail = _userManager.NormalizeEmail(adminEmail);
+            var baseCurrency = dto.BaseCurrency.Trim().ToUpperInvariant();
+
+            if (await _dbContext.Tenants.IgnoreQueryFilters().AnyAsync(tenant =>
+                    tenant.Subdomain == subdomain))
+            {
+                return ServiceResult<CompanyRegistrationResponseDto>.Failure(
+                    "النطاق المختصر مستخدم بالفعل. اختر نطاقاً آخر.",
+                    "SUBDOMAIN_ALREADY_EXISTS");
+            }
+
+            if (await _userManager.FindByEmailAsync(adminEmail) != null ||
+                await _dbContext.TenantInvitations.AnyAsync(invitation =>
+                    invitation.NormalizedEmail == normalizedEmail &&
+                    invitation.AcceptedAt == null &&
+                    invitation.RevokedAt == null &&
+                    invitation.ExpiresAt > DateTime.UtcNow))
+            {
+                return ServiceResult<CompanyRegistrationResponseDto>.Failure(
+                    "البريد الإلكتروني مستخدم بالفعل.",
+                    "EMAIL_ALREADY_EXISTS");
+            }
+
+            if (!await _dbContext.Currencies.AnyAsync(currency =>
+                    currency.CurrencyCode == baseCurrency && currency.IsActive))
+            {
+                return ServiceResult<CompanyRegistrationResponseDto>.Failure(
+                    "العملة الأساسية المحددة غير متاحة.",
+                    "CURRENCY_NOT_SUPPORTED");
+            }
+
+            var now = DateTime.UtcNow;
+            var trialEndsAt = now.AddDays(14);
+            var tenant = new Tenant
+            {
+                CompanyName = companyName,
+                Subdomain = subdomain,
+                BaseCurrency = baseCurrency,
+                IsActive = true,
+                TrialEndsAt = trialEndsAt,
+                CreatedAt = now
+            };
+            var subscription = new TenantSubscription
+            {
+                Tenant = tenant,
+                Plan = "Trial",
+                StartDate = now.Date,
+                EndDate = trialEndsAt.Date,
+                MonthlyFee = 0,
+                CurrencyCode = baseCurrency,
+                Status = SubscriptionStatus.Trial,
+                CreatedAt = now
+            };
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+            try
+            {
+                await EnsureSystemRolesAsync();
+
+                _dbContext.Tenants.Add(tenant);
+                _dbContext.TenantSubscriptions.Add(subscription);
+                await _dbContext.SaveChangesAsync();
+                using var provisioningScope = _dbContext.BeginTenantProvisioningScope(tenant.TenantID);
+
+                var user = new ApplicationUser
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    EmailConfirmed = true,
+                    FullName = dto.AdminFullName.Trim(),
+                    PhoneNumber = string.IsNullOrWhiteSpace(dto.AdminPhoneNumber)
+                        ? null
+                        : dto.AdminPhoneNumber.Trim(),
+                    TenantID = tenant.TenantID,
+                    IsActive = true
+                };
+
+                var createResult = await _userManager.CreateAsync(user, dto.Password);
+                if (!createResult.Succeeded)
+                {
+                    await transaction.RollbackAsync();
+                    return ServiceResult<CompanyRegistrationResponseDto>.Failure(
+                        "تعذر إنشاء الحساب. يجب أن تتكون كلمة المرور من 8 أحرف على الأقل، وتشمل حرفاً كبيراً وصغيراً ورقماً ورمزاً خاصاً.",
+                        "REGISTRATION_FAILED");
+                }
+
+                var roleResult = await _userManager.AddToRoleAsync(user, SystemRoles.TenantAdmin);
+                if (!roleResult.Succeeded)
+                {
+                    await transaction.RollbackAsync();
+                    return ServiceResult<CompanyRegistrationResponseDto>.Failure(
+                        "تعذر تجهيز صلاحيات مدير الشركة.",
+                        "REGISTRATION_FAILED");
+                }
+
+                _dbContext.AuditLogs.Add(CreateAuditLog(
+                    tenant.TenantID,
+                    user.Id,
+                    "CompanyRegistration",
+                    tenant.TenantID.ToString(),
+                    new
+                    {
+                        tenant.CompanyName,
+                        tenant.Subdomain,
+                        tenant.BaseCurrency,
+                        AdminEmail = adminEmail,
+                        AssignedRole = SystemRoles.TenantAdmin,
+                        TrialEndsAt = trialEndsAt
+                    }));
+                await _dbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return ServiceResult<CompanyRegistrationResponseDto>.Success(new CompanyRegistrationResponseDto
+                {
+                    TenantID = tenant.TenantID,
+                    CompanyName = tenant.CompanyName,
+                    Subdomain = tenant.Subdomain,
+                    AdminEmail = adminEmail,
+                    TrialEndsAt = trialEndsAt,
+                    Message = "تم إنشاء حساب شركتك بنجاح. يمكنك الآن تسجيل الدخول."
+                });
+            }
+            catch (DbUpdateException ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogWarning(ex, "Company registration data conflict for {Subdomain}.", subdomain);
+                return ServiceResult<CompanyRegistrationResponseDto>.Failure(
+                    "البريد الإلكتروني أو النطاق المختصر مستخدم بالفعل.",
+                    "REGISTRATION_CONFLICT");
+            }
+            catch (InvalidOperationException ex) when (
+                ex.Message.StartsWith("ROLE_SETUP_FAILED:", StringComparison.Ordinal))
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "System role setup failed during company registration.");
+                return ServiceResult<CompanyRegistrationResponseDto>.Failure(
+                    "تعذر تجهيز صلاحيات النظام.",
+                    "ROLE_SETUP_FAILED");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Company registration failed for {Subdomain}.", subdomain);
+                return ServiceResult<CompanyRegistrationResponseDto>.Failure(
+                    "تعذر إكمال التسجيل حالياً. يرجى المحاولة لاحقاً.",
+                    "REGISTRATION_FAILED");
+            }
         }
 
         public async Task<ServiceResult<TenantDto>> CreateAsync(
@@ -429,11 +590,24 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<TenantDto>> UpdateAsync(int tenantId, TenantUpdateDto dto)
         {
-            var tenant = await _unitOfWork.Tenants.GetByIdAsync(tenantId);
+            var tenant = await _unitOfWork.Tenants.GetByIdWithIncludesAsync(tenantId,
+                t => t.Currency, t => t.TenantSubscriptions);
             if (tenant == null)
             {
                 return ServiceResult<TenantDto>.Failure("المستأجر غير موجود", "TENANT_NOT_FOUND");
             }
+
+            dto.BaseCurrency = string.IsNullOrWhiteSpace(dto.BaseCurrency)
+                ? tenant.BaseCurrency : dto.BaseCurrency.Trim().ToUpperInvariant();
+            if (!await _unitOfWork.Currencies.ExistsAsync(c => c.CurrencyCode == dto.BaseCurrency && c.IsActive))
+                return ServiceResult<TenantDto>.Failure("العملة الأساسية غير موجودة أو غير نشطة", "INVALID_CURRENCY");
+            if (dto.BaseCurrency != tenant.BaseCurrency &&
+                (await _dbContext.BoothReservations.IgnoreQueryFilters().AnyAsync(r => r.TenantID == tenantId) ||
+                 await _dbContext.Invoices.IgnoreQueryFilters().AnyAsync(i => i.TenantID == tenantId) ||
+                 await _dbContext.Payments.IgnoreQueryFilters().AnyAsync(p => p.TenantID == tenantId) ||
+                 await _dbContext.Expenses.IgnoreQueryFilters().AnyAsync(e => e.TenantID == tenantId) ||
+                 await _dbContext.FinancialReports.IgnoreQueryFilters().AnyAsync(r => r.TenantID == tenantId)))
+                return ServiceResult<TenantDto>.Failure("لا يمكن تغيير العملة الأساسية بعد وجود معاملات مالية", "BASE_CURRENCY_LOCKED");
 
             var isUnique = await _unitOfWork.Tenants.IsSubdomainUniqueAsync(dto.Subdomain, tenantId);
             if (!isUnique)
@@ -443,6 +617,16 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
             _mapper.Map(dto, tenant);
             tenant.UpdatedAt = DateTime.UtcNow;
+
+            if (!tenant.IsActive)
+            {
+                var sessions = await _dbContext.RefreshSessions.Where(s => s.TenantID == tenantId && s.RevokedAt == null).ToListAsync();
+                foreach (var session in sessions)
+                {
+                    session.RevokedAt = DateTime.UtcNow;
+                    session.RevocationReason = "Tenant disabled";
+                }
+            }
 
             _unitOfWork.Tenants.Update(tenant);
             await _unitOfWork.SaveChangesAsync();
@@ -459,8 +643,16 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult.Failure("المستأجر غير موجود", "TENANT_NOT_FOUND");
             }
 
-            // Using "System" as the default deleting user for service layer
-            await _unitOfWork.Tenants.SoftDeleteAsync(tenantId, "System");
+            // Deactivate without deleting the tenant or its financial history.
+            tenant.IsActive = false;
+            tenant.UpdatedAt = DateTime.UtcNow;
+            var sessions = await _dbContext.RefreshSessions.Where(s => s.TenantID == tenantId && s.RevokedAt == null).ToListAsync();
+            foreach (var session in sessions)
+            {
+                session.RevokedAt = DateTime.UtcNow;
+                session.RevocationReason = "Tenant disabled";
+            }
+            _unitOfWork.Tenants.Update(tenant);
             await _unitOfWork.SaveChangesAsync();
 
             return ServiceResult.Success();

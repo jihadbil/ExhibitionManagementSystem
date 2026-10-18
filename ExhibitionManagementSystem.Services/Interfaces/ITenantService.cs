@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using ExhibitionManagementSystem.Models.DTOs.Tenant;
 using ExhibitionManagementSystem.Models.DTOs.Admin;
 using ExhibitionManagementSystem.Models.DTOs.Common;
+using ExhibitionManagementSystem.Models.DTOs.Auth;
 using ExhibitionManagementSystem.Services.Common;
 
 namespace ExhibitionManagementSystem.Services.Interfaces
@@ -10,6 +11,7 @@ namespace ExhibitionManagementSystem.Services.Interfaces
     {
         Task<ServiceResult<PagedResultDto<TenantDto>>> GetAllAsync(int page, int pageSize);
         Task<ServiceResult<TenantDto>> GetByIdAsync(int tenantId);
+        Task<ServiceResult<CompanyRegistrationResponseDto>> RegisterCompanyAsync(CompanyRegistrationRequestDto dto);
         Task<ServiceResult<TenantDto>> CreateAsync(TenantCreateDto dto, string actorUserId);
         Task<ServiceResult> AcceptInvitationAsync(TenantInvitationAcceptDto dto);
         Task<ServiceResult> ResendInvitationAsync(int tenantId, string actorUserId);

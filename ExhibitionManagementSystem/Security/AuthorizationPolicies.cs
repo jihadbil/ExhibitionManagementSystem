@@ -20,7 +20,7 @@ public static class AuthorizationPolicies
     public static void Configure(AuthorizationOptions options)
     {
         options.AddPolicy("AdminOnly", policy =>
-            policy.RequireRole(SystemRoles.Admin, SystemRoles.TenantAdmin));
+            policy.RequireRole(SystemRoles.SuperAdmin, SystemRoles.Admin, SystemRoles.TenantAdmin));
         options.AddPolicy(TenantAdministration, policy =>
             policy.RequireRole(SystemRoles.Admin, SystemRoles.TenantAdmin));
         options.AddPolicy(EventManagement, policy =>

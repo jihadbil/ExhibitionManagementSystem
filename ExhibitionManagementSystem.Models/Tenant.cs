@@ -59,7 +59,8 @@ public class Tenant : IAuditableEntity
     /// </summary>
     [NotMapped]
     public string? CurrentPlan => TenantSubscriptions
-        .Where(s => s.Status is SubscriptionStatus.Active or SubscriptionStatus.Trial)
+        .Where(s => s.Status is SubscriptionStatus.Active or SubscriptionStatus.Trial
+            && s.StartDate.Date <= DateTime.UtcNow.Date && s.EndDate.Date >= DateTime.UtcNow.Date)
         .OrderByDescending(s => s.StartDate)
         .FirstOrDefault()?.Plan;
 

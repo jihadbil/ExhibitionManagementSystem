@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Building2, Shield } from 'lucide-react';
-import { api } from '../../../services/api';
+import { getAllItems } from '../../../services/pagination';
 
 interface Tenant {
   tenantID: number;
@@ -20,8 +20,7 @@ export const TenantsPage = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const response = await api.get<{ items: Tenant[] }>('/api/tenants?page=1&pageSize=100');
-        setTenants(response.data.items ?? []);
+        setTenants(await getAllItems<Tenant>('/api/tenants'));
       } catch {
         setError('تعذر تحميل المستأجرين من الخادم.');
       } finally {

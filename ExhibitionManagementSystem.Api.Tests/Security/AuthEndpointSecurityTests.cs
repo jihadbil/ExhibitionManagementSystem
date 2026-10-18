@@ -11,7 +11,7 @@ namespace ExhibitionManagementSystem.Api.Tests.Security;
 public sealed class AuthEndpointSecurityTests
 {
     [Fact]
-    public void AuthController_DoesNotExposeAnonymousUserRegistration()
+    public void AuthController_ExposesRateLimitedAnonymousCompanyRegistration()
     {
         var anonymousPostRoutes = typeof(AuthController)
             .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
@@ -20,9 +20,13 @@ public sealed class AuthEndpointSecurityTests
             .Select(attribute => attribute.Template)
             .ToArray();
 
-        Assert.DoesNotContain(
+        Assert.Contains(
             anonymousPostRoutes,
             route => string.Equals(route, "register", StringComparison.OrdinalIgnoreCase));
+
+        var register = typeof(AuthController).GetMethod(nameof(AuthController.Register));
+        Assert.NotNull(register);
+        Assert.NotNull(register.GetCustomAttribute<AllowAnonymousAttribute>());
     }
 
     [Fact]

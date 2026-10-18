@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace ExhibitionManagementSystem.Controllers.Admin;
 
 [Route("api/[controller]")]
-[Authorize(Policy = AuthorizationPolicies.TenantAdministration)]
 public class AdminController : BaseApiController
 {
     private readonly IAdminService _adminService;
@@ -19,6 +18,7 @@ public class AdminController : BaseApiController
 
     // GET /api/admin/audit-logs?page=1&pageSize=50
     [HttpGet("audit-logs")]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdministration)]
     public async Task<ActionResult<PagedResultDto<AuditLogDto>>> GetAuditLogs(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
@@ -29,6 +29,7 @@ public class AdminController : BaseApiController
 
     // GET /api/admin/audit-logs/{tableName}/{recordId}
     [HttpGet("audit-logs/{tableName}/{recordId}")]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdministration)]
     public async Task<ActionResult<IList<AuditLogDto>>> GetAuditLogsByEntity(
         string tableName,
         string recordId)
@@ -40,6 +41,7 @@ public class AdminController : BaseApiController
 
     // GET /api/admin/subscriptions
     [HttpGet("subscriptions")]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdministration)]
     public async Task<ActionResult<IList<TenantSubscriptionDto>>> GetSubscriptions()
     {
         var result = await _adminService.GetSubscriptionHistoryAsync(TenantId);
@@ -48,6 +50,7 @@ public class AdminController : BaseApiController
 
     // POST /api/admin/subscriptions
     [HttpPost("subscriptions")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<TenantSubscriptionDto>> CreateSubscription(
         [FromBody] TenantSubscriptionDto dto)
     {

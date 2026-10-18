@@ -34,6 +34,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var totalCount = await query.CountAsync();
             var items = await query
                 .OrderByDescending(a => a.ActionAt)
+                .ThenByDescending(a => a.LogID)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -79,25 +80,35 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<TenantSubscriptionDto>> CreateSubscriptionAsync(int tenantId, TenantSubscriptionDto dto)
         {
-            var tenant = await _unitOfWork.Tenants.GetByIdAsync(tenantId);
+            var tenant = await _unitOfWork.Tenants.GetByIdWithIncludesAsync(tenantId, t => t.TenantSubscriptions);
             if (tenant == null)
             {
                 return ServiceResult<TenantSubscriptionDto>.Failure("المستأجر غير موجود", "TENANT_NOT_FOUND");
             }
 
-            if (!Enum.TryParse<SubscriptionStatus>(dto.Status, true, out var status))
-            {
-                status = SubscriptionStatus.Active;
-            }
+            if (!Enum.TryParse<SubscriptionStatus>(dto.Status, true, out var status) || !Enum.IsDefined(status))
+                return ServiceResult<TenantSubscriptionDto>.Failure("حالة الاشتراك غير صالحة", "INVALID_SUBSCRIPTION_STATUS");
+            var start = dto.StartDate == default ? DateTime.UtcNow.Date : dto.StartDate.Date;
+            if (start.Year > 9994)
+                return ServiceResult<TenantSubscriptionDto>.Failure("تاريخ بداية الاشتراك غير صالح", "INVALID_SUBSCRIPTION_INPUT");
+            var end = dto.EndDate == default ? start.AddMonths(1) : dto.EndDate.Date;
+            var plan = string.IsNullOrWhiteSpace(dto.PlanName) ? tenant.CurrentPlan ?? "Free" : dto.PlanName.Trim();
+            if (dto.Price < 0 || dto.Price > 9999999999999999.99m || end <= start || end > start.AddYears(5) || plan.Length > 50)
+                return ServiceResult<TenantSubscriptionDto>.Failure("رسوم الاشتراك أو مدته أو اسم الخطة غير صالح؛ أقصى مدة خمس سنوات", "INVALID_SUBSCRIPTION_INPUT");
+            if (!_unitOfWork.IsSuperAdmin && !string.Equals(plan, tenant.CurrentPlan ?? "Free", StringComparison.OrdinalIgnoreCase))
+                return ServiceResult<TenantSubscriptionDto>.Failure("تغيير خطة المؤسسة يتطلب المشرف العام؛ السجل الإداري يجب أن يطابق الخطة الحالية", "SUBSCRIPTION_PLAN_CHANGE_NOT_ALLOWED");
+            var currency = string.IsNullOrWhiteSpace(dto.CurrencyCode) ? tenant.BaseCurrency : dto.CurrencyCode.Trim().ToUpperInvariant();
+            if (!await _unitOfWork.Currencies.ExistsAsync(c => c.CurrencyCode == currency && c.IsActive))
+                return ServiceResult<TenantSubscriptionDto>.Failure("عملة الاشتراك غير صالحة", "INVALID_CURRENCY");
 
             var sub = new TenantSubscription
             {
                 TenantID = tenantId,
-                Plan = string.IsNullOrWhiteSpace(dto.PlanName) ? tenant.CurrentPlan ?? "Free" : dto.PlanName,
-                StartDate = dto.StartDate == default ? DateTime.UtcNow.Date : dto.StartDate.Date,
-                EndDate = dto.EndDate == default ? DateTime.UtcNow.AddMonths(1).Date : dto.EndDate.Date,
+                Plan = plan,
+                StartDate = start,
+                EndDate = end,
                 MonthlyFee = dto.Price,
-                CurrencyCode = string.IsNullOrWhiteSpace(dto.CurrencyCode) ? "USD" : dto.CurrencyCode,
+                CurrencyCode = currency,
                 Status = status,
                 CreatedAt = DateTime.UtcNow
             };

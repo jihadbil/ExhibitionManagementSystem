@@ -12,9 +12,26 @@ namespace ExhibitionManagementSystem.Controllers.Auth;
 public class AuthController : BaseApiController
 {
     private readonly IAuthService _authService;
+    private readonly ITenantService _tenantService;
 
-    public AuthController(IAuthService authService)
-        => _authService = authService;
+    public AuthController(IAuthService authService, ITenantService tenantService)
+    {
+        _authService = authService;
+        _tenantService = tenantService;
+    }
+
+    // POST /api/auth/register
+    [HttpPost("register")]
+    [AllowAnonymous]
+    public async Task<ActionResult<CompanyRegistrationResponseDto>> Register(
+        [FromBody] CompanyRegistrationRequestDto dto)
+    {
+        var result = await _tenantService.RegisterCompanyAsync(dto);
+        if (!result.IsSuccess)
+            return ToActionResult(result);
+
+        return Created("/api/auth/login", result.Data);
+    }
 
     // POST /api/auth/login
     [HttpPost("login")]

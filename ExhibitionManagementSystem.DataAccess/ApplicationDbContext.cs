@@ -15,6 +15,7 @@ namespace ExhibitionManagementSystem.DataAccess
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
     {
         private readonly ITenantContext _tenantContext;
+        private int? _provisioningTenantId;
 
         public ApplicationDbContext(
             DbContextOptions<ApplicationDbContext> options,
@@ -23,8 +24,32 @@ namespace ExhibitionManagementSystem.DataAccess
             _tenantContext = tenantContext ?? new EmptyTenantContext();
         }
 
-        public int CurrentTenantId => _tenantContext.TenantId ?? 0;
+        public int CurrentTenantId => _tenantContext.TenantId ?? _provisioningTenantId ?? 0;
         public bool CanBypassTenantIsolation => _tenantContext.CanBypassTenantIsolation;
+
+        /// <summary>
+        /// Allows the same scoped context that has just created a tenant to finish
+        /// provisioning its first administrator and tenant-owned audit record.
+        /// This is deliberately tenant-specific and cannot be used from an existing
+        /// authenticated tenant request or nested to switch tenant identity.
+        /// </summary>
+        public IDisposable BeginTenantProvisioningScope(int tenantId)
+        {
+            if (tenantId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(tenantId));
+            if (_tenantContext.TenantId.HasValue || _provisioningTenantId.HasValue)
+                throw new InvalidOperationException("A tenant context is already active.");
+
+            var tenantIsTracked = ChangeTracker.Entries<Tenant>().Any(entry =>
+                entry.Entity.TenantID == tenantId &&
+                entry.State != EntityState.Detached &&
+                entry.State != EntityState.Deleted);
+            if (!tenantIsTracked)
+                throw new InvalidOperationException("The provisioned tenant must be tracked by this context.");
+
+            _provisioningTenantId = tenantId;
+            return new TenantProvisioningScope(this);
+        }
 
 
 
@@ -752,7 +777,7 @@ namespace ExhibitionManagementSystem.DataAccess
                 return;
             }
 
-            var tenantId = _tenantContext.TenantId;
+            var tenantId = _tenantContext.TenantId ?? _provisioningTenantId;
             var tenantEntries = ChangeTracker.Entries()
                 .Where(entry => entry.Entity is ITenantEntity &&
                                 entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
@@ -782,6 +807,20 @@ namespace ExhibitionManagementSystem.DataAccess
                     throw new InvalidOperationException(
                         "Cross-tenant write was blocked.");
                 }
+            }
+        }
+
+        private sealed class TenantProvisioningScope(ApplicationDbContext context) : IDisposable
+        {
+            private ApplicationDbContext? _context = context;
+
+            public void Dispose()
+            {
+                if (_context == null)
+                    return;
+
+                _context._provisioningTenantId = null;
+                _context = null;
             }
         }
 
