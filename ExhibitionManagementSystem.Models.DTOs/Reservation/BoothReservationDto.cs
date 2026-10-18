@@ -25,6 +25,15 @@ public class BoothReservationDto : AuditDto
     public string CurrencySymbol { get; set; } = string.Empty;
     public decimal ExchangeRateUsed { get; set; }
     public decimal AmountInBaseCurrency { get; set; }
+    public string BaseCurrencyCode { get; set; } = string.Empty;
+    public DateTime? ExchangeRateDate { get; set; }
+    public string ExchangeRateSource { get; set; } = string.Empty;
+    public decimal BoothSourceAmount { get; set; }
+    public string BoothSourceCurrencyCode { get; set; } = string.Empty;
+    public decimal BoothExchangeRateUsed { get; set; }
+    public DateTime? BoothExchangeRateDate { get; set; }
+    public string BoothExchangeRateSource { get; set; } = string.Empty;
+    public int? BoothPriceRuleID { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime ReservationDate { get; set; }
     public string LogisticNotes { get; set; } = string.Empty;

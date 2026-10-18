@@ -10,4 +10,11 @@ public class ReservationServiceDto
     public decimal UnitPrice { get; set; }
     public string CurrencyCode { get; set; } = string.Empty;
     public decimal TotalPrice { get; set; }
+    public decimal SourceUnitPrice { get; set; }
+    public decimal SourceTotalPrice { get; set; }
+    public string SourceCurrencyCode { get; set; } = string.Empty;
+    public decimal ExchangeRateUsed { get; set; }
+    public DateTime? ExchangeRateDate { get; set; }
+    public string ExchangeRateSource { get; set; } = string.Empty;
+    public int? ServicePriceRuleID { get; set; }
 }

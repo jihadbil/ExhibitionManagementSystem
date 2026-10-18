@@ -74,7 +74,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             return await _dbSet.AsNoTracking()
                 .Where(r => r.ExhibitionID == exhibitionId && r.Status != ReservationStatus.Cancelled)
-                .SumAsync(r => (decimal?)r.TotalAmount) ?? 0m;
+                .SumAsync(r => (decimal?)r.AmountInBaseCurrency) ?? 0m;
         }
 
         public async Task<IReadOnlyList<BoothReservation>> GetUnpaidReservationsAsync(int exhibitionId)

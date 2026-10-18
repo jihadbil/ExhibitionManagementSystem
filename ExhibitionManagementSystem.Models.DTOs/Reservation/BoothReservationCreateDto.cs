@@ -30,7 +30,9 @@ public class BoothReservationCreateDto : IValidatableObject
     public string CurrencyCode { get; set; } = string.Empty;
 
     [StringLength(500)]
-    public string LogisticNotes { get; set; } = string.Empty;
+    public string? LogisticNotes { get; set; }
+
+    public List<ReservationServiceCreateDto> Services { get; set; } = [];
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
