@@ -1,0 +1,2 @@
+:root { --sidebar-width: 0px; --topbar-height: 0px; }
+.vs-brand small::after { content: ' · معاينة ببيانات تجريبية'; color: #d97706; }

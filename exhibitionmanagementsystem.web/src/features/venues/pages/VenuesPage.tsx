@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
+  ArrowRight,
   Building,
   Building2,
   Edit2,
+  DraftingCompass,
   Layers,
   MapPin,
-  Maximize2,
+  Pencil,
   Plus,
   Search,
   Trash2,
   Users,
   X
 } from 'lucide-react';
+import { NavLink, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useToast } from '../../../app/providers/ToastContext';
 import { api } from '../../../services/api';
@@ -67,25 +70,32 @@ interface HallFormData {
   maxBooths: string;
   floorPlanWidth: string;
   floorPlanHeight: string;
+  isActive: boolean;
 }
 
 const emptyHallForm: HallFormData = {
   hallName: '',
   areaSqM: '',
   maxBooths: '',
-  floorPlanWidth: '',
-  floorPlanHeight: '',
+  floorPlanWidth: '40',
+  floorPlanHeight: '30',
+  isActive: true,
 };
 
 export const VenuesPage = () => {
+  const { venueId: routeVenueId } = useParams<{ venueId: string }>();
+  const [searchParams] = useSearchParams();
+  const activeVenueId = routeVenueId || searchParams.get('venueId') || '';
+
   const { user } = useAuth();
   const { showToast } = useToast();
-  const canManage = user?.roles.some(role => role === 'Admin' || role === 'TenantAdmin') ?? false;
+  const canManage = user?.roles.some(role => role === 'Admin' || role === 'TenantAdmin' || role === 'SuperAdmin') ?? false;
 
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
+  const [currentVenue, setCurrentVenue] = useState<Venue | null>(null);
   const [halls, setHalls] = useState<Hall[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hallSearchQuery, setHallSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingHalls, setLoadingHalls] = useState(false);
   const [error, setError] = useState('');
@@ -102,7 +112,7 @@ export const VenuesPage = () => {
   const [hallForm, setHallForm] = useState<HallFormData>(emptyHallForm);
   const [isSavingHall, setIsSavingHall] = useState(false);
 
-  // Load Venues
+  // Load All Venues
   const loadVenues = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -110,47 +120,56 @@ export const VenuesPage = () => {
       const response = await api.get<Venue[]>('/api/venues');
       const data = response.data ?? [];
       setVenues(data);
-      if (data.length > 0) {
-        setSelectedVenue(prev => {
-          if (!prev) return data[0];
-          const found = data.find(v => v.venueID === prev.venueID);
-          return found || data[0];
-        });
-      } else {
-        setSelectedVenue(null);
-      }
+      return data;
     } catch {
       setError('تعذر تحميل المواقع والقاعات من الخادم.');
+      return [];
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void loadVenues();
-  }, [loadVenues]);
-
-  // Load Halls for selected venue
-  const loadHalls = useCallback(async (venueId: number) => {
+  // Load Halls for a specific venue
+  const loadHallsForVenue = useCallback(async (vId: number) => {
     setLoadingHalls(true);
     try {
-      const response = await api.get<Hall[]>(`/api/halls/venue/${venueId}`);
-      setHalls(response.data ?? []);
+      const [hallsRes, venueRes] = await Promise.allSettled([
+        api.get<Hall[]>(`/api/halls/venue/${vId}`),
+        api.get<Venue>(`/api/venues/${vId}`)
+      ]);
+
+      if (hallsRes.status === 'fulfilled') {
+        setHalls(hallsRes.value.data ?? []);
+      } else {
+        setHalls([]);
+      }
+
+      if (venueRes.status === 'fulfilled') {
+        setCurrentVenue(venueRes.value.data);
+      }
     } catch {
-      showToast('تعذر تحميل القاعات للموقع المحدد.', 'danger');
+      showToast('تعذر تحميل بيانات القاعات للموقع المحدد.', 'danger');
     } finally {
       setLoadingHalls(false);
     }
   }, [showToast]);
 
   useEffect(() => {
-    if (selectedVenue) {
-      void loadHalls(selectedVenue.venueID);
-    } else {
-      setHalls([]);
-    }
-  }, [selectedVenue, loadHalls]);
+    void (async () => {
+      const venueList = await loadVenues();
+      if (activeVenueId) {
+        const parsedId = Number(activeVenueId);
+        const match = venueList.find(v => v.venueID === parsedId);
+        if (match) setCurrentVenue(match);
+        void loadHallsForVenue(parsedId);
+      } else {
+        setCurrentVenue(null);
+        setHalls([]);
+      }
+    })();
+  }, [activeVenueId, loadVenues, loadHallsForVenue]);
 
+  // Filtered Venues
   const filteredVenues = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return venues;
@@ -160,6 +179,24 @@ export const VenuesPage = () => {
       v.address.toLowerCase().includes(q)
     );
   }, [venues, searchQuery]);
+
+  // Filtered Halls
+  const filteredHalls = useMemo(() => {
+    const q = hallSearchQuery.trim().toLowerCase();
+    if (!q) return halls;
+    return halls.filter(h =>
+      h.hallName.toLowerCase().includes(q)
+    );
+  }, [halls, hallSearchQuery]);
+
+  // Statistics for active venue halls
+  const hallStats = useMemo(() => {
+    const totalHalls = halls.length;
+    const totalArea = halls.reduce((acc, h) => acc + (h.areaSqM || 0), 0);
+    const totalMaxBooths = halls.reduce((acc, h) => acc + (h.maxBooths || 0), 0);
+    const totalBoothsRegistered = halls.reduce((acc, h) => acc + (h.boothsCount || 0), 0);
+    return { totalHalls, totalArea, totalMaxBooths, totalBoothsRegistered };
+  }, [halls]);
 
   // Open Create Venue Modal
   const openCreateVenue = () => {
@@ -213,6 +250,9 @@ export const VenuesPage = () => {
 
       setIsVenueModalOpen(false);
       await loadVenues();
+      if (activeVenueId) {
+        void loadHallsForVenue(Number(activeVenueId));
+      }
     } catch {
       showToast('فشل حفظ بيانات الموقع. يرجى التحقق من المدخلات والصلاحيات.', 'danger');
     } finally {
@@ -227,9 +267,6 @@ export const VenuesPage = () => {
     try {
       await api.delete(`/api/venues/${venue.venueID}`);
       showToast('تم حذف الموقع بنجاح.', 'success');
-      if (selectedVenue?.venueID === venue.venueID) {
-        setSelectedVenue(null);
-      }
       await loadVenues();
     } catch {
       showToast('تعذر حذف الموقع؛ قد يكون مرتبطاً بمعارض نشطة.', 'danger');
@@ -238,7 +275,7 @@ export const VenuesPage = () => {
 
   // Open Create Hall Modal
   const openCreateHall = () => {
-    if (!selectedVenue) return;
+    if (!currentVenue && !activeVenueId) return;
     setEditingHallId(null);
     setHallForm(emptyHallForm);
     setIsHallModalOpen(true);
@@ -253,6 +290,7 @@ export const VenuesPage = () => {
       maxBooths: hall.maxBooths ? hall.maxBooths.toString() : '',
       floorPlanWidth: hall.floorPlanWidth ? hall.floorPlanWidth.toString() : '',
       floorPlanHeight: hall.floorPlanHeight ? hall.floorPlanHeight.toString() : '',
+      isActive: hall.isActive,
     });
     setIsHallModalOpen(true);
   };
@@ -260,22 +298,30 @@ export const VenuesPage = () => {
   // Submit Hall Form (Create / Update)
   const handleHallSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selectedVenue) return;
+    const vId = currentVenue?.venueID || Number(activeVenueId);
+    if (!vId) return;
     if (!hallForm.hallName.trim()) {
       showToast('يرجى إدخال اسم القاعة.', 'warning');
+      return;
+    }
+
+    const planWidth = Number(hallForm.floorPlanWidth);
+    const planHeight = Number(hallForm.floorPlanHeight);
+    if (!Number.isFinite(planWidth) || !Number.isFinite(planHeight) || planWidth < 5 || planHeight < 5) {
+      showToast('يجب أن يكون عرض وطول القاعة 5 أمتار على الأقل.', 'warning');
       return;
     }
 
     setIsSavingHall(true);
     try {
       const payload = {
-        venueID: selectedVenue.venueID,
+        venueID: vId,
         hallName: hallForm.hallName.trim(),
-        areaSqM: hallForm.areaSqM ? Number(hallForm.areaSqM) : null,
+        areaSqM: hallForm.areaSqM ? Number(hallForm.areaSqM) : planWidth * planHeight,
         maxBooths: hallForm.maxBooths ? Number(hallForm.maxBooths) : null,
-        floorPlanWidth: hallForm.floorPlanWidth ? Number(hallForm.floorPlanWidth) : null,
-        floorPlanHeight: hallForm.floorPlanHeight ? Number(hallForm.floorPlanHeight) : null,
-        floorPlanJSON: '',
+        floorPlanWidth: planWidth,
+        floorPlanHeight: planHeight,
+        isActive: hallForm.isActive,
       };
 
       if (editingHallId) {
@@ -283,11 +329,11 @@ export const VenuesPage = () => {
         showToast('تم تحديث بيانات القاعة بنجاح.', 'success');
       } else {
         await api.post('/api/halls', payload);
-        showToast('تمت إضافة القاعة بنجاح.', 'success');
+        showToast('تمت إضافة القاعة بنجاح للموقع.', 'success');
       }
 
       setIsHallModalOpen(false);
-      await loadHalls(selectedVenue.venueID);
+      await loadHallsForVenue(vId);
       await loadVenues();
     } catch {
       showToast('فشل حفظ القاعة. يرجى التحقق من المدخلات.', 'danger');
@@ -303,8 +349,9 @@ export const VenuesPage = () => {
     try {
       await api.delete(`/api/halls/${hall.hallID}`);
       showToast('تم حذف القاعة بنجاح.', 'success');
-      if (selectedVenue) {
-        await loadHalls(selectedVenue.venueID);
+      const vId = currentVenue?.venueID || Number(activeVenueId);
+      if (vId) {
+        await loadHallsForVenue(vId);
         await loadVenues();
       }
     } catch {
@@ -314,188 +361,421 @@ export const VenuesPage = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <MapPin size={24} style={{ color: 'var(--primary)' }} />
-            <h1 style={{ fontSize: '24px', fontWeight: 800 }}>المواقع والقاعات</h1>
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>إدارة مراكز المعارض وقاعات العرض وأبعاد المساحات.</p>
-        </div>
-        {canManage && (
-          <button className="btn-primary" onClick={openCreateVenue}>
-            <Plus size={18} /> موقع جديد
-          </button>
-        )}
-      </div>
+      {/* ━━━━━━━━━━━━━━━━━ VIEW 1: VENUE HALLS COMMAND CENTER ━━━━━━━━━━━━━━━━━ */}
+      {activeVenueId ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Top Navigation Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <NavLink
+              to="/venues"
+              className="btn-secondary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', textDecoration: 'none' }}
+            >
+              <ArrowRight size={16} />
+              <span>العودة لكافة المواقع</span>
+            </NavLink>
 
-      {/* Search Bar */}
-      <div className="card" style={{ position: 'relative' }}>
-        <Search size={18} style={{ position: 'absolute', right: '28px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-        <input
-          className="input-field"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="ابحث باسم الموقع أو المدينة أو العنوان"
-          style={{ paddingRight: '42px' }}
-        />
-      </div>
-
-      {error && <div role="alert" style={{ padding: '14px', background: 'var(--danger-bg)', color: 'var(--danger-text)', borderRadius: 'var(--radius-lg)' }}>{error}</div>}
-
-      {/* Main Split Grid: Venues List on Left/Right and Hall Details on the other */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(350px, 1.3fr)', gap: '24px' }}>
-        {/* Venues Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Building size={18} style={{ color: 'var(--primary)' }} />
-            مواقع المعارض ({filteredVenues.length})
-          </h2>
-
-          {loading ? (
-            <div className="card" style={{ textAlign: 'center' }}>جاري تحميل المواقع…</div>
-          ) : filteredVenues.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>لا توجد مواقع مسجلة.</div>
-          ) : (
-            filteredVenues.map(venue => {
-              const isSelected = selectedVenue?.venueID === venue.venueID;
-              return (
-                <article
-                  key={venue.venueID}
-                  className="card"
-                  onClick={() => setSelectedVenue(venue)}
-                  style={{
-                    cursor: 'pointer',
-                    borderColor: isSelected ? 'var(--primary)' : 'var(--border-main)',
-                    boxShadow: isSelected ? '0 0 0 1px var(--primary)' : undefined,
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                  }}
+            {venues.length > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>تبديل الموقع:</span>
+                <select
+                  className="input-field"
+                  value={activeVenueId}
+                  onChange={e => window.location.assign(`/venues/${e.target.value}/halls`)}
+                  style={{ minWidth: '220px', padding: '6px 12px', fontSize: '13px' }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>{venue.name}</h3>
-                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                        {venue.city} {venue.country ? `· ${venue.country}` : ''}
-                      </p>
+                  {venues.map(v => (
+                    <option key={v.venueID} value={v.venueID.toString()}>
+                      {v.name} ({v.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Venue Banner Header Card */}
+          {currentVenue && (
+            <div
+              className="card"
+              style={{
+                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                color: '#ffffff',
+                padding: '24px 28px',
+                borderRadius: 'var(--radius-xl)',
+                boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: 'var(--radius-lg)',
+                      background: 'var(--primary-gradient)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ffffff',
+                      boxShadow: 'var(--primary-glow)'
+                    }}
+                  >
+                    <Building size={26} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff', margin: 0 }}>{currentVenue.name}</h1>
+                      <span className={`badge ${currentVenue.isActive ? 'badge-success' : 'badge-danger'}`}>
+                        {currentVenue.isActive ? 'نشط ومتاح' : 'موقوف مؤقتاً'}
+                      </span>
                     </div>
-                    <span className={`badge ${venue.isActive ? 'badge-success' : 'badge-danger'}`}>
-                      {venue.isActive ? 'نشط' : 'موقوف'}
+                    <p style={{ color: '#94a3b8', fontSize: '13px', marginTop: '4px', margin: 0 }}>
+                      إدارة قاعات العرض، أبعاد المساحات، الطاقة الاستيعابية، والمخططات الهندسية.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  {canManage && (
+                    <NavLink
+                      to={`/venues/${currentVenue.venueID}/designer`}
+                      className="btn-primary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+                    >
+                      <DraftingCompass size={17} />
+                      <span>مخطط الموقع البصري</span>
+                    </NavLink>
+                  )}
+                  {canManage && (
+                    <button
+                      className="btn-secondary"
+                      onClick={() => openEditVenue(currentVenue)}
+                      style={{
+                        background: 'rgba(255,255,255,0.12)',
+                        color: '#ffffff',
+                        borderColor: 'rgba(255,255,255,0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <Pencil size={15} />
+                      <span>تعديل بيانات الموقع</span>
+                    </button>
+                  )}
+
+                  {canManage && (
+                    <button
+                      className="btn-primary"
+                      onClick={openCreateHall}
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Plus size={17} />
+                      <span>إضافة قاعة جديدة</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '14px', fontSize: '13px', color: '#cbd5e1' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <MapPin size={15} style={{ color: '#38bdf8' }} />
+                  المدينة: <strong>{currentVenue.city} {currentVenue.country ? `— ${currentVenue.country}` : ''}</strong>
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Building2 size={15} style={{ color: '#38bdf8' }} />
+                  العنوان: <strong>{currentVenue.address || 'غير محدد'}</strong>
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Users size={15} style={{ color: '#38bdf8' }} />
+                  السعة الإجمالية: <strong>{currentVenue.totalCapacity ? currentVenue.totalCapacity.toLocaleString() : 'غير محدد'} زائر</strong>
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Layers size={15} style={{ color: '#38bdf8' }} />
+                  إجمالي القاعات: <strong>{halls.length} قاعات</strong>
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* KPI Summary Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div className="card" style={{ padding: '16px 20px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>إجمالي قاعات الموقع</span>
+              <h2 style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px', color: 'var(--text-primary)' }}>{hallStats.totalHalls}</h2>
+            </div>
+            <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid var(--primary)' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>المساحة الكلية للقاعات</span>
+              <h2 style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px', color: 'var(--primary)' }}>{hallStats.totalArea.toLocaleString()} م²</h2>
+            </div>
+            <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid var(--success)' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>أقصى استيعاب للأجنحة</span>
+              <h2 style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px', color: 'var(--success)' }}>{hallStats.totalMaxBooths} جناح</h2>
+            </div>
+            <div className="card" style={{ padding: '16px 20px', borderLeft: '4px solid #6366f1' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>الأجنحة المسجلة حالياً</span>
+              <h2 style={{ fontSize: '24px', fontWeight: 800, marginTop: '4px', color: '#6366f1' }}>{hallStats.totalBoothsRegistered} جناح</h2>
+            </div>
+          </div>
+
+          {/* Search & Action Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div className="card" style={{ flex: 1, minWidth: '260px', position: 'relative', padding: 0 }}>
+              <Search size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                className="input-field"
+                value={hallSearchQuery}
+                onChange={e => setHallSearchQuery(e.target.value)}
+                style={{ paddingRight: '44px', border: 0 }}
+                placeholder="ابحث باسم القاعة ومواصفاتها…"
+              />
+            </div>
+
+            {canManage && (
+              <button className="btn-primary" onClick={openCreateHall}>
+                <Plus size={17} /> إضافة قاعة جديدة
+              </button>
+            )}
+          </div>
+
+          {/* Halls Grid Cards */}
+          {loadingHalls ? (
+            <div className="card" style={{ textAlign: 'center', padding: '40px' }}>جاري تحميل قاعات الموقع…</div>
+          ) : filteredHalls.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+              لا توجد قاعات مضافة لهذا الموقع حتى الآن. اضغط على «إضافة قاعة جديدة» لإنشاء أول قاعة.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+              {filteredHalls.map(hall => (
+                <article key={hall.hallID} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: 'var(--radius-md)',
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          color: 'var(--primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <Building2 size={20} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '16px', fontWeight: 800 }}>{hall.hallName}</h3>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>قاعة عرض رئيسية</span>
+                      </div>
+                    </div>
+                    <span className={`badge ${hall.isActive ? 'badge-success' : 'badge-danger'}`}>
+                      {hall.isActive ? 'نشطة' : 'موقوفة'}
                     </span>
                   </div>
 
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    {venue.address || 'لا يوجد عنوان تفصيلي'}
-                  </p>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-main)', paddingTop: '10px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Layers size={14} style={{ color: 'var(--primary)' }} /> {venue.hallsCount} قاعات
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Users size={14} style={{ color: 'var(--primary)' }} /> السعة: {venue.totalCapacity?.toLocaleString() || 'غير محدد'}
-                    </span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
+                    <div style={{ background: 'var(--bg-main)', padding: '10px 12px', borderRadius: 'var(--radius-md)' }}>
+                      <span style={{ fontSize: '11px', display: 'block', color: 'var(--text-muted)' }}>المساحة الإجمالية</span>
+                      <strong style={{ fontSize: '15px' }}>{hall.areaSqM ? `${hall.areaSqM.toLocaleString()} م²` : '—'}</strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-main)', padding: '10px 12px', borderRadius: 'var(--radius-md)' }}>
+                      <span style={{ fontSize: '11px', display: 'block', color: 'var(--text-muted)' }}>أقصى أجنحة</span>
+                      <strong style={{ fontSize: '15px' }}>{hall.maxBooths ? `${hall.maxBooths} جناح` : '—'}</strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-main)', padding: '10px 12px', borderRadius: 'var(--radius-md)' }}>
+                      <span style={{ fontSize: '11px', display: 'block', color: 'var(--text-muted)' }}>الأبعاد (العرض × الطول)</span>
+                      <strong>{hall.floorPlanWidth && hall.floorPlanHeight ? `${hall.floorPlanWidth} × ${hall.floorPlanHeight} م` : '—'}</strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-main)', padding: '10px 12px', borderRadius: 'var(--radius-md)' }}>
+                      <span style={{ fontSize: '11px', display: 'block', color: 'var(--text-muted)' }}>الأجنحة المسجلة</span>
+                      <strong>{hall.boothsCount} جناح</strong>
+                    </div>
                   </div>
 
                   {canManage && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }} onClick={e => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', borderTop: '1px solid var(--border-main)', paddingTop: '12px' }}>
+                      <button
+                        className="btn-secondary"
+                        onClick={() => openEditHall(hall)}
+                        style={{ flex: 1, padding: '9px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                      >
+                        <Edit2 size={14} /> تعديل
+                      </button>
                       <button
                         className="btn-icon"
-                        title="تعديل الموقع"
-                        onClick={() => openEditVenue(venue)}
+                        title="حذف القاعة"
+                        style={{ color: 'var(--danger)' }}
+                        onClick={() => void handleDeleteHall(hall)}
                       >
-                        <Edit2 size={15} />
+                        <Trash2 size={16} />
                       </button>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ━━━━━━━━━━━━━━━━━ VIEW 2: ALL VENUES DIRECTORY ━━━━━━━━━━━━━━━━━ */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <MapPin size={24} style={{ color: 'var(--primary)' }} />
+                <h1 style={{ fontSize: '24px', fontWeight: 800 }}>المواقع وقاعات المعارض</h1>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                اختر الموقع للدخول المباشر إلى إدارة قاعاته، مساحاته، ومخططاته الهندسية.
+              </p>
+            </div>
+            {canManage && (
+              <button className="btn-primary" onClick={openCreateVenue}>
+                <Plus size={18} /> موقع جديد
+              </button>
+            )}
+          </div>
+
+          {/* Search Bar */}
+          <div className="card" style={{ position: 'relative' }}>
+            <Search size={18} style={{ position: 'absolute', right: '28px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              className="input-field"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="ابحث باسم الموقع أو المدينة أو العنوان…"
+              style={{ paddingRight: '42px' }}
+            />
+          </div>
+
+          {error && <div role="alert" style={{ padding: '14px', background: 'var(--danger-bg)', color: 'var(--danger-text)', borderRadius: 'var(--radius-lg)' }}>{error}</div>}
+
+          {/* Venues Cards Grid */}
+          {loading ? (
+            <div className="card" style={{ textAlign: 'center', padding: '40px' }}>جاري تحميل المواقع…</div>
+          ) : filteredVenues.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+              لا توجد مواقع مسجلة. اضغط على «موقع جديد» لإضافة مركز معارض.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+              {filteredVenues.map(venue => (
+                <article
+                  key={venue.venueID}
+                  className="card"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                    transition: 'all 0.2s',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: 'var(--radius-lg)',
+                          background: 'var(--primary-gradient)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#ffffff',
+                          boxShadow: 'var(--primary-glow)',
+                          flexShrink: 0
+                        }}
+                      >
+                        <Building size={22} />
+                      </div>
+                      <div>
+                        <NavLink to={`/venues/${venue.venueID}/halls`} style={{ textDecoration: 'none' }}>
+                          <h2 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                            {venue.name}
+                          </h2>
+                        </NavLink>
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {venue.city} {venue.country ? `· ${venue.country}` : ''}
+                        </span>
+                      </div>
+                    </div>
+                    <span className={`badge ${venue.isActive ? 'badge-success' : 'badge-danger'}`}>
+                      {venue.isActive ? 'نشط ومتاح' : 'موقوف'}
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+                    {venue.address || 'لا يوجد عنوان تفصيلي مسجل'}
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)', background: 'var(--bg-main)', padding: '10px 12px', borderRadius: 'var(--radius-md)' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Layers size={15} style={{ color: 'var(--primary)' }} />
+                      القاعات: <strong>{venue.hallsCount} قاعات</strong>
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Users size={15} style={{ color: 'var(--primary)' }} />
+                      السعة: <strong>{venue.totalCapacity ? venue.totalCapacity.toLocaleString() : 'غير محدد'}</strong>
+                    </span>
+                  </div>
+
+                  {/* Primary Action Button to Venue Halls Hub */}
+                  <NavLink
+                    to={`/venues/${venue.venueID}/halls`}
+                    className="btn-primary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      fontSize: '13px',
+                      padding: '9px 14px',
+                      textDecoration: 'none',
+                      marginTop: '4px'
+                    }}
+                  >
+                    <Layers size={16} />
+                    <span>إدارة قاعات الموقع ({venue.hallsCount} قاعات)</span>
+                  </NavLink>
+
+                  {/* Secondary Action Row */}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                    {canManage && (
+                      <button
+                        className="btn-secondary"
+                        onClick={() => openEditVenue(venue)}
+                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}
+                      >
+                        <Pencil size={14} /> تعديل
+                      </button>
+                    )}
+                    {canManage && (
                       <button
                         className="btn-icon"
                         title="حذف الموقع"
                         style={{ color: 'var(--danger)' }}
                         onClick={() => void handleDeleteVenue(venue)}
                       >
-                        <Trash2 size={15} />
+                        <Trash2 size={16} />
                       </button>
-                    </div>
-                  )}
-                </article>
-              );
-            })
-          )}
-        </div>
-
-        {/* Halls Column for Selected Venue */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Layers size={18} style={{ color: 'var(--primary)' }} />
-              قاعات {selectedVenue ? `«${selectedVenue.name}»` : ''} ({halls.length})
-            </h2>
-            {canManage && selectedVenue && (
-              <button className="btn-secondary" onClick={openCreateHall} style={{ height: '34px', padding: '0 12px', fontSize: '13px' }}>
-                <Plus size={15} /> إضافة قاعة
-              </button>
-            )}
-          </div>
-
-          {!selectedVenue ? (
-            <div className="card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-              اختر موقعاً من القائمة لعرض القاعات التابعة له.
-            </div>
-          ) : loadingHalls ? (
-            <div className="card" style={{ textAlign: 'center' }}>جاري تحميل القاعات…</div>
-          ) : halls.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)' }}>
-              لا توجد قاعات مضافة لهذا الموقع حتى الآن.
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '14px' }}>
-              {halls.map(hall => (
-                <article key={hall.hallID} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Building2 size={18} style={{ color: 'var(--primary)' }} />
-                      <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{hall.hallName}</h3>
-                    </div>
-                    {canManage && (
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button className="btn-icon" title="تعديل القاعة" onClick={() => openEditHall(hall)}>
-                          <Edit2 size={14} />
-                        </button>
-                        <button className="btn-icon" title="حذف القاعة" style={{ color: 'var(--danger)' }} onClick={() => void handleDeleteHall(hall)}>
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
                     )}
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    <div style={{ background: 'var(--bg-main)', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
-                      <span style={{ fontSize: '11px', display: 'block', color: 'var(--text-muted)' }}>المساحة</span>
-                      <strong>{hall.areaSqM ? `${hall.areaSqM} م²` : '—'}</strong>
-                    </div>
-                    <div style={{ background: 'var(--bg-main)', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
-                      <span style={{ fontSize: '11px', display: 'block', color: 'var(--text-muted)' }}>أقصى أجنحة</span>
-                      <strong>{hall.maxBooths ? `${hall.maxBooths} جناح` : '—'}</strong>
-                    </div>
-                    <div style={{ background: 'var(--bg-main)', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
-                      <span style={{ fontSize: '11px', display: 'block', color: 'var(--text-muted)' }}>الأبعاد (طول×عرض)</span>
-                      <strong>{hall.floorPlanWidth && hall.floorPlanHeight ? `${hall.floorPlanWidth} × ${hall.floorPlanHeight} م` : '—'}</strong>
-                    </div>
-                    <div style={{ background: 'var(--bg-main)', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
-                      <span style={{ fontSize: '11px', display: 'block', color: 'var(--text-muted)' }}>الأجنحة المسجلة</span>
-                      <strong>{hall.boothsCount} جناح</strong>
-                    </div>
                   </div>
                 </article>
               ))}
             </div>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Modal: Create / Edit Venue */}
+      {/* ━━━━━━━━━━━━━━━━━ MODAL: CREATE / EDIT VENUE ━━━━━━━━━━━━━━━━━ */}
       {isVenueModalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(15,23,42,.45)', display: 'grid', placeItems: 'center', padding: '20px' }}>
           <form className="card" onSubmit={handleVenueSubmit} style={{ width: 'min(560px, 100%)', display: 'grid', gap: '14px', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -509,7 +789,7 @@ export const VenuesPage = () => {
               <input
                 className="input-field"
                 required
-                placeholder="مثال: معرض طرابلس الدولي"
+                placeholder="مثال: مركز طرابلس الدولي للمعارض"
                 value={venueForm.name}
                 onChange={e => setVenueForm(prev => ({ ...prev, name: e.target.value }))}
               />
@@ -571,21 +851,26 @@ export const VenuesPage = () => {
               </div>
             </div>
 
-            <button className="btn-primary" type="submit" disabled={isSavingVenue} style={{ marginTop: '8px' }}>
-              {isSavingVenue ? 'جاري الحفظ…' : editingVenueId ? 'تحديث الموقع' : 'حفظ الموقع الجديد'}
-            </button>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+              <button className="btn-primary" type="submit" disabled={isSavingVenue} style={{ flex: 1 }}>
+                {isSavingVenue ? 'جاري الحفظ…' : editingVenueId ? 'تحديث الموقع' : 'حفظ الموقع الجديد'}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setIsVenueModalOpen(false)}>
+                إلغاء
+              </button>
+            </div>
           </form>
         </div>
       )}
 
-      {/* Modal: Create / Edit Hall */}
+      {/* ━━━━━━━━━━━━━━━━━ MODAL: CREATE / EDIT HALL ━━━━━━━━━━━━━━━━━ */}
       {isHallModalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(15,23,42,.45)', display: 'grid', placeItems: 'center', padding: '20px' }}>
           <form className="card" onSubmit={handleHallSubmit} style={{ width: 'min(520px, 100%)', display: 'grid', gap: '14px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h2>{editingHallId ? 'تعديل بيانات القاعة' : 'إضافة قاعة جديدة'}</h2>
-                <small style={{ color: 'var(--text-secondary)' }}>للموقع: {selectedVenue?.name}</small>
+                <small style={{ color: 'var(--text-secondary)' }}>للموقع: {currentVenue?.name}</small>
               </div>
               <button type="button" className="btn-icon" onClick={() => setIsHallModalOpen(false)}><X size={18} /></button>
             </div>
@@ -595,7 +880,7 @@ export const VenuesPage = () => {
               <input
                 className="input-field"
                 required
-                placeholder="مثال: القاعة الرئيسية (القاعة الكبرى)"
+                placeholder="مثال: القاعة الكبرى (Hall 1)"
                 value={hallForm.hallName}
                 onChange={e => setHallForm(prev => ({ ...prev, hallName: e.target.value }))}
               />
@@ -629,34 +914,57 @@ export const VenuesPage = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">عرض المخطط (بالمتر)</label>
+                <label className="form-label">عرض القاعة (بالمتر) *</label>
                 <input
                   className="input-field"
                   type="number"
                   step="0.1"
-                  min="0"
+                  min="5"
                   placeholder="50"
                   value={hallForm.floorPlanWidth}
                   onChange={e => setHallForm(prev => ({ ...prev, floorPlanWidth: e.target.value }))}
+                  required
                 />
               </div>
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">طول المخطط (بالمتر)</label>
+                <label className="form-label">طول القاعة (بالمتر) *</label>
                 <input
                   className="input-field"
                   type="number"
                   step="0.1"
-                  min="0"
+                  min="5"
                   placeholder="40"
                   value={hallForm.floorPlanHeight}
                   onChange={e => setHallForm(prev => ({ ...prev, floorPlanHeight: e.target.value }))}
+                  required
                 />
               </div>
             </div>
 
-            <button className="btn-primary" type="submit" disabled={isSavingHall} style={{ marginTop: '8px' }}>
-              {isSavingHall ? 'جاري الحفظ…' : editingHallId ? 'تحديث القاعة' : 'إضافة القاعة'}
-            </button>
+            <small style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+              ستظهر القاعة تلقائياً داخل مخطط الموقع بحجم نسبي مطابق لهذه الأبعاد.
+            </small>
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">الحالة</label>
+              <select
+                className="input-field"
+                value={hallForm.isActive ? 'true' : 'false'}
+                onChange={e => setHallForm(prev => ({ ...prev, isActive: e.target.value === 'true' }))}
+              >
+                <option value="true">نشطة وجاهزة للاستخدام</option>
+                <option value="false">تحت الصيانة / موقوفة</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+              <button className="btn-primary" type="submit" disabled={isSavingHall} style={{ flex: 1 }}>
+                {isSavingHall ? 'جاري الحفظ…' : editingHallId ? 'تحديث القاعة' : 'إضافة القاعة'}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setIsHallModalOpen(false)}>
+                إلغاء
+              </button>
+            </div>
           </form>
         </div>
       )}
