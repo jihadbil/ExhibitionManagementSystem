@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   CalendarDays,
   Plus,
+  Pencil,
   Trash2,
   Search,
   Clock,
@@ -15,16 +16,19 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { api } from '../../../services/api';
+import { getAllItems } from '../../../services/pagination';
 import { useToast } from '../../../app/providers/ToastContext';
+import { getApiErrorMessage } from '../../../services/apiError';
 
 interface Exhibition {
   exhibitionID: number;
   name: string;
+  venueID?: number;
 }
 
 interface Hall {
   hallID: number;
-  name: string;
+  hallName: string;
   venueName?: string;
 }
 
@@ -56,15 +60,21 @@ interface NewScheduleForm {
 }
 
 const EVENT_TYPES = [
-  'ندوة',
-  'ورشة عمل',
-  'محاضرة',
-  'حفل افتتاح',
-  'جلسة حوارية',
-  'عرض تقديمي',
-  'حفل ختام',
-  'اجتماع ثنائي (B2B)'
+  { value: 'Lecture', label: 'محاضرة' },
+  { value: 'Workshop', label: 'ورشة عمل' },
+  { value: 'Demo', label: 'عرض توضيحي' },
+  { value: 'Ceremony', label: 'مراسم أو حفل' },
 ];
+
+const eventTypeName = (type?: string) =>
+  EVENT_TYPES.find(item => item.value === type)?.label ?? type ?? 'فعالية';
+
+const toLocalDateTimeInput = (value: string) => {
+  const date = new Date(value);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+};
 
 export const EventsPage: React.FC = () => {
   const { showToast } = useToast();
@@ -83,13 +93,14 @@ export const EventsPage: React.FC = () => {
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Form State
   const initialForm: NewScheduleForm = {
     eventName: '',
-    eventType: 'ندوة',
+    eventType: 'Lecture',
     hallID: '',
     speakerName: '',
     startDateTime: '',
@@ -100,23 +111,14 @@ export const EventsPage: React.FC = () => {
   };
   const [formData, setFormData] = useState<NewScheduleForm>(initialForm);
 
-  // Load Exhibitions and Halls
+  // Load Exhibitions. Halls are loaded from the selected exhibition's venue.
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        const [exhibitionsRes, hallsRes] = await Promise.all([
-          api.get<{ items: Exhibition[] }>('/api/exhibitions?page=1&pageSize=100'),
-          api.get<Hall[]>('/api/halls').catch(() => ({ data: [] }))
-        ]);
-
-        const exList = exhibitionsRes.data.items ?? [];
+        const exList = await getAllItems<Exhibition>('/api/exhibitions');
         setExhibitions(exList);
         if (exList.length > 0) {
           setSelectedExhibitionId(exList[0].exhibitionID.toString());
-        }
-
-        if (Array.isArray(hallsRes.data)) {
-          setHalls(hallsRes.data);
         }
       } catch (err: unknown) {
         console.error('Failed to load initial data:', err);
@@ -128,7 +130,7 @@ export const EventsPage: React.FC = () => {
   }, []);
 
   // Load Schedules when selected exhibition changes
-  const loadSchedules = async () => {
+  const loadSchedules = useCallback(async () => {
     if (!selectedExhibitionId) {
       setSchedules([]);
       setLoading(false);
@@ -138,8 +140,18 @@ export const EventsPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.get<Schedule[]>(`/api/exhibitions/${selectedExhibitionId}/schedules`);
-      setSchedules(res.data || []);
+      const [schedulesRes, exhibitionRes] = await Promise.all([
+        api.get<Schedule[]>(`/api/exhibitions/${selectedExhibitionId}/schedules`),
+        api.get<Exhibition>(`/api/exhibitions/${selectedExhibitionId}`),
+      ]);
+      setSchedules(schedulesRes.data || []);
+
+      if (exhibitionRes.data.venueID) {
+        const hallsRes = await api.get<Hall[]>(`/api/halls/venue/${exhibitionRes.data.venueID}`);
+        setHalls(hallsRes.data || []);
+      } else {
+        setHalls([]);
+      }
     } catch (err: unknown) {
       console.error('Failed to load schedules:', err);
       setError('تعذر تحميل جدول الفعاليات لهذا المعرض.');
@@ -147,11 +159,11 @@ export const EventsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedExhibitionId]);
 
   useEffect(() => {
     void loadSchedules();
-  }, [selectedExhibitionId]);
+  }, [loadSchedules]);
 
   // Filtered schedules
   const filteredSchedules = useMemo(() => {
@@ -201,10 +213,33 @@ export const EventsPage: React.FC = () => {
       startDateTime: startIso,
       endDateTime: endIso
     });
+    setEditingSchedule(null);
     setIsAddModalOpen(true);
   };
 
-  const handleCreateSchedule = async (e: React.FormEvent) => {
+  const handleOpenEditModal = (schedule: Schedule) => {
+    setEditingSchedule(schedule);
+    setFormData({
+      eventName: schedule.eventName,
+      eventType: schedule.eventType || 'Lecture',
+      hallID: schedule.hallID?.toString() ?? '',
+      speakerName: schedule.speakerName ?? '',
+      startDateTime: toLocalDateTimeInput(schedule.startDateTime),
+      endDateTime: toLocalDateTimeInput(schedule.endDateTime),
+      maxAttendees: schedule.maxAttendees?.toString() ?? '',
+      description: schedule.description ?? '',
+      isPublic: schedule.isPublic,
+    });
+    setIsAddModalOpen(true);
+  };
+
+  const closeScheduleModal = () => {
+    setIsAddModalOpen(false);
+    setEditingSchedule(null);
+    setFormData(initialForm);
+  };
+
+  const handleSaveSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedExhibitionId) {
       showToast('الرجاء اختيار المعرض أولاً', 'danger');
@@ -243,14 +278,28 @@ export const EventsPage: React.FC = () => {
         isPublic: formData.isPublic
       };
 
-      await api.post(`/api/exhibitions/${selectedExhibitionId}/schedules`, payload);
-      showToast('تمت إضافة الفعالية بنجاح إلى جدول المعرض ✓', 'success');
-      setIsAddModalOpen(false);
+      if (editingSchedule) {
+        await api.put(
+          `/api/exhibitions/${selectedExhibitionId}/schedules/${editingSchedule.scheduleID}`,
+          payload,
+        );
+      } else {
+        await api.post(`/api/exhibitions/${selectedExhibitionId}/schedules`, payload);
+      }
+      showToast(
+        editingSchedule
+          ? 'تم تحديث بيانات الفعالية بنجاح ✓'
+          : 'تمت إضافة الفعالية بنجاح إلى جدول المعرض ✓',
+        'success',
+      );
+      closeScheduleModal();
       await loadSchedules();
-    } catch (err: any) {
-      console.error('Failed to create schedule:', err);
-      const msg = err.response?.data?.message || err.response?.data || 'تعذر إضافة الفعالية.';
-      showToast(typeof msg === 'string' ? msg : 'تعذر إضافة الفعالية', 'danger');
+    } catch (err: unknown) {
+      console.error('Failed to save schedule:', err);
+      showToast(
+        getApiErrorMessage(err, editingSchedule ? 'تعذر تحديث الفعالية.' : 'تعذر إضافة الفعالية.'),
+        'danger',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -265,10 +314,9 @@ export const EventsPage: React.FC = () => {
       showToast('تم حذف الفعالية من الجدول بنجاح ✓', 'success');
       setScheduleToDelete(null);
       await loadSchedules();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete schedule:', err);
-      const msg = err.response?.data?.message || 'تعذر حذف الفعالية.';
-      showToast(msg, 'danger');
+      showToast(getApiErrorMessage(err, 'تعذر حذف الفعالية.'), 'danger');
     } finally {
       setSubmitting(false);
     }
@@ -276,14 +324,13 @@ export const EventsPage: React.FC = () => {
 
   const getEventTypeBadgeClass = (type?: string) => {
     switch (type) {
-      case 'ندوة':
+      case 'Lecture':
         return 'badge-info';
-      case 'ورشة عمل':
+      case 'Workshop':
         return 'badge-primary';
-      case 'محاضرة':
+      case 'Demo':
         return 'badge-warning';
-      case 'حفل افتتاح':
-      case 'حفل ختام':
+      case 'Ceremony':
         return 'badge-success';
       default:
         return 'badge-secondary';
@@ -414,9 +461,9 @@ export const EventsPage: React.FC = () => {
               onChange={(e) => setSelectedType(e.target.value)}
             >
               <option value="ALL">جميع الأنواع</option>
-              {EVENT_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {EVENT_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
                 </option>
               ))}
             </select>
@@ -428,7 +475,7 @@ export const EventsPage: React.FC = () => {
             <select
               className="input-field"
               value={selectedPrivacy}
-              onChange={(e) => setSelectedPrivacy(e.target.value as any)}
+              onChange={(e) => setSelectedPrivacy(e.target.value as 'ALL' | 'PUBLIC' | 'PRIVATE')}
             >
               <option value="ALL">الكل (عامة ومغلقة)</option>
               <option value="PUBLIC">فعاليات عامة للجميع</option>
@@ -492,7 +539,7 @@ export const EventsPage: React.FC = () => {
                     </td>
                     <td>
                       <span className={`badge ${getEventTypeBadgeClass(item.eventType)}`}>
-                        {item.eventType || 'فعالية'}
+                        {eventTypeName(item.eventType)}
                       </span>
                     </td>
                     <td>
@@ -546,14 +593,24 @@ export const EventsPage: React.FC = () => {
                       )}
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <button
-                        onClick={() => setScheduleToDelete(item)}
-                        className="btn-danger"
-                        style={{ height: '32px', width: '32px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}
-                        title="حذف الفعالية"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          onClick={() => handleOpenEditModal(item)}
+                          className="btn-secondary"
+                          style={{ height: '32px', width: '32px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}
+                          title="تعديل الفعالية"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => setScheduleToDelete(item)}
+                          className="btn-danger"
+                          style={{ height: '32px', width: '32px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}
+                          title="حذف الفعالية"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -590,7 +647,7 @@ export const EventsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Schedule Modal */}
+      {/* Add or edit schedule modal */}
       {isAddModalOpen && (
         <div
           style={{
@@ -618,18 +675,18 @@ export const EventsPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <CalendarDays size={22} style={{ color: 'var(--primary)' }} />
                 <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-                  إضافة فعالية أو جلسة جديدة
+                  {editingSchedule ? 'تعديل بيانات الفعالية' : 'إضافة فعالية أو جلسة جديدة'}
                 </h3>
               </div>
               <button
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={closeScheduleModal}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleSaveSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="form-group" style={{ margin: 0 }}>
                 <label className="form-label">
                   عنوان الفعالية <span style={{ color: 'var(--danger)' }}>*</span>
@@ -652,9 +709,9 @@ export const EventsPage: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, eventType: e.target.value })}
                     className="input-field"
                   >
-                    {EVENT_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
+                    {EVENT_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
                       </option>
                     ))}
                   </select>
@@ -670,7 +727,7 @@ export const EventsPage: React.FC = () => {
                     <option value="">-- بدون قاعة محددة --</option>
                     {halls.map((h) => (
                       <option key={h.hallID} value={h.hallID}>
-                        {h.name} {h.venueName ? `(${h.venueName})` : ''}
+                        {h.hallName} {h.venueName ? `(${h.venueName})` : ''}
                       </option>
                     ))}
                   </select>
@@ -758,7 +815,7 @@ export const EventsPage: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={closeScheduleModal}
                   className="btn-secondary"
                   style={{ height: '40px', padding: '0 18px' }}
                 >
@@ -770,7 +827,7 @@ export const EventsPage: React.FC = () => {
                   className="btn-primary"
                   style={{ height: '40px', padding: '0 24px' }}
                 >
-                  {submitting ? 'جاري الحفظ...' : 'إضافة الفعالية'}
+                  {submitting ? 'جاري الحفظ...' : editingSchedule ? 'حفظ التعديلات' : 'إضافة الفعالية'}
                 </button>
               </div>
             </form>
