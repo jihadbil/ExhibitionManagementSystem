@@ -218,7 +218,9 @@ namespace ExhibitionManagementSystem.DeskTop.ViewModels.ServiceMgmt
         {
             await ExecuteSafeAsync(async () =>
             {
-                var result = await _exhibitionService.GetByTenantAsync(Session.TenantId, 1, 100);
+                var result = await PagedLookupLoader.LoadAllAsync((page, pageSize) =>
+                    _exhibitionService.GetByTenantAsync(Session.TenantId, page, pageSize));
+                if (!result.IsSuccess) throw new InvalidOperationException(result.ErrorMessage);
                 if (result.IsSuccess && result.Data is not null)
                 {
                     Exhibitions.Clear();
@@ -226,7 +228,7 @@ namespace ExhibitionManagementSystem.DeskTop.ViewModels.ServiceMgmt
 
                     ExhibitionsWithAll.Add(new ExhibitionSummaryDto { ExhibitionID = 0, Name = "عامة (الكل)" });
 
-                    foreach (var exh in result.Data.Items)
+                    foreach (var exh in result.Data)
                     {
                         Exhibitions.Add(exh);
                         ExhibitionsWithAll.Add(exh);

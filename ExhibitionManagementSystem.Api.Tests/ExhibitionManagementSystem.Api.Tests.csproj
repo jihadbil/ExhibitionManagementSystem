@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ExhibitionManagementSystem\ExhibitionManagementSystem.csproj" />
+    <Compile Include="..\ExhibitionManagementSystem.DeskTop\Helpers\PagedLookupLoader.cs" Link="Desktop\PagedLookupLoader.cs" />
   </ItemGroup>
 
 </Project>
