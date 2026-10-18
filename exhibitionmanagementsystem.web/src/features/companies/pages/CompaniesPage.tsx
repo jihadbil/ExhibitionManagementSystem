@@ -14,6 +14,8 @@ import {
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useToast } from '../../../app/providers/ToastContext';
 import { api } from '../../../services/api';
+import { getAllItems } from '../../../services/pagination';
+import { getApiErrorMessage } from '../../../services/apiError';
 
 interface Exhibitor {
   exhibitorID: number;
@@ -21,6 +23,7 @@ interface Exhibitor {
   sector: string;
   nationality: string;
   exhibitorCategory: string;
+  preferredCurrencyCode: string;
   contactPerson?: string;
   email?: string;
   phone?: string;
@@ -34,11 +37,13 @@ interface ExhibitorFormData {
   sector: string;
   nationality: string;
   exhibitorCategory: string;
+  preferredCurrencyCode: string;
   contactPerson: string;
   email: string;
   phone: string;
   logoURL: string;
   companyProfile: string;
+  isActive: boolean;
 }
 
 const emptyForm: ExhibitorFormData = {
@@ -46,12 +51,21 @@ const emptyForm: ExhibitorFormData = {
   sector: '',
   nationality: 'ليبي',
   exhibitorCategory: 'Local',
+  preferredCurrencyCode: 'LYD',
   contactPerson: '',
   email: '',
   phone: '',
   logoURL: '',
   companyProfile: '',
+  isActive: true,
 };
+
+interface CurrencyOption {
+  currencyCode: string;
+  currencyName: string;
+  symbol: string;
+  isActive: boolean;
+}
 
 const categoryNames: Record<string, string> = {
   Local: 'محلي',
@@ -62,9 +76,10 @@ const categoryNames: Record<string, string> = {
 export const CompaniesPage = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
-  const canManage = user?.roles.some(role => role === 'Admin' || role === 'TenantAdmin' || role === 'EventManager') ?? false;
+  const canManage = user?.roles.some(role => role === 'Admin' || role === 'TenantAdmin' || role === 'SuperAdmin') ?? false;
 
   const [items, setItems] = useState<Exhibitor[]>([]);
+  const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [loading, setLoading] = useState(true);
@@ -81,8 +96,7 @@ export const CompaniesPage = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get<{ items: Exhibitor[] }>('/api/exhibitors?page=1&pageSize=150');
-      setItems(response.data.items ?? []);
+      setItems(await getAllItems<Exhibitor>('/api/exhibitors'));
     } catch {
       setError('تعذر تحميل بيانات الشركات العارضة من الخادم.');
     } finally {
@@ -92,6 +106,9 @@ export const CompaniesPage = () => {
 
   useEffect(() => {
     void loadExhibitors();
+    void api.get<CurrencyOption[]>('/api/currencies')
+      .then(response => setCurrencies((response.data ?? []).filter(currency => currency.isActive)))
+      .catch(() => setCurrencies([]));
   }, [loadExhibitors]);
 
   // Filtered List
@@ -124,11 +141,13 @@ export const CompaniesPage = () => {
       sector: ex.sector || '',
       nationality: ex.nationality || 'ليبي',
       exhibitorCategory: ex.exhibitorCategory || 'Local',
+      preferredCurrencyCode: ex.preferredCurrencyCode || 'LYD',
       contactPerson: ex.contactPerson || '',
       email: ex.email || '',
       phone: ex.phone || '',
       logoURL: ex.logoURL || '',
       companyProfile: ex.companyProfile || '',
+      isActive: ex.isActive,
     });
     setIsModalOpen(true);
   };
@@ -148,11 +167,13 @@ export const CompaniesPage = () => {
         sector: form.sector.trim(),
         nationality: form.nationality.trim(),
         exhibitorCategory: form.exhibitorCategory,
+        preferredCurrencyCode: form.preferredCurrencyCode,
         contactPerson: form.contactPerson.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
         logoURL: form.logoURL.trim(),
         companyProfile: form.companyProfile.trim(),
+        isActive: form.isActive,
       };
 
       if (editingId) {
@@ -180,8 +201,8 @@ export const CompaniesPage = () => {
       await api.delete(`/api/exhibitors/${ex.exhibitorID}`);
       showToast('تم حذف الشركة العارضة بنجاح.', 'success');
       await loadExhibitors();
-    } catch {
-      showToast('تعذر حذف الشركة؛ قد تكون مرتبطة بحجوزات أو فواتير قائمة.', 'danger');
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'تعذر حذف الشركة؛ قد تكون مرتبطة بحجوزات أو فواتير قائمة.'), 'danger');
     }
   };
 
@@ -284,6 +305,9 @@ export const CompaniesPage = () => {
                     <Globe size={13} style={{ color: 'var(--primary)' }} /> الجنسية: {item.nationality}
                   </span>
                 )}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  عملة الفوترة المفضلة: <strong>{item.preferredCurrencyCode || 'LYD'}</strong>
+                </span>
               </div>
 
               {canManage && (
@@ -319,6 +343,23 @@ export const CompaniesPage = () => {
                 value={form.companyName}
                 onChange={e => setForm(prev => ({ ...prev, companyName: e.target.value }))}
               />
+            </div>
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">عملة الفوترة المفضلة *</label>
+              <select
+                className="input-field"
+                required
+                value={form.preferredCurrencyCode}
+                onChange={e => setForm(prev => ({ ...prev, preferredCurrencyCode: e.target.value }))}
+              >
+                {currencies.map(currency => (
+                  <option key={currency.currencyCode} value={currency.currencyCode}>
+                    {currency.currencyName} ({currency.currencyCode})
+                  </option>
+                ))}
+              </select>
+              <small style={{ color: 'var(--text-secondary)' }}>تُقترح تلقائيًا عند إنشاء الحجز ويمكن تغييرها لذلك الحجز فقط.</small>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

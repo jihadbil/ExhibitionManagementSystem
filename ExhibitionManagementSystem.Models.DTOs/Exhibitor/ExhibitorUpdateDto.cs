@@ -27,6 +27,9 @@ public class ExhibitorUpdateDto
     [Required]
     public string ExhibitorCategory { get; set; } = string.Empty;
 
+    [Required, StringLength(3)]
+    public string PreferredCurrencyCode { get; set; } = "LYD";
+
     [StringLength(500)]
     public string LogoURL { get; set; } = string.Empty;
 

@@ -27,6 +27,7 @@ public class ExhibitorMappingProfile : Profile
             .ForMember(dest => dest.DeletedByUserId, opt => opt.Ignore())
             .ForMember(dest => dest.Tenant, opt => opt.Ignore())
             .ForMember(dest => dest.User, opt => opt.Ignore())
+            .ForMember(dest => dest.PreferredCurrency, opt => opt.Ignore())
             .ForMember(dest => dest.BoothReservations, opt => opt.Ignore())
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
@@ -42,6 +43,7 @@ public class ExhibitorMappingProfile : Profile
             .ForMember(dest => dest.DeletedByUserId, opt => opt.Ignore())
             .ForMember(dest => dest.Tenant, opt => opt.Ignore())
             .ForMember(dest => dest.User, opt => opt.Ignore())
+            .ForMember(dest => dest.PreferredCurrency, opt => opt.Ignore())
             .ForMember(dest => dest.BoothReservations, opt => opt.Ignore());
     }
 }

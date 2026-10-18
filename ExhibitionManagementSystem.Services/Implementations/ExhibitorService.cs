@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using ExhibitionManagementSystem.DataAccess.Repositories.Interfaces;
 using ExhibitionManagementSystem.Models;
+using ExhibitionManagementSystem.Models.Enums;
 using ExhibitionManagementSystem.Models.DTOs.Exhibitor;
 using ExhibitionManagementSystem.Models.DTOs.Reservation;
 using ExhibitionManagementSystem.Models.DTOs.Common;
@@ -80,6 +81,13 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<ExhibitorDto>> CreateAsync(int tenantId, ExhibitorCreateDto dto)
         {
+            if (!EnumInput.TryParse<ExhibitorCategory>(dto.ExhibitorCategory, out var category))
+                return ServiceResult<ExhibitorDto>.Failure("فئة العارض غير صالحة", "INVALID_EXHIBITOR_CATEGORY");
+            dto.ExhibitorCategory = category.ToString();
+            dto.PreferredCurrencyCode = dto.PreferredCurrencyCode.Trim().ToUpperInvariant();
+            if (!await _unitOfWork.Currencies.ExistsAsync(c => c.CurrencyCode == dto.PreferredCurrencyCode && c.IsActive))
+                return ServiceResult<ExhibitorDto>.Failure("عملة الفوترة المفضلة غير موجودة أو غير نشطة", "INVALID_CURRENCY");
+
             var exists = await _unitOfWork.Exhibitors.ExistsAsync(e => e.TenantID == tenantId && e.Email == dto.Email);
             if (exists)
             {
@@ -98,6 +106,13 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<ExhibitorDto>> UpdateAsync(int tenantId, int id, ExhibitorUpdateDto dto)
         {
+            if (!EnumInput.TryParse<ExhibitorCategory>(dto.ExhibitorCategory, out var category))
+                return ServiceResult<ExhibitorDto>.Failure("فئة العارض غير صالحة", "INVALID_EXHIBITOR_CATEGORY");
+            dto.ExhibitorCategory = category.ToString();
+            dto.PreferredCurrencyCode = dto.PreferredCurrencyCode.Trim().ToUpperInvariant();
+            if (!await _unitOfWork.Currencies.ExistsAsync(c => c.CurrencyCode == dto.PreferredCurrencyCode && c.IsActive))
+                return ServiceResult<ExhibitorDto>.Failure("عملة الفوترة المفضلة غير موجودة أو غير نشطة", "INVALID_CURRENCY");
+
             var exhibitor = await _unitOfWork.Exhibitors.GetByIdAsync(id);
             if (exhibitor == null || exhibitor.TenantID != tenantId)
             {
@@ -122,14 +137,32 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult> DeleteAsync(int tenantId, int id)
         {
+            await _unitOfWork.BeginSerializableTransactionAsync();
+            try { return await DeleteCoreAsync(tenantId, id); }
+            catch (DbUpdateException) { return ServiceResult.Failure("تعارض حذف العارض مع عملية أخرى؛ أعد تحميل البيانات", "EXHIBITOR_DELETE_CONFLICT"); }
+            catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number is 1205 or 1222)
+            { return ServiceResult.Failure("تعارض حذف العارض مع عملية أخرى؛ أعد تحميل البيانات", "EXHIBITOR_DELETE_CONFLICT"); }
+            finally { await _unitOfWork.RollbackTransactionAsync(); }
+        }
+
+        private async Task<ServiceResult> DeleteCoreAsync(int tenantId, int id)
+        {
             var exhibitor = await _unitOfWork.Exhibitors.GetByIdAsync(id);
             if (exhibitor == null || exhibitor.TenantID != tenantId)
             {
                 return ServiceResult.Failure("العارض غير موجود", "EXHIBITOR_NOT_FOUND");
             }
 
+            if (await _unitOfWork.Invoices.AsQueryable().IgnoreQueryFilters().AnyAsync(invoice =>
+                invoice.TenantID == tenantId && invoice.Reservation.ExhibitorID == id))
+                return ServiceResult.Failure("لا يمكن حذف العارض لوجود فواتير مرتبطة به", "EXHIBITOR_HAS_INVOICES");
+            if (await _unitOfWork.BoothReservations.AsQueryable().IgnoreQueryFilters().AnyAsync(reservation =>
+                reservation.TenantID == tenantId && reservation.ExhibitorID == id))
+                return ServiceResult.Failure("لا يمكن حذف العارض لوجود حجوزات مرتبطة به", "EXHIBITOR_HAS_RESERVATIONS");
+
             await _unitOfWork.Exhibitors.SoftDeleteAsync(id, "System");
             await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
 
             return ServiceResult.Success();
         }

@@ -7,5 +7,6 @@ public class ExhibitorSummaryDto
     public string Sector { get; set; } = string.Empty;
     public string Nationality { get; set; } = string.Empty;
     public string ExhibitorCategory { get; set; } = string.Empty;
+    public string PreferredCurrencyCode { get; set; } = "LYD";
     public bool IsActive { get; set; }
 }

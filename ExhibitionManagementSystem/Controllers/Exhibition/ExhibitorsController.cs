@@ -53,6 +53,7 @@ public class ExhibitorsController : BaseApiController
 
     // GET /api/exhibitors/{exhibitorId}/reservations
     [HttpGet("{exhibitorId:int}/reservations")]
+    [Authorize(Policy = "EventManagement")]
     public async Task<ActionResult<IList<BoothReservationSummaryDto>>> GetReservations(
         int exhibitorId)
     {
