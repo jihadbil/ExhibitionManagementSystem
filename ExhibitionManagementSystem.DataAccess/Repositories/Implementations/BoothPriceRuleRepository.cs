@@ -31,7 +31,8 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             BoothType? boothType, 
             ExhibitorCategory? category, 
             decimal areaSqM, 
-            DateTime date)
+            DateTime date,
+            string? productCategory = null)
         {
             var targetDate = date.Date;
 
@@ -41,6 +42,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                             (r.ExhibitionID == null || r.ExhibitionID == exhibitionId) &&
                             (r.BoothType == null || r.BoothType == boothType) &&
                             (r.ExhibitorCategory == null || r.ExhibitorCategory == category) &&
+                            (string.IsNullOrEmpty(r.ProductCategory) || r.ProductCategory == productCategory) &&
                             (r.MinAreaSqM == null || areaSqM >= r.MinAreaSqM) &&
                             (r.MaxAreaSqM == null || areaSqM <= r.MaxAreaSqM) &&
                             r.ValidFrom <= targetDate &&
@@ -58,6 +60,10 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 .OrderByDescending(r => r.ExhibitionID.HasValue)
                 .ThenByDescending(r => r.BoothType.HasValue)
                 .ThenByDescending(r => r.ExhibitorCategory.HasValue)
+                .ThenByDescending(r => !string.IsNullOrEmpty(r.ProductCategory))
+                .ThenByDescending(r => r.ValidFrom)
+                .ThenByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.RuleID)
                 .FirstOrDefault();
         }
     }

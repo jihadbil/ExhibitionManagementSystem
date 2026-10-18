@@ -9,6 +9,7 @@ public class ServicePriceRuleCreateDto
     public int ServiceID { get; set; }
     public int? ExhibitionID { get; set; }
     public string? ExhibitorCategory { get; set; }
+    [Range(typeof(decimal), "0", "9999999999999999.99")]
     public decimal UnitPrice { get; set; }
 
     [Required]

@@ -17,6 +17,9 @@ public class ServiceCreateDto
     public string Unit { get; set; } = string.Empty;
 
     public decimal? DefaultPrice { get; set; }
+
+    [Required, StringLength(3)]
+    public string DefaultCurrencyCode { get; set; } = "LYD";
     public bool IsMandatory { get; set; }
 
     [StringLength(500)]

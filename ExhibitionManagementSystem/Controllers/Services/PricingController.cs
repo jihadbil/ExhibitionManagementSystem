@@ -105,15 +105,36 @@ public class PricingController : BaseApiController
         [FromBody] CalculateBoothPriceRequest request)
     {
         if (!Enum.TryParse<ExhibitionManagementSystem.Models.Enums.BoothType>(
-                request.BoothType, out var boothType))
+                request.BoothType, true, out var boothType) || !Enum.IsDefined(boothType))
             return BadRequest(new { ErrorMessage = "نوع الكشك غير صالح", ErrorCode = "INVALID_BOOTH_TYPE" });
 
         if (!Enum.TryParse<ExhibitionManagementSystem.Models.Enums.ExhibitorCategory>(
-                request.ExhibitorCategory, out var category))
+                request.ExhibitorCategory, true, out var category) || !Enum.IsDefined(category))
             return BadRequest(new { ErrorMessage = "فئة العارض غير صالحة", ErrorCode = "INVALID_EXHIBITOR_CATEGORY" });
 
         var result = await _pricingService.CalculateBoothPriceAsync(
-            TenantId, request.ExhibitionId, boothType, category, request.AreaSqM ?? 0);
+            TenantId, request.ExhibitionId, boothType, category, request.AreaSqM ?? 0,
+            productCategory: request.ProductCategory);
+        return ToActionResult(result);
+    }
+
+    // POST /api/pricing/calculate/booth/details
+    // Returns the rule currency as well as the amount so clients never guess it.
+    [HttpPost("calculate/booth/details")]
+    public async Task<ActionResult<BoothPriceCalculationDto>> CalculateBoothPriceDetails(
+        [FromBody] CalculateBoothPriceRequest request)
+    {
+        if (!Enum.TryParse<ExhibitionManagementSystem.Models.Enums.BoothType>(
+                request.BoothType, true, out var boothType) || !Enum.IsDefined(boothType))
+            return BadRequest(new { ErrorMessage = "نوع الكشك غير صالح", ErrorCode = "INVALID_BOOTH_TYPE" });
+
+        if (!Enum.TryParse<ExhibitionManagementSystem.Models.Enums.ExhibitorCategory>(
+                request.ExhibitorCategory, true, out var category) || !Enum.IsDefined(category))
+            return BadRequest(new { ErrorMessage = "فئة العارض غير صالحة", ErrorCode = "INVALID_EXHIBITOR_CATEGORY" });
+
+        var result = await _pricingService.CalculateBoothPriceDetailsAsync(
+            TenantId, request.ExhibitionId, boothType, category, request.AreaSqM ?? 0,
+            productCategory: request.ProductCategory);
         return ToActionResult(result);
     }
 
@@ -134,7 +155,8 @@ public record CalculateBoothPriceRequest(
     int ExhibitionId,
     string BoothType,
     string ExhibitorCategory,
-    decimal? AreaSqM);
+    decimal? AreaSqM,
+    string? ProductCategory = null);
 
 public record CalculateServicePriceRequest(
     int ServiceId,

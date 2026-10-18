@@ -44,6 +44,12 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<ServiceDto>> CreateAsync(int tenantId, ServiceCreateDto dto)
         {
+            if (dto.DefaultPrice.HasValue && !MoneyInput.IsValid(dto.DefaultPrice.Value, allowZero: true))
+                return ServiceResult<ServiceDto>.Failure("سعر الخدمة يجب أن يكون غير سالب وضمن الحجم المدعوم وبمنزلتين عشريتين كحد أقصى", "INVALID_PRICE");
+            dto.DefaultCurrencyCode = dto.DefaultCurrencyCode.Trim().ToUpperInvariant();
+            if (!await _unitOfWork.Currencies.ExistsAsync(c => c.CurrencyCode == dto.DefaultCurrencyCode && c.IsActive))
+                return ServiceResult<ServiceDto>.Failure("عملة السعر الافتراضي غير موجودة أو غير نشطة", "INVALID_CURRENCY");
+
             var service = _mapper.Map<Models.Service>(dto);
             service.TenantID = tenantId;
             service.IsActive = true;
@@ -57,6 +63,12 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<ServiceDto>> UpdateAsync(int tenantId, int serviceId, ServiceCreateDto dto)
         {
+            if (dto.DefaultPrice.HasValue && !MoneyInput.IsValid(dto.DefaultPrice.Value, allowZero: true))
+                return ServiceResult<ServiceDto>.Failure("سعر الخدمة يجب أن يكون غير سالب وضمن الحجم المدعوم وبمنزلتين عشريتين كحد أقصى", "INVALID_PRICE");
+            dto.DefaultCurrencyCode = dto.DefaultCurrencyCode.Trim().ToUpperInvariant();
+            if (!await _unitOfWork.Currencies.ExistsAsync(c => c.CurrencyCode == dto.DefaultCurrencyCode && c.IsActive))
+                return ServiceResult<ServiceDto>.Failure("عملة السعر الافتراضي غير موجودة أو غير نشطة", "INVALID_CURRENCY");
+
             var service = await _unitOfWork.Services.GetByIdAsync(serviceId);
             if (service == null || service.TenantID != tenantId)
             {

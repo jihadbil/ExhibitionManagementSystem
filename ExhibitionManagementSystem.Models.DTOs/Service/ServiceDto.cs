@@ -11,6 +11,7 @@ public class ServiceDto : AuditDto
     public string Category { get; set; } = string.Empty;
     public string Unit { get; set; } = string.Empty;
     public decimal? DefaultPrice { get; set; }
+    public string DefaultCurrencyCode { get; set; } = "LYD";
     public bool IsMandatory { get; set; }
     public string Description { get; set; } = string.Empty;
     public bool IsActive { get; set; }

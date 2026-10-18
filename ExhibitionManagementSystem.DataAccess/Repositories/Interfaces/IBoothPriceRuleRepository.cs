@@ -16,6 +16,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Interfaces
             BoothType? boothType, 
             ExhibitorCategory? category, 
             decimal areaSqM, 
-            DateTime date);
+            DateTime date,
+            string? productCategory = null);
     }
 }

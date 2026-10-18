@@ -20,6 +20,7 @@ public class ServiceMappingProfile : Profile
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedByUserId, opt => opt.Ignore())
             .ForMember(dest => dest.Tenant, opt => opt.Ignore())
+            .ForMember(dest => dest.DefaultCurrency, opt => opt.Ignore())
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
     }
 }

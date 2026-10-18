@@ -51,6 +51,9 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return rules
                 .OrderByDescending(r => r.ExhibitionID.HasValue)
                 .ThenByDescending(r => r.ExhibitorCategory.HasValue)
+                .ThenByDescending(r => r.ValidFrom)
+                .ThenByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.PriceRuleID)
                 .FirstOrDefault();
         }
     }
