@@ -396,6 +396,50 @@ button:active {
   }
 }
 
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .badge-print-target,
+  .badge-print-target *,
+  .kiosk-print-target,
+  .kiosk-print-target *,
+  .ticket-print-target,
+  .ticket-print-target * {
+    visibility: visible !important;
+  }
+
+    .kiosk-print-target {
+      position: absolute !important;
+      inset: 0 !important;
+      margin: auto !important;
+      box-shadow: none !important;
+    }
+
+    .badge-print-target,
+    .ticket-print-target {
+      position: fixed !important;
+      top: 12mm !important;
+      left: 50% !important;
+      right: auto !important;
+      width: var(--badge-width, 86mm) !important;
+      height: var(--badge-height, 120mm) !important;
+      min-height: var(--badge-height, 120mm) !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      transform: translateX(-50%) !important;
+      border: 0.25mm solid #e2e8f0 !important;
+      border-radius: 3mm !important;
+      box-shadow: none !important;
+      color: #0f172a !important;
+      background: #ffffff !important;
+      overflow: hidden !important;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+}
+
 @media (max-width: 520px) {
   .app-topbar h1 {
     max-width: 190px;

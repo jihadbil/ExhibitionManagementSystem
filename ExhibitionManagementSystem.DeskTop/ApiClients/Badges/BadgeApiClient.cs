@@ -54,6 +54,6 @@ public class BadgeApiClient : ApiClientBase, IBadgeService
 
     public Task<ServiceResult<BadgePrintPayloadDto>> GenerateBadgePayloadForStaffAsync(int tenantId, int staffId)
     {
-        return GetAsync<BadgePrintPayloadDto>($"api/badges/render-staff/{staffId}");
+        return PostAsync<BadgePrintPayloadDto>($"api/badges/staff/{staffId}/issue", new { });
     }
 }

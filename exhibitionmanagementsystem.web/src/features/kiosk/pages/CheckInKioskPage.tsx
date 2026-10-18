@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   QrCode,
   Scan,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../../app/providers/ToastContext';
 import { api } from '../../../services/api';
+import { BadgeCard, type BadgePrintPayload } from '../../badges/components/BadgeCard';
 
 interface CheckedInAttendee {
   id: string;
@@ -40,6 +41,54 @@ export const CheckInKioskPage: React.FC = () => {
   // Success Flash state
   const [currentAttendee, setCurrentAttendee] = useState<CheckedInAttendee | null>(null);
   const [isSuccessFlash, setIsSuccessFlash] = useState(false);
+  const [badgePayload, setBadgePayload] = useState<BadgePrintPayload | null>(null);
+  const [badgeLoading, setBadgeLoading] = useState(false);
+  const [pendingPrint, setPendingPrint] = useState<string | null>(null);
+  const requestId = useRef(0);
+  const flashTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => {
+    requestId.current += 1;
+    window.clearTimeout(flashTimer.current);
+  }, []);
+
+  // Print only after React has mounted the actual badge, including its QR code.
+  useEffect(() => {
+    if (!autoPrint || !pendingPrint || badgePayload?.qrCode !== pendingPrint) return;
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        window.print();
+        setPendingPrint(null);
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+    };
+  }, [autoPrint, pendingPrint, badgePayload]);
+
+  const loadBadge = async (qrCode: string, request: number) => {
+    setBadgeLoading(true);
+    try {
+      const { data } = await api.get<BadgePrintPayload>(`/api/badges/render-by-qr/${encodeURIComponent(qrCode)}`);
+      if (request !== requestId.current) return;
+      setBadgePayload(data);
+      setCurrentAttendee(current => current ? {
+        ...current, name: data.fullName, company: data.companyName || '',
+        category: data.participantTypeTitle,
+        boothLocation: [data.venueAndHallName, data.boothNumber].filter(Boolean).join(' | '),
+      } : current);
+      setRecentList(current => current.map(item => item.ticketNumber === qrCode ? {
+        ...item, name: data.fullName, company: data.companyName || '', category: data.participantTypeTitle,
+      } : item));
+      if (autoPrint) setPendingPrint(data.qrCode);
+    } catch {
+      if (request === requestId.current) showToast('تم تسجيل الدخول، لكن تعذر تحميل الشارة. أعد تحميلها دون إعادة مسح التذكرة.', 'warning');
+    } finally {
+      if (request === requestId.current) setBadgeLoading(false);
+    }
+  };
 
   const handleManualScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +98,12 @@ export const CheckInKioskPage: React.FC = () => {
   };
 
   const processCheckIn = async (code: string) => {
+    const request = ++requestId.current;
+    window.clearTimeout(flashTimer.current);
+    setBadgePayload(null);
+    setPendingPrint(null);
+    setCurrentAttendee(null);
+    setIsSuccessFlash(false);
     setIsScanning(true);
     try {
       const response = await api.post<TicketScanResponse>('/api/tickets/scan', {
@@ -57,6 +112,7 @@ export const CheckInKioskPage: React.FC = () => {
         location: gateName,
       });
       const scan = response.data;
+      if (request !== requestId.current) return;
       const attendee: CheckedInAttendee = {
         id: scan.scanID.toString(),
         name: `تذكرة رقم ${scan.ticketID}`,
@@ -74,13 +130,17 @@ export const CheckInKioskPage: React.FC = () => {
       setScanCode('');
       showToast('تم التحقق من التذكرة وتسجيل الدخول في الخادم.', 'success');
 
-      if (autoPrint) window.print();
-      window.setTimeout(() => setIsSuccessFlash(false), 4500);
+      flashTimer.current = window.setTimeout(() => {
+        if (request === requestId.current) setIsSuccessFlash(false);
+      }, 4500);
+      await loadBadge(scan.qrCode, request);
     } catch {
-      setIsSuccessFlash(false);
-      showToast('رُفضت عملية المسح. تحقق من الرمز أو حالة التذكرة.', 'danger');
+      if (request === requestId.current) {
+        setIsSuccessFlash(false);
+        showToast('رُفضت عملية المسح. تحقق من الرمز أو حالة التذكرة.', 'danger');
+      }
     } finally {
-      setIsScanning(false);
+      if (request === requestId.current) setIsScanning(false);
     }
   };
 
@@ -124,6 +184,7 @@ export const CheckInKioskPage: React.FC = () => {
 
       {/* Main Kiosk Split Layout */}
       <div
+        className="kiosk-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: '1.2fr 1fr',
@@ -150,6 +211,7 @@ export const CheckInKioskPage: React.FC = () => {
           {isSuccessFlash && currentAttendee ? (
             /* Instant Green Confirmation Card */
             <div
+              className="kiosk-confirmation"
               style={{
                 width: '100%',
                 display: 'flex',
@@ -199,22 +261,24 @@ export const CheckInKioskPage: React.FC = () => {
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  backgroundColor: 'var(--bg-secondary)',
-                  padding: '10px 20px',
-                  borderRadius: 'var(--radius-lg)',
-                  color: 'var(--primary)',
-                  fontWeight: 600,
-                  fontSize: '13px'
-                }}
-              >
-                <Printer size={18} />
-                <span>جاري طباعة شارة الدخول على الطابعة الحرارية...</span>
-              </div>
+              {autoPrint && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    backgroundColor: 'var(--bg-secondary)',
+                    padding: '10px 20px',
+                    borderRadius: 'var(--radius-lg)',
+                    color: 'var(--primary)',
+                    fontWeight: 600,
+                    fontSize: '13px'
+                  }}
+                >
+                  <Printer size={18} />
+                  <span>{badgeLoading ? 'جاري تجهيز الشارة للطباعة…' : badgePayload ? 'الطباعة الآلية مفعلة للشارة المحفوظة.' : 'تعذر تجهيز الشارة للطباعة.'}</span>
+                </div>
+              )}
             </div>
           ) : (
             /* Normal Scanning Awaiting Mode */
@@ -277,6 +341,23 @@ export const CheckInKioskPage: React.FC = () => {
             </>
           )}
 
+          {badgePayload && (
+            <>
+              <BadgeCard className="badge-print-target" data={badgePayload} design={{
+                ...badgePayload, categoryBadgeText: badgePayload.categoryBadgeText || badgePayload.participantTypeTitle,
+              }} />
+              <button className="btn-secondary" onClick={() => window.print()} disabled={isScanning || badgeLoading}>
+                <Printer size={18} /> طباعة الشارة
+              </button>
+            </>
+          )}
+          {currentAttendee && !badgePayload && (
+            <button className="btn-secondary" disabled={isScanning || badgeLoading}
+              onClick={() => void loadBadge(currentAttendee.ticketNumber, requestId.current)}>
+              {badgeLoading ? 'جاري تجهيز الشارة…' : 'إعادة تحميل الشارة للطباعة'}
+            </button>
+          )}
+
           {/* Kiosk Controls Options */}
           <div
             style={{
@@ -293,14 +374,14 @@ export const CheckInKioskPage: React.FC = () => {
               <input
                 type="checkbox"
                 checked={autoPrint}
-                onChange={(e) => setAutoPrint(e.target.checked)}
+                onChange={(e) => { setPendingPrint(null); setAutoPrint(e.target.checked); }}
                 style={{ accentColor: 'var(--primary)', width: '16px', height: '16px' }}
               />
               <span>طباعة الشارة تلقائياً عند كل مسح ناجح</span>
             </label>
 
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              حالة الطابعة: <strong style={{ color: 'var(--success)' }}>متصلة وجاهزة ✓</strong>
+              الطباعة: <strong>عبر مربع حوار المتصفح</strong>
             </span>
           </div>
         </div>
