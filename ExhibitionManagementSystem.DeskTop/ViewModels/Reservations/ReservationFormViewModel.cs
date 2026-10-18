@@ -125,11 +125,13 @@ public partial class ReservationFormViewModel : ViewModelBase
     {
         await ExecuteSafeAsync(async () =>
         {
-            var result = await _exhibitionService.GetByTenantAsync(Session.TenantId, 1, 100);
+            var result = await PagedLookupLoader.LoadAllAsync((page, pageSize) =>
+                _exhibitionService.GetByTenantAsync(Session.TenantId, page, pageSize));
+            if (!result.IsSuccess) throw new InvalidOperationException(result.ErrorMessage);
             if (result.IsSuccess && result.Data is not null)
             {
                 Exhibitions.Clear();
-                foreach (var exhibition in result.Data.Items)
+                foreach (var exhibition in result.Data)
                 {
                     Exhibitions.Add(exhibition);
                 }
@@ -154,6 +156,8 @@ public partial class ReservationFormViewModel : ViewModelBase
 
             var venueId = exhResult.Data.VenueID;
             CurrencyCode = string.IsNullOrWhiteSpace(exhResult.Data.EntryCurrency) ? "USD" : exhResult.Data.EntryCurrency;
+            var selectedExhibitor = SearchedExhibitors.FirstOrDefault(e => e.ExhibitorID == SelectedExhibitorId);
+            if (selectedExhibitor != null) CurrencyCode = selectedExhibitor.PreferredCurrencyCode;
 
             // 2. Get halls for this venue
             var hallsResult = await _hallService.GetByVenueAsync(Session.TenantId, venueId);
@@ -239,7 +243,7 @@ public partial class ReservationFormViewModel : ViewModelBase
                 ServiceName = service.ServiceName,
                 Quantity = ServiceQuantity,
                 UnitPrice = service.DefaultPrice ?? 0,
-                CurrencyCode = CurrencyCode
+                CurrencyCode = service.DefaultCurrencyCode
             });
         }
 
@@ -288,27 +292,18 @@ public partial class ReservationFormViewModel : ViewModelBase
                 RequestedAreaSqM = RequestedAreaSqM,
                 ExhibitorCategory = ExhibitorCategory,
                 CurrencyCode = CurrencyCode,
-                LogisticNotes = Notes
+                LogisticNotes = Notes,
+                Services = SelectedServices.Select(item => new ReservationServiceCreateDto
+                {
+                    ServiceID = item.ServiceID,
+                    Quantity = item.Quantity,
+                    CurrencyCode = item.CurrencyCode
+                }).ToList()
             };
 
             var result = await _reservationService.CreateAsync(Session.TenantId, Session.UserId, dto);
             if (result.IsSuccess && result.Data is not null)
             {
-                var newReservationId = result.Data.ReservationID;
-
-                // Add services if any
-                foreach (var item in SelectedServices)
-                {
-                    var sDto = new ReservationServiceCreateDto
-                    {
-                        ServiceID = item.ServiceID,
-                        Quantity = item.Quantity,
-                        UnitPrice = item.UnitPrice,
-                        CurrencyCode = item.CurrencyCode
-                    };
-                    await _reservationService.AddServiceToReservationAsync(Session.TenantId, newReservationId, sDto);
-                }
-
                 NotificationService.ShowSuccess("تم إنشاء الحجز بنجاح ✓");
                 CloseAction?.Invoke();
             }
@@ -361,6 +356,7 @@ public partial class ReservationFormViewModel : ViewModelBase
             if (exhibitor != null)
             {
                 ExhibitorCategory = string.IsNullOrWhiteSpace(exhibitor.ExhibitorCategory) ? "Local" : exhibitor.ExhibitorCategory;
+                CurrencyCode = exhibitor.PreferredCurrencyCode;
             }
         }
     }

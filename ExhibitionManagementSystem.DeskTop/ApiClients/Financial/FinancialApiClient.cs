@@ -22,6 +22,9 @@ public class FinancialApiClient : ApiClientBase, IFinancialService
         return GetAsync<PagedResultDto<InvoiceDto>>($"api/financial/invoices?page={page}&pageSize={pageSize}");
     }
 
+    public Task<ServiceResult<InvoicePageDto>> GetInvoicePageAsync(int tenantId, int page, int pageSize, string? status = null) =>
+        GetAsync<InvoicePageDto>($"api/financial/invoices?page={page}&pageSize={pageSize}&status={Uri.EscapeDataString(status ?? "All")}");
+
     public Task<ServiceResult<InvoiceDto>> GetInvoiceByIdAsync(int tenantId, int invoiceId)
     {
         return GetAsync<InvoiceDto>($"api/financial/invoices/{invoiceId}");

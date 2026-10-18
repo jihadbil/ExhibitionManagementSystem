@@ -21,7 +21,7 @@ public partial class InvoicesViewModel : ViewModelBase
     // ━━━━━━━━━━━━━━ Collections ━━━━━━━━━━━━━━
 
     public ObservableCollection<InvoiceDto> Invoices { get; } = [];
-    public ObservableCollection<string> StatusFilters { get; } = new() { "All", "Pending", "Paid", "Overdue", "Cancelled" };
+    public ObservableCollection<string> StatusFilters { get; } = new() { "All", "Draft", "Issued", "PartiallyPaid", "Paid", "Overdue", "Cancelled" };
 
     // ━━━━━━━━━━━━━━ Properties ━━━━━━━━━━━━━━
 
@@ -69,35 +69,23 @@ public partial class InvoicesViewModel : ViewModelBase
     {
         await ExecuteSafeAsync(async () =>
         {
-            var result = await _financialService.GetInvoicesByTenantAsync(Session.TenantId, CurrentPage, PageSize);
+            var result = await _financialService.GetInvoicePageAsync(Session.TenantId, CurrentPage, PageSize, StatusFilter);
             if (result.IsSuccess && result.Data is not null)
             {
                 var rawData = result.Data.Items;
 
-                // Apply status filter locally
-                var filtered = StatusFilter == "All"
-                    ? rawData
-                    : rawData.Where(i => i.Status.Equals(StatusFilter, StringComparison.OrdinalIgnoreCase)).ToList();
-
                 Invoices.Clear();
-                foreach (var invoice in filtered)
+                foreach (var invoice in rawData)
                 {
                     Invoices.Add(invoice);
                 }
 
-                TotalCount = result.Data.TotalCount;
+                TotalCount = result.Data.AllCount;
                 TotalPages = result.Data.TotalPages;
 
-                // Calculate summary counts
-                PaidCount = rawData.Count(i => i.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase));
-                PendingCount = rawData.Count(i => i.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase));
-
-                // Load overdue counts
-                var overdueResult = await _financialService.GetOverdueInvoicesAsync(Session.TenantId);
-                if (overdueResult.IsSuccess && overdueResult.Data is not null)
-                {
-                    OverdueCount = overdueResult.Data.Count;
-                }
+                PaidCount = result.Data.PaidCount;
+                PendingCount = result.Data.PendingCount;
+                OverdueCount = result.Data.OverdueCount;
             }
             else
             {
@@ -109,26 +97,8 @@ public partial class InvoicesViewModel : ViewModelBase
     [RelayCommand]
     private async Task LoadOverdueAsync()
     {
-        await ExecuteSafeAsync(async () =>
-        {
-            var result = await _financialService.GetOverdueInvoicesAsync(Session.TenantId);
-            if (result.IsSuccess && result.Data is not null)
-            {
-                Invoices.Clear();
-                foreach (var invoice in result.Data)
-                {
-                    Invoices.Add(invoice);
-                }
-
-                TotalCount = result.Data.Count;
-                TotalPages = 1;
-                CurrentPage = 1;
-            }
-            else
-            {
-                NotificationService.ShowError(result.ErrorMessage ?? "فشل تحميل الفواتير المتأخرة");
-            }
-        }, "خطأ في تحميل الفواتير المتأخرة");
+        if (StatusFilter != "Overdue") StatusFilter = "Overdue";
+        else { CurrentPage = 1; await LoadInvoicesAsync(); }
     }
 
     [RelayCommand]
