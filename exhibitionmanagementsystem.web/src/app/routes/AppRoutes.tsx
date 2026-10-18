@@ -9,6 +9,9 @@ const lazyNamed = <T extends Record<string, unknown>, K extends keyof T>(
 ) => lazy(async () => ({ default: (await importer())[exportName] as ComponentType }));
 
 const LoginPage = lazyNamed(() => import('../../features/auth/pages/LoginPage'), 'LoginPage');
+const RegistrationPage = lazyNamed(() => import('../../features/auth/pages/RegistrationPage'), 'RegistrationPage');
+const PasswordRecoveryPage = lazyNamed(() => import('../../features/auth/pages/PasswordRecoveryPage'), 'PasswordRecoveryPage');
+const ResetPasswordPage = lazyNamed(() => import('../../features/auth/pages/PasswordRecoveryPage'), 'ResetPasswordPage');
 const DashboardPage = lazyNamed(() => import('../../features/dashboard/pages/DashboardPage'), 'DashboardPage');
 const ExhibitionsPage = lazyNamed(() => import('../../features/exhibitions/pages/ExhibitionsPage'), 'ExhibitionsPage');
 const BoothsPage = lazyNamed(() => import('../../features/booths/pages/BoothsPage'), 'BoothsPage');
@@ -22,6 +25,7 @@ const CheckInKioskPage = lazyNamed(() => import('../../features/kiosk/pages/Chec
 const ReservationsPage = lazyNamed(() => import('../../features/reservations/pages/ReservationsPage'), 'ReservationsPage');
 const InvoicesPage = lazyNamed(() => import('../../features/financial/pages/InvoicesPage'), 'InvoicesPage');
 const VenuesPage = lazyNamed(() => import('../../features/venues/pages/VenuesPage'), 'VenuesPage');
+const VenueDesignerPage = lazyNamed(() => import('../../features/venues/pages/VenueDesignerPage'), 'VenueDesignerPage');
 const SponsorshipPage = lazyNamed(() => import('../../features/sponsorship/pages/SponsorshipPage'), 'SponsorshipPage');
 const ServicesPage = lazyNamed(() => import('../../features/services-mgmt/pages/ServicesPage'), 'ServicesPage');
 const UsersPage = lazyNamed(() => import('../../features/users/pages/UsersPage'), 'UsersPage');
@@ -30,6 +34,7 @@ const AdminAuditPage = lazyNamed(() => import('../../features/admin-audit/pages/
 const SettingsPage = lazyNamed(() => import('../../features/settings/pages/SettingsPage'), 'SettingsPage');
 
 const TENANT_ADMINS = ['Admin', 'TenantAdmin'] as const;
+const DESIGN_ADMINS = ['SuperAdmin', 'Admin', 'TenantAdmin'] as const;
 const EVENT_MANAGERS = ['Admin', 'TenantAdmin', 'EventManager'] as const;
 const FINANCE_MANAGERS = ['Admin', 'TenantAdmin', 'Finance'] as const;
 const GATE_OPERATORS = ['Admin', 'TenantAdmin', 'EventManager', 'GateOperator'] as const;
@@ -74,6 +79,9 @@ export const AppRoutes = () => (
   <Suspense fallback={<LoadingScreen />}>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegistrationPage />} />
+      <Route path="/forgot-password" element={<PasswordRecoveryPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route
         path="/"
@@ -88,9 +96,12 @@ export const AppRoutes = () => (
         <Route path="unauthorized" element={<UnauthorizedPage />} />
         <Route path="analytics" element={<RoleRoute roles={FINANCE_MANAGERS}><AnalyticsPage /></RoleRoute>} />
         <Route path="exhibitions" element={<ExhibitionsPage />} />
+        <Route path="exhibitions/:exhibitionId/booths" element={<BoothsPage />} />
         <Route path="booths" element={<BoothsPage />} />
-        <Route path="booths/designer" element={<RoleRoute roles={TENANT_ADMINS}><BoothDesignerPage /></RoleRoute>} />
+        <Route path="booths/designer" element={<RoleRoute roles={DESIGN_ADMINS}><BoothDesignerPage /></RoleRoute>} />
         <Route path="venues" element={<VenuesPage />} />
+        <Route path="venues/:venueId/halls" element={<VenuesPage />} />
+        <Route path="venues/:venueId/designer" element={<RoleRoute roles={DESIGN_ADMINS}><VenueDesignerPage /></RoleRoute>} />
         <Route path="companies" element={<CompaniesPage />} />
         <Route path="events" element={<RoleRoute roles={EVENT_MANAGERS}><EventsPage /></RoleRoute>} />
         <Route path="tickets" element={<RoleRoute roles={GATE_OPERATORS}><TicketsPage /></RoleRoute>} />
@@ -103,7 +114,7 @@ export const AppRoutes = () => (
         <Route path="users" element={<RoleRoute roles={TENANT_ADMINS}><UsersPage /></RoleRoute>} />
         <Route path="tenants" element={<RoleRoute roles={['SuperAdmin']}><TenantsPage /></RoleRoute>} />
         <Route path="admin/audit" element={<RoleRoute roles={TENANT_ADMINS}><AdminAuditPage /></RoleRoute>} />
-        <Route path="settings" element={<RoleRoute roles={TENANT_ADMINS}><SettingsPage /></RoleRoute>} />
+        <Route path="settings" element={<RoleRoute roles={DESIGN_ADMINS}><SettingsPage /></RoleRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

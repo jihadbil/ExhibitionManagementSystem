@@ -4,8 +4,6 @@ import {
   LayoutDashboard,
   TrendingUp,
   Building2,
-  Store,
-  Compass,
   MapPin,
   Building,
   Calendar,
@@ -38,7 +36,12 @@ interface NavCategory {
   items: NavItem[];
 }
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const { logout, user } = useAuth();
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const hasAnyRole = (roles?: readonly string[]) => !roles || roles.some(role => user?.roles.includes(role));
@@ -62,8 +65,6 @@ export const Sidebar: React.FC = () => {
       title: 'المعارض والأجنحة',
       items: [
         { to: '/exhibitions', label: 'إدارة المعارض', icon: Building2 },
-        { to: '/booths', label: 'سجل الأجنحة', icon: Store },
-        { to: '/booths/designer', label: 'مصمم المخططات 2D', icon: Compass, roles: ['Admin', 'TenantAdmin'] },
         { to: '/venues', label: 'المواقع والقاعات', icon: MapPin },
       ]
     },
@@ -92,13 +93,16 @@ export const Sidebar: React.FC = () => {
         { to: '/users', label: 'المستخدمون والصلاحيات', icon: Users, roles: ['Admin', 'TenantAdmin'] },
         { to: '/tenants', label: 'إدارة المستأجرين', icon: Shield, roles: ['SuperAdmin'] },
         { to: '/admin/audit', label: 'سجلات الرقابة', icon: FileText, roles: ['Admin', 'TenantAdmin'] },
-        { to: '/settings', label: 'إعدادات النظام', icon: Settings, roles: ['Admin', 'TenantAdmin'] },
+        { to: '/settings', label: 'إعدادات النظام', icon: Settings, roles: ['SuperAdmin', 'Admin', 'TenantAdmin'] },
       ]
     }
   ];
 
   return (
+    <>
+    {isOpen && <button className="sidebar-backdrop" aria-label="إغلاق القائمة" onClick={onClose} />}
     <aside
+      className={`app-sidebar${isOpen ? ' is-open' : ''}`}
       style={{
         width: 'var(--sidebar-width)',
         height: '100vh',
@@ -213,6 +217,7 @@ export const Sidebar: React.FC = () => {
                       <NavLink
                         key={item.to}
                         to={item.to}
+                        onClick={onClose}
                         style={({ isActive }) => ({
                           display: 'flex',
                           alignItems: 'center',
@@ -247,7 +252,7 @@ export const Sidebar: React.FC = () => {
           backgroundColor: '#fafbfc'
         }}
       >
-        {hasAnyRole(['Admin', 'TenantAdmin']) && (
+        {hasAnyRole(['Admin', 'TenantAdmin', 'SuperAdmin']) && (
           <NavLink
             to="/exhibitions?action=create"
             className="btn-primary"
@@ -284,5 +289,6 @@ export const Sidebar: React.FC = () => {
         </button>
       </div>
     </aside>
+    </>
   );
 };

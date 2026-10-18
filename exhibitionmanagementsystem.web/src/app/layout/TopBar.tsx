@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Search, Bell, ShieldCheck, User } from 'lucide-react';
+import { Search, ShieldCheck, User, Menu } from 'lucide-react';
 import { useAuth } from '../providers/AuthContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'لوحة التحكم والمؤشرات الرئيسية',
@@ -18,23 +18,37 @@ const pageTitles: Record<string, string> = {
   '/reservations': 'طلبات الحجز وعقود الأجنحة',
   '/financial': 'الفواتير والتحصيل المالي',
   '/sponsorship': 'الرعاة والمساحات الإعلانية',
-  '/services-mgmt': 'الخدمات الإضافية والتسعير',
+  '/services-mgmt': 'الخدمات المساندة',
   '/users': 'إدارة المستخدمين والصلاحيات',
   '/tenants': 'إدارة المستأجرين والاشتراكات',
   '/admin/audit': 'سجلات الرقابة والعمليات',
   '/settings': 'إعدادات النظام العامة',
 };
 
-export const TopBar: React.FC = () => {
+interface TopBarProps {
+  onMenuClick?: () => void;
+}
+
+export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
 
-  const currentTitle = pageTitles[location.pathname] || 'ExpoManager';
+  const currentTitle = pageTitles[location.pathname]
+    || (location.pathname.startsWith('/venues/') && location.pathname.endsWith('/designer')
+      ? 'المصمم البصري لمخطط الموقع'
+      : location.pathname.startsWith('/exhibitions/') ? 'إدارة أجنحة المعرض' : 'ExpoManager');
+
+  const handleSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    const query = searchValue.trim();
+    if (query) navigate(`/exhibitions?search=${encodeURIComponent(query)}`);
+  };
 
   return (
     <header
-      className="glass-surface"
+      className="glass-surface app-topbar"
       style={{
         height: 'var(--topbar-height)',
         position: 'fixed',
@@ -52,13 +66,18 @@ export const TopBar: React.FC = () => {
     >
       {/* Right Side: Page Title */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button className="btn-icon mobile-menu-button" aria-label="فتح القائمة" onClick={onMenuClick}>
+          <Menu size={20} />
+        </button>
         <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
           {currentTitle}
         </h1>
       </div>
 
       {/* Center: Global Search Bar (400px width) */}
-      <div
+      <form
+        className="topbar-search"
+        onSubmit={handleSearch}
         style={{
           position: 'relative',
           width: '400px',
@@ -89,12 +108,13 @@ export const TopBar: React.FC = () => {
             fontSize: '13px'
           }}
         />
-      </div>
+      </form>
 
       {/* Left Side: Actions & Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         {/* Tenant Badge */}
         <div
+          className="topbar-tenant"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -110,27 +130,6 @@ export const TopBar: React.FC = () => {
           <ShieldCheck size={14} />
           <span>{user?.tenantName || 'المستأجر الافتراضي'}</span>
         </div>
-
-        {/* Notifications Icon Button */}
-        <button
-          className="btn-icon"
-          title="الإشعارات"
-          style={{ position: 'relative' }}
-        >
-          <Bell size={18} />
-          <span
-            style={{
-              position: 'absolute',
-              top: '8px',
-              left: '8px',
-              width: '8px',
-              height: '8px',
-              background: 'var(--danger)',
-              borderRadius: '50%',
-              border: '2px solid #ffffff'
-            }}
-          />
-        </button>
 
         {/* User Profile Tile */}
         <div

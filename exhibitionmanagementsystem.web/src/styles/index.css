@@ -333,3 +333,87 @@ button:active {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+.mobile-menu-button,
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .dashboard-charts {
+    grid-template-columns: 1fr !important;
+  }
+
+  .kiosk-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .badge-designer-grid,
+  .booth-designer-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .app-layout-body {
+    margin-right: 0 !important;
+    width: 100%;
+  }
+
+  .app-sidebar {
+    transform: translateX(105%);
+    transition: transform var(--transition-normal);
+    box-shadow: var(--shadow-xl);
+  }
+
+  .app-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 49;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.45);
+  }
+
+  .app-topbar {
+    right: 0 !important;
+    padding: 0 14px !important;
+  }
+
+  .mobile-menu-button {
+    display: inline-flex;
+  }
+
+  .topbar-search,
+  .topbar-tenant {
+    display: none !important;
+  }
+
+  .app-main-content {
+    padding: 20px 14px 40px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-topbar h1 {
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px !important;
+  }
+
+  .topbar-actions > div > div:last-child {
+    display: none !important;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+}
