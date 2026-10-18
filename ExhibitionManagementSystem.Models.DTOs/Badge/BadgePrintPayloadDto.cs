@@ -24,6 +24,14 @@ public class BadgePrintPayloadDto
     public string HeaderBgColor { get; set; } = "#6366F1";
     public string HeaderTextColor { get; set; } = "#FFFFFF";
     public string AccentColor { get; set; } = "#4F46E5";
+    public string CategoryBadgeText { get; set; } = string.Empty;
+    public bool ShowLogo { get; set; } = true;
+    public bool ShowQRCode { get; set; } = true;
+    public bool ShowBarcode { get; set; } = true;
+    public bool ShowCompanyName { get; set; } = true;
+    public bool ShowJobTitle { get; set; } = true;
+    public bool ShowHallName { get; set; } = true;
+    public bool ShowDates { get; set; } = true;
     public string? LogoUrl { get; set; }
     public string? FooterText { get; set; }
     public int WidthMm { get; set; } = 86;

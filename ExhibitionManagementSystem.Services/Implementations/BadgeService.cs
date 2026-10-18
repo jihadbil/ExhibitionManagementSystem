@@ -36,7 +36,12 @@ public class BadgeService : IBadgeService
             query = query.Where(t => t.ExhibitionID == exhibitionId.Value || t.ExhibitionID == null);
         }
 
-        var templates = await query.OrderBy(t => t.TargetParticipantType).ToListAsync();
+        var templates = await query
+            .OrderByDescending(t => exhibitionId.HasValue && t.ExhibitionID == exhibitionId.Value)
+            .ThenByDescending(t => t.IsDefault)
+            .ThenBy(t => t.TargetParticipantType)
+            .ThenBy(t => t.TemplateName)
+            .ToListAsync();
         var dtos = _mapper.Map<IList<BadgeTemplateDto>>(templates);
         return ServiceResult<IList<BadgeTemplateDto>>.Success(dtos);
     }
@@ -57,7 +62,14 @@ public class BadgeService : IBadgeService
     }
 
     public async Task<ServiceResult<BadgeTemplateDto>> CreateTemplateAsync(int tenantId, BadgeTemplateCreateDto dto)
+        => await RunTemplateMutationAsync(() => CreateTemplateCoreAsync(tenantId, dto));
+
+    private async Task<ServiceResult<BadgeTemplateDto>> CreateTemplateCoreAsync(int tenantId, BadgeTemplateCreateDto dto)
     {
+        if (dto.ExhibitionID.HasValue && !await _unitOfWork.Exhibitions.ExistsAsync(e =>
+                e.ExhibitionID == dto.ExhibitionID.Value && e.TenantID == tenantId))
+            return ServiceResult<BadgeTemplateDto>.Failure("المعرض غير موجود", "EXHIBITION_NOT_FOUND");
+
         if (dto.IsDefault)
         {
             // Reset existing defaults for this participant type in this tenant/exhibition
@@ -90,12 +102,19 @@ public class BadgeService : IBadgeService
     }
 
     public async Task<ServiceResult<BadgeTemplateDto>> UpdateTemplateAsync(int tenantId, int templateId, BadgeTemplateUpdateDto dto)
+        => await RunTemplateMutationAsync(() => UpdateTemplateCoreAsync(tenantId, templateId, dto));
+
+    private async Task<ServiceResult<BadgeTemplateDto>> UpdateTemplateCoreAsync(int tenantId, int templateId, BadgeTemplateUpdateDto dto)
     {
         var template = await _unitOfWork.BadgeTemplates.GetByIdAsync(templateId);
         if (template == null || template.TenantID != tenantId)
         {
             return ServiceResult<BadgeTemplateDto>.Failure("قالب الشارة غير موجود", "TEMPLATE_NOT_FOUND");
         }
+
+        if (dto.ExhibitionID.HasValue && !await _unitOfWork.Exhibitions.ExistsAsync(e =>
+                e.ExhibitionID == dto.ExhibitionID.Value && e.TenantID == tenantId))
+            return ServiceResult<BadgeTemplateDto>.Failure("المعرض غير موجود", "EXHIBITION_NOT_FOUND");
 
         if (dto.IsDefault)
         {
@@ -127,6 +146,22 @@ public class BadgeService : IBadgeService
         return ServiceResult<BadgeTemplateDto>.Success(resultDto);
     }
 
+    private async Task<ServiceResult<BadgeTemplateDto>> RunTemplateMutationAsync(Func<Task<ServiceResult<BadgeTemplateDto>>> mutation)
+    {
+        await _unitOfWork.BeginSerializableTransactionAsync();
+        try
+        {
+            var result = await mutation();
+            if (result.IsSuccess) await _unitOfWork.CommitTransactionAsync();
+            return result;
+        }
+        catch (DbUpdateException)
+        { return ServiceResult<BadgeTemplateDto>.Failure("تعارض حفظ قالب الشارة مع تعديل آخر", "TEMPLATE_CONFLICT"); }
+        catch (Exception ex) when (DatabaseConflict.IsLockConflict(ex))
+        { return ServiceResult<BadgeTemplateDto>.Failure("تعارض حفظ قالب الشارة مع تعديل آخر", "TEMPLATE_CONFLICT"); }
+        finally { await _unitOfWork.RollbackTransactionAsync(); }
+    }
+
     public async Task<ServiceResult> DeleteTemplateAsync(int tenantId, int templateId, string userId)
     {
         var template = await _unitOfWork.BadgeTemplates.GetByIdAsync(templateId);
@@ -148,6 +183,14 @@ public class BadgeService : IBadgeService
         }
 
         // 1. Check if it's a Visitor Ticket
+        if (qrCode.StartsWith("STAFF-", StringComparison.Ordinal))
+        {
+            var staff = await _unitOfWork.BoothStaffs.AsQueryable().FirstOrDefaultAsync(s => s.BadgeIssued &&
+                s.BadgeNumber == qrCode.Trim() && s.Reservation.TenantID == tenantId);
+            if (staff == null)
+                return ServiceResult<BadgePrintPayloadDto>.Failure("تصريح الطاقم غير موجود", "STAFF_NOT_FOUND");
+            return await GenerateBadgePayloadForStaffAsync(tenantId, staff.StaffID);
+        }
         var ticket = await _unitOfWork.Tickets.AsQueryable()
             .Include(t => t.Visitor)
             .Include(t => t.Exhibition)
@@ -156,7 +199,9 @@ public class BadgeService : IBadgeService
 
         if (ticket != null && ticket.Visitor.TenantID == tenantId)
         {
-            return await BuildVisitorBadgePayloadAsync(tenantId, ticket.Visitor, ticket.Exhibition, ticket.QRCode);
+            var participantType = DetermineParticipantType(ticket.TicketType, ticket.Visitor);
+            return await BuildVisitorBadgePayloadAsync(
+                tenantId, ticket.Visitor, ticket.Exhibition, ticket.QRCode, participantType, $"TKT-{ticket.TicketID:D8}");
         }
 
         // 2. Check if it's a Staff QR or Visitor ID pattern
@@ -173,7 +218,9 @@ public class BadgeService : IBadgeService
 
                 if (latestTicket != null)
                 {
-                    return await BuildVisitorBadgePayloadAsync(tenantId, visitor, latestTicket.Exhibition, latestTicket.QRCode);
+                    var participantType = DetermineParticipantType(latestTicket.TicketType, visitor);
+                    return await BuildVisitorBadgePayloadAsync(
+                        tenantId, visitor, latestTicket.Exhibition, latestTicket.QRCode, participantType, $"TKT-{latestTicket.TicketID:D8}");
                 }
             }
         }
@@ -199,10 +246,15 @@ public class BadgeService : IBadgeService
         }
 
         var ticket = await _unitOfWork.Tickets.AsQueryable()
-            .FirstOrDefaultAsync(t => t.VisitorID == visitorId && t.ExhibitionID == exhibitionId);
+            .Where(t => t.VisitorID == visitorId && t.ExhibitionID == exhibitionId && (t.Status == TicketStatus.Active || t.Status == TicketStatus.Used))
+            .OrderByDescending(t => t.IssuedAt).FirstOrDefaultAsync();
 
-        string qrCode = ticket?.QRCode ?? $"{exhibitionId}-{visitorId}-{Guid.NewGuid():N}";
-        return await BuildVisitorBadgePayloadAsync(tenantId, visitor, exhibition, qrCode);
+        if (ticket == null)
+            return ServiceResult<BadgePrintPayloadDto>.Failure("يجب إصدار تذكرة للزائر قبل طباعة شارة دخول", "TICKET_REQUIRED");
+        string qrCode = ticket.QRCode;
+        var participantType = DetermineParticipantType(ticket.TicketType, visitor);
+        var barcode = $"TKT-{ticket.TicketID:D8}";
+        return await BuildVisitorBadgePayloadAsync(tenantId, visitor, exhibition, qrCode, participantType, barcode);
     }
 
     public async Task<ServiceResult<BadgePrintPayloadDto>> GenerateBadgePayloadForStaffAsync(int tenantId, int staffId)
@@ -222,6 +274,10 @@ public class BadgeService : IBadgeService
             return ServiceResult<BadgePrintPayloadDto>.Failure("عضو طاقم العارض غير موجود", "STAFF_NOT_FOUND");
         }
 
+        if (!staff.BadgeIssued || !await _unitOfWork.Tickets.ExistsAsync(t => t.TenantID == tenantId && t.QRCode == staff.BadgeNumber
+            && (t.Status == TicketStatus.Active || t.Status == TicketStatus.Used)))
+            return ServiceResult<BadgePrintPayloadDto>.Failure("يجب إصدار تصريح دخول محفوظ للطاقم قبل الطباعة", "STAFF_BADGE_REQUIRED");
+
         var exhibition = staff.Reservation.Exhibition;
         var exhibitor = staff.Reservation.Exhibitor;
         var template = await _unitOfWork.BadgeTemplates.GetTemplateForParticipantAsync(
@@ -236,7 +292,8 @@ public class BadgeService : IBadgeService
             Phone = staff.Phone,
             ParticipantType = ParticipantType.Exhibitor,
             ParticipantTypeTitle = "عارض / EXHIBITOR",
-            QRCode = $"STAFF-{staff.StaffID}-{staff.BadgeNumber ?? Guid.NewGuid().ToString("N")[..8]}",
+            QRCode = staff.BadgeNumber,
+            Barcode = $"STF-{staff.StaffID:D8}",
             ExhibitionName = exhibition.Name,
             VenueAndHallName = staff.Reservation.Booth?.Hall?.HallName,
             BoothNumber = staff.Reservation.Booth?.BoothNumber,
@@ -244,6 +301,14 @@ public class BadgeService : IBadgeService
             HeaderBgColor = template?.HeaderBgColor ?? "#059669",
             HeaderTextColor = template?.HeaderTextColor ?? "#FFFFFF",
             AccentColor = template?.AccentColor ?? "#10B981",
+            CategoryBadgeText = template?.CategoryBadgeText ?? "عارض / EXHIBITOR",
+            ShowLogo = template?.ShowLogo ?? true,
+            ShowQRCode = template?.ShowQRCode ?? true,
+            ShowBarcode = template?.ShowBarcode ?? true,
+            ShowCompanyName = template?.ShowCompanyName ?? true,
+            ShowJobTitle = template?.ShowJobTitle ?? true,
+            ShowHallName = template?.ShowHallName ?? true,
+            ShowDates = template?.ShowDates ?? true,
             LogoUrl = template?.LogoUrl ?? exhibitor.LogoURL,
             FooterText = template?.CustomFooterText ?? "بطاقة دخول عارض معتمدة",
             WidthMm = template?.WidthMm ?? 86,
@@ -256,10 +321,56 @@ public class BadgeService : IBadgeService
         return ServiceResult<BadgePrintPayloadDto>.Success(payload);
     }
 
-    private async Task<ServiceResult<BadgePrintPayloadDto>> BuildVisitorBadgePayloadAsync(
-        int tenantId, Visitor visitor, Exhibition exhibition, string qrCode)
+    public async Task<ServiceResult<BadgePrintPayloadDto>> IssueStaffBadgeAsync(int tenantId, int staffId)
     {
-        var participantType = DetermineParticipantType(visitor);
+        await _unitOfWork.BeginSerializableTransactionAsync();
+        try
+        {
+            var staff = await _unitOfWork.BoothStaffs.AsQueryable().Include(s => s.Reservation).ThenInclude(r => r.Exhibition)
+                .FirstOrDefaultAsync(s => s.StaffID == staffId && s.Reservation.TenantID == tenantId);
+            if (staff == null)
+                return ServiceResult<BadgePrintPayloadDto>.Failure("عضو الطاقم غير موجود", "STAFF_NOT_FOUND");
+            var exhibition = staff.Reservation.Exhibition;
+            if (staff.Reservation.Status != ReservationStatus.Confirmed || exhibition.Status is ExhibitionStatus.Closed or ExhibitionStatus.Cancelled
+                || exhibition.EndDate.Date < DateTime.UtcNow.Date)
+                return ServiceResult<BadgePrintPayloadDto>.Failure("لا يمكن إصدار تصريح لطاقم حجز غير مؤكد أو معرض مغلق", "STAFF_ACCESS_NOT_ACTIVE");
+            var existing = string.IsNullOrWhiteSpace(staff.BadgeNumber) ? null : await _unitOfWork.Tickets.FirstOrDefaultAsync(t =>
+                t.TenantID == tenantId && t.QRCode == staff.BadgeNumber);
+            if (existing != null)
+            {
+                if (!staff.BadgeIssued || existing.Status is TicketStatus.Cancelled or TicketStatus.Expired)
+                    return ServiceResult<BadgePrintPayloadDto>.Failure("تصريح الطاقم موقوف؛ يلزم اعتماد إعادة إصداره", "STAFF_ACCESS_NOT_ACTIVE");
+                return await GenerateBadgePayloadForStaffAsync(tenantId, staffId);
+            }
+            var ticket = new Ticket {
+                TenantID = tenantId, ExhibitionID = exhibition.ExhibitionID, TicketType = "Exhibitor", Price = 0,
+                CurrencyCode = exhibition.EntryCurrency, Status = TicketStatus.Active,
+                QRCode = $"STAFF-{staff.StaffID}-{Guid.NewGuid():N}", IssuedAt = DateTime.UtcNow,
+                Visitor = new Visitor { TenantID = tenantId, FullName = staff.StaffName, VisitorType = "Exhibitor", Email = staff.Email, Phone = staff.Phone }
+            };
+            await _unitOfWork.Tickets.AddAsync(ticket);
+            staff.BadgeNumber = ticket.QRCode;
+            staff.BadgeIssued = true;
+            staff.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.BoothStaffs.Update(staff);
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+            return await GenerateBadgePayloadForStaffAsync(tenantId, staffId);
+        }
+        catch (DbUpdateException)
+        {
+            return ServiceResult<BadgePrintPayloadDto>.Failure("تعارض إصدار شارة الطاقم؛ أعد تحميل بياناته", "STAFF_BADGE_CONFLICT");
+        }
+        catch (Exception ex) when (DatabaseConflict.IsLockConflict(ex))
+        { return ServiceResult<BadgePrintPayloadDto>.Failure("تعارض إصدار تصريح الطاقم مع عملية أخرى", "STAFF_BADGE_CONFLICT"); }
+        finally { await _unitOfWork.RollbackTransactionAsync(); }
+    }
+
+    private async Task<ServiceResult<BadgePrintPayloadDto>> BuildVisitorBadgePayloadAsync(
+        int tenantId, Visitor visitor, Exhibition exhibition, string qrCode,
+        ParticipantType? requestedParticipantType = null, string? barcode = null)
+    {
+        var participantType = requestedParticipantType ?? DetermineParticipantType(visitor);
         var template = await _unitOfWork.BadgeTemplates.GetTemplateForParticipantAsync(
             tenantId, exhibition.ExhibitionID, participantType);
 
@@ -273,12 +384,22 @@ public class BadgeService : IBadgeService
             ParticipantType = participantType,
             ParticipantTypeTitle = GetParticipantTypeTitle(participantType),
             QRCode = qrCode,
+            Barcode = barcode ?? $"VIS-{visitor.VisitorID:D8}",
             ExhibitionName = exhibition.Name,
             VenueAndHallName = exhibition.Venue?.Name,
             DatesText = $"{exhibition.StartDate:dd/MM/yyyy} - {exhibition.EndDate:dd/MM/yyyy}",
             HeaderBgColor = template?.HeaderBgColor ?? GetDefaultColorForType(participantType),
             HeaderTextColor = template?.HeaderTextColor ?? "#FFFFFF",
             AccentColor = template?.AccentColor ?? GetDefaultAccentForType(participantType),
+            CategoryBadgeText = template?.CategoryBadgeText ?? GetParticipantTypeTitle(participantType),
+            ShowLogo = template?.ShowLogo ?? true,
+            ShowQRCode = template?.ShowQRCode ?? true,
+            // Older web templates always stored false because the designer had no barcode option.
+            ShowBarcode = true,
+            ShowCompanyName = template?.ShowCompanyName ?? true,
+            ShowJobTitle = template?.ShowJobTitle ?? true,
+            ShowHallName = template?.ShowHallName ?? true,
+            ShowDates = template?.ShowDates ?? true,
             LogoUrl = template?.LogoUrl,
             FooterText = template?.CustomFooterText ?? $"{exhibition.Name} — بطاقة دخول رسمية",
             WidthMm = template?.WidthMm ?? 86,
@@ -305,6 +426,23 @@ public class BadgeService : IBadgeService
             return ParticipantType.Speaker;
 
         return ParticipantType.Visitor;
+    }
+
+    private static ParticipantType DetermineParticipantType(string? ticketType, Visitor visitor)
+    {
+        if (!string.IsNullOrWhiteSpace(ticketType))
+        {
+            var type = ticketType.Trim().ToLowerInvariant();
+            if (type.Contains("vip")) return ParticipantType.VIP;
+            if (type.Contains("press") || type.Contains("media") || type.Contains("صحف") || type.Contains("إعلام")) return ParticipantType.Press;
+            if (type.Contains("speaker") || type.Contains("متحدث") || type.Contains("محاضر")) return ParticipantType.Speaker;
+            if (type.Contains("exhibitor") || type.Contains("عارض")) return ParticipantType.Exhibitor;
+            if (type.Contains("organizer") || type.Contains("منظم")) return ParticipantType.Organizer;
+            if (type.Contains("sponsor") || type.Contains("راعي")) return ParticipantType.Sponsor;
+            if (type.Contains("regular") || type.Contains("student") || type.Contains("earlybird")) return ParticipantType.Visitor;
+        }
+
+        return DetermineParticipantType(visitor);
     }
 
     private static string GetParticipantTypeTitle(ParticipantType type) => type switch
@@ -375,6 +513,11 @@ public class BadgeService : IBadgeService
         // QR Code
         sb.AppendLine("^FO180,340^BQN,2,8");
         sb.AppendLine($"^FDQA,{payload.QRCode}^FS");
+
+        if (payload.ShowBarcode && !string.IsNullOrWhiteSpace(payload.Barcode))
+        {
+            sb.AppendLine($"^FO120,545^BCN,60,Y,N,N^FD{payload.Barcode}^FS");
+        }
 
         // Exhibition & Date Info
         sb.AppendLine($"^FO50,620^A0N,28,28^FB500,2,0,C^FD{payload.ExhibitionName}^FS");

@@ -48,7 +48,7 @@ public class BadgeTemplateCreateDto
     public bool ShowLogo { get; set; } = true;
     public string? LogoUrl { get; set; }
     public bool ShowQRCode { get; set; } = true;
-    public bool ShowBarcode { get; set; } = false;
+    public bool ShowBarcode { get; set; } = true;
     public bool ShowCompanyName { get; set; } = true;
     public bool ShowJobTitle { get; set; } = true;
     public bool ShowHallName { get; set; } = true;

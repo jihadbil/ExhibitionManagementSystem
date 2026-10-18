@@ -8,9 +8,10 @@ import {
   Trash2,
   LayoutTemplate
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { useToast } from '../../../app/providers/ToastContext';
 import { api } from '../../../services/api';
+import { getAllItems } from '../../../services/pagination';
+import { BadgeCard } from '../components/BadgeCard';
 
 interface Exhibition {
   exhibitionID: number;
@@ -23,10 +24,10 @@ interface BadgeTemplate {
   exhibitionID?: number;
   exhibitionName?: string;
   templateName: string;
-  targetParticipantType: number; // 0=Visitor, 1=Exhibitor, 2=VIP, 3=Speaker
+  targetParticipantType: number; // 1=Visitor, 2=Exhibitor, 3=Speaker, 4=VIP
   widthMm: number;
   heightMm: number;
-  orientation: number; // 0=Vertical, 1=Horizontal
+  orientation: number; // 1=Vertical, 2=Horizontal
   headerBgColor: string;
   headerTextColor: string;
   accentColor: string;
@@ -44,12 +45,13 @@ interface BadgeTemplate {
 }
 
 const participantTypeMap: Record<number, string> = {
-  0: 'زائر عادي (Visitor)',
-  1: 'عارض مشارك (Exhibitor)',
-  2: 'شخصية هامة (VIP)',
+  1: 'زائر عادي (Visitor)',
+  2: 'عارض مشارك (Exhibitor)',
   3: 'متحدث / محاضر (Speaker)',
-  4: 'فريق التنظيم (Organizer)',
+  4: 'شخصية هامة (VIP)',
   5: 'صحافة وإعلام (Press)',
+  6: 'فريق التنظيم (Organizer)',
+  7: 'راعٍ (Sponsor)',
 };
 
 export const BadgeDesignerPage: React.FC = () => {
@@ -64,12 +66,12 @@ export const BadgeDesignerPage: React.FC = () => {
 
   // Template Form State
   const [templateName, setTemplateName] = useState('شارة الحضور المعتمدة');
-  const [participantType, setParticipantType] = useState<number>(2); // VIP
+  const [participantType, setParticipantType] = useState<number>(1);
   const [orientation, setOrientation] = useState<'Vertical' | 'Horizontal'>('Vertical');
   const [headerColor, setHeaderColor] = useState('#6366f1');
-  const [headerTextColor] = useState('#ffffff');
+  const [headerTextColor, setHeaderTextColor] = useState('#ffffff');
   const [accentColor, setAccentColor] = useState('#4f46e5');
-  const [categoryText, setCategoryText] = useState('شخصية هامة / VIP GUEST');
+  const [categoryText, setCategoryText] = useState('زائر / VISITOR');
   const [showLogo, setShowLogo] = useState(true);
   const [showQR, setShowQR] = useState(true);
   const [showCompany, setShowCompany] = useState(true);
@@ -77,20 +79,54 @@ export const BadgeDesignerPage: React.FC = () => {
   const [showHall, setShowHall] = useState(true);
   const [footerText, setFooterText] = useState('ExpoManager — بطاقة دخول رقمية معتمدة');
 
-  // Sample Attendee Data for Live Preview
-  const [attendeeName] = useState('د. طارق مصطفى المنصوري');
-  const [companyName] = useState('الشركة الليبية لتقنية المعلومات والاتصالات');
-  const [jobTitle] = useState('الرئيس التنفيذي للابتكار الرقمي');
-  const [sampleExhibitionName] = useState('معرض طرابلس الدولي للتقنية 2026');
-  const [boothLocation] = useState('القاعة الكبرى | جناح VIP-01');
-  const [qrPayload] = useState('EXPO-2026-VIP-9941');
+  // Sample Attendee Data for Live Preview (Editable by user)
+  const [attendeeName, setAttendeeName] = useState('د. طارق مصطفى المنصوري');
+  const [companyName, setCompanyName] = useState('الشركة الليبية لتقنية المعلومات والاتصالات');
+  const [jobTitle, setJobTitle] = useState('الرئيس التنفيذي للابتكار الرقمي');
+  const [boothLocation, setBoothLocation] = useState('القاعة الكبرى | جناح VIP-01');
+  const qrPayload = 'EXPO-2026-VISITOR-9941';
+
+  const currentExhibitionName = exhibitions.find(e => e.exhibitionID.toString() === selectedExhibitionId)?.name || 'معرض طرابلس الدولي للتقنية 2026';
+
+  const applyTemplate = useCallback((template: BadgeTemplate) => {
+    setEditingTemplateId(template.templateID);
+    setTemplateName(template.templateName);
+    setParticipantType(template.targetParticipantType);
+    setOrientation(template.orientation === 2 ? 'Horizontal' : 'Vertical');
+    setHeaderColor(template.headerBgColor || '#6366f1');
+    setHeaderTextColor(template.headerTextColor || '#ffffff');
+    setAccentColor(template.accentColor || '#4f46e5');
+    setCategoryText(template.categoryBadgeText || 'زائر معتمد');
+    setShowLogo(template.showLogo);
+    setShowQR(template.showQRCode);
+    setShowCompany(template.showCompanyName);
+    setShowJobTitle(template.showJobTitle);
+    setShowHall(template.showHallName);
+    setFooterText(template.customFooterText || 'ExpoManager — بطاقة دخول رقمية معتمدة');
+  }, []);
+
+  const resetToNew = useCallback(() => {
+    setEditingTemplateId(null);
+    setTemplateName('قالب شارة جديد');
+    setParticipantType(1);
+    setOrientation('Vertical');
+    setHeaderColor('#6366f1');
+    setHeaderTextColor('#ffffff');
+    setAccentColor('#4f46e5');
+    setCategoryText('زائر / VISITOR');
+    setShowLogo(true);
+    setShowQR(true);
+    setShowCompany(true);
+    setShowJobTitle(true);
+    setShowHall(true);
+    setFooterText('ExpoManager — بطاقة دخول رقمية معتمدة');
+  }, []);
 
   // 1. Load Exhibitions
   useEffect(() => {
     const loadExhibitions = async () => {
       try {
-        const response = await api.get<{ items: Exhibition[] }>('/api/exhibitions?page=1&pageSize=50');
-        const list = response.data.items ?? [];
+        const list = await getAllItems<Exhibition>('/api/exhibitions');
         setExhibitions(list);
         if (list.length > 0) {
           setSelectedExhibitionId(list[0].exhibitionID.toString());
@@ -109,52 +145,30 @@ export const BadgeDesignerPage: React.FC = () => {
       const data = response.data ?? [];
       setTemplates(data);
       if (data.length > 0) {
-        applyTemplate(data[0]);
+        const selectedId = Number(exId);
+        const preferredTemplate = data.find(template =>
+          template.exhibitionID === selectedId &&
+          template.targetParticipantType === 1 &&
+          template.isDefault
+        ) ?? data.find(template => template.exhibitionID === selectedId && template.isDefault)
+          ?? data.find(template => template.isDefault)
+          ?? data[0];
+        applyTemplate(preferredTemplate);
       } else {
         resetToNew();
       }
     } catch {
-      // Fallback
       setTemplates([]);
+      resetToNew();
+      showToast('تعذر تحميل قوالب الشارات لهذا المعرض.', 'danger');
     }
-  }, []);
+  }, [applyTemplate, resetToNew, showToast]);
 
   useEffect(() => {
     if (selectedExhibitionId) {
       void loadTemplates(selectedExhibitionId);
     }
   }, [selectedExhibitionId, loadTemplates]);
-
-  const applyTemplate = (t: BadgeTemplate) => {
-    setEditingTemplateId(t.templateID);
-    setTemplateName(t.templateName);
-    setParticipantType(t.targetParticipantType);
-    setOrientation(t.orientation === 1 ? 'Horizontal' : 'Vertical');
-    setHeaderColor(t.headerBgColor || '#6366f1');
-    setAccentColor(t.accentColor || '#4f46e5');
-    setCategoryText(t.categoryBadgeText || 'زائر معتمد');
-    setShowLogo(t.showLogo);
-    setShowQR(t.showQRCode);
-    setShowCompany(t.showCompanyName);
-    setShowJobTitle(t.showJobTitle);
-    setShowHall(t.showHallName);
-    setFooterText(t.customFooterText || 'ExpoManager — بطاقة دخول رقمية معتمدة');
-  };
-
-  const resetToNew = () => {
-    setEditingTemplateId(null);
-    setTemplateName('قالب شارة جديد');
-    setParticipantType(0);
-    setOrientation('Vertical');
-    setHeaderColor('#6366f1');
-    setCategoryText('زائر / VISITOR');
-    setShowLogo(true);
-    setShowQR(true);
-    setShowCompany(true);
-    setShowJobTitle(true);
-    setShowHall(true);
-    setFooterText('ExpoManager — بطاقة دخول رقمية معتمدة');
-  };
 
   const handlePrint = () => {
     window.print();
@@ -163,6 +177,10 @@ export const BadgeDesignerPage: React.FC = () => {
   const handleSave = async () => {
     if (!templateName.trim()) {
       showToast('يرجى إدخال اسم القالب.', 'warning');
+      return;
+    }
+    if (!selectedExhibitionId) {
+      showToast('يرجى اختيار معرض قبل حفظ القالب.', 'warning');
       return;
     }
 
@@ -174,14 +192,14 @@ export const BadgeDesignerPage: React.FC = () => {
         targetParticipantType: participantType,
         widthMm: orientation === 'Vertical' ? 86 : 120,
         heightMm: orientation === 'Vertical' ? 120 : 86,
-        orientation: orientation === 'Horizontal' ? 1 : 0,
+        orientation: orientation === 'Horizontal' ? 2 : 1,
         headerBgColor: headerColor,
         headerTextColor,
         accentColor,
         categoryBadgeText: categoryText.trim(),
         showLogo,
         showQRCode: showQR,
-        showBarcode: false,
+        showBarcode: true,
         showCompanyName: showCompany,
         showJobTitle,
         showHallName: showHall,
@@ -319,6 +337,7 @@ export const BadgeDesignerPage: React.FC = () => {
 
       {/* Main Split Layout: Left Controls + Right Live Preview */}
       <div
+        className="badge-designer-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 440px',
@@ -375,41 +394,60 @@ export const BadgeDesignerPage: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
             <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">لون الشريط العلوي</label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <label className="form-label" style={{ fontSize: '12px' }}>خلفية الشريط</label>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 <input
                   type="color"
                   value={headerColor}
                   onChange={(e) => setHeaderColor(e.target.value)}
-                  style={{ width: '42px', height: '40px', padding: 0, border: '1px solid var(--border-main)', borderRadius: '6px', cursor: 'pointer' }}
+                  style={{ width: '38px', height: '38px', padding: 0, border: '1px solid var(--border-main)', borderRadius: '6px', cursor: 'pointer' }}
                 />
                 <input
                   type="text"
                   value={headerColor}
                   onChange={(e) => setHeaderColor(e.target.value)}
                   className="input-field"
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, padding: '6px 8px', fontSize: '12px' }}
                 />
               </div>
             </div>
 
             <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">لون الزخرفة / التمييز</label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <label className="form-label" style={{ fontSize: '12px' }}>لون نص الشريط</label>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <input
+                  type="color"
+                  value={headerTextColor}
+                  onChange={(e) => setHeaderTextColor(e.target.value)}
+                  style={{ width: '38px', height: '38px', padding: 0, border: '1px solid var(--border-main)', borderRadius: '6px', cursor: 'pointer' }}
+                />
+                <input
+                  type="text"
+                  value={headerTextColor}
+                  onChange={(e) => setHeaderTextColor(e.target.value)}
+                  className="input-field"
+                  style={{ flex: 1, padding: '6px 8px', fontSize: '12px' }}
+                />
+              </div>
+            </div>
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '12px' }}>لون شريط التمييز</label>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 <input
                   type="color"
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
-                  style={{ width: '42px', height: '40px', padding: 0, border: '1px solid var(--border-main)', borderRadius: '6px', cursor: 'pointer' }}
+                  style={{ width: '38px', height: '38px', padding: 0, border: '1px solid var(--border-main)', borderRadius: '6px', cursor: 'pointer' }}
                 />
                 <input
                   type="text"
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
                   className="input-field"
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, padding: '6px 8px', fontSize: '12px' }}
                 />
               </div>
             </div>
@@ -438,7 +476,7 @@ export const BadgeDesignerPage: React.FC = () => {
           </div>
 
           {/* Visibility Checkboxes */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
             <label className="form-label" style={{ marginBottom: '2px' }}>العناصر المعروضة على الشارة</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
@@ -463,6 +501,53 @@ export const BadgeDesignerPage: React.FC = () => {
               </label>
             </div>
           </div>
+
+          {/* Sample Attendee Preview Customization */}
+          <div style={{ borderTop: '1px solid var(--border-main)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)' }}>بيانات المعاينة التجريبية (Live Sample Data):</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div>
+                <label className="form-label" style={{ fontSize: '11px', marginBottom: '2px' }}>اسم المشارك</label>
+                <input
+                  type="text"
+                  value={attendeeName}
+                  onChange={e => setAttendeeName(e.target.value)}
+                  className="input-field"
+                  style={{ fontSize: '12px', padding: '6px 10px' }}
+                />
+              </div>
+              <div>
+                <label className="form-label" style={{ fontSize: '11px', marginBottom: '2px' }}>المسمى الوظيفي</label>
+                <input
+                  type="text"
+                  value={jobTitle}
+                  onChange={e => setJobTitle(e.target.value)}
+                  className="input-field"
+                  style={{ fontSize: '12px', padding: '6px 10px' }}
+                />
+              </div>
+              <div>
+                <label className="form-label" style={{ fontSize: '11px', marginBottom: '2px' }}>الشركة / المؤسسة</label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={e => setCompanyName(e.target.value)}
+                  className="input-field"
+                  style={{ fontSize: '12px', padding: '6px 10px' }}
+                />
+              </div>
+              <div>
+                <label className="form-label" style={{ fontSize: '11px', marginBottom: '2px' }}>الجناح / الموقع</label>
+                <input
+                  type="text"
+                  value={boothLocation}
+                  onChange={e => setBoothLocation(e.target.value)}
+                  className="input-field"
+                  style={{ fontSize: '12px', padding: '6px 10px' }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Live Badge Preview Area */}
@@ -471,131 +556,36 @@ export const BadgeDesignerPage: React.FC = () => {
             المعاينة الحية الفورية (Live Print Preview)
           </span>
 
-          {/* Badge Physical Frame */}
-          <div
+          <BadgeCard
             id="printable-badge"
-            style={{
-              width: orientation === 'Vertical' ? '320px' : '400px',
-              minHeight: orientation === 'Vertical' ? '460px' : '300px',
-              backgroundColor: '#ffffff',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              boxShadow: 'var(--shadow-xl)',
-              border: '1px solid #e2e8f0',
-              display: 'flex',
-              flexDirection: 'column',
-              position: 'relative'
+            className="badge-print-target"
+            data={{
+              fullName: attendeeName,
+              companyName,
+              jobTitle,
+              qrCode: qrPayload,
+              barcode: 'TKT-009941',
+              exhibitionName: currentExhibitionName,
+              venueAndHallName: boothLocation,
             }}
-          >
-            {/* Top Lanyard Hole Visual Indicator */}
-            <div
-              style={{
-                position: 'absolute',
-                top: '8px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '36px',
-                height: '7px',
-                borderRadius: '4px',
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                zIndex: 20
-              }}
-            />
-
-            {/* Header Ribbon */}
-            <div
-              style={{
-                backgroundColor: headerColor,
-                padding: '24px 18px 16px',
-                textAlign: 'center',
-                color: headerTextColor,
-                position: 'relative'
-              }}
-            >
-              {showLogo && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '6px' }}>
-                  <Building2 size={16} />
-                  <span style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.5px' }}>
-                    ExpoManager System
-                  </span>
-                </div>
-              )}
-              <h2 style={{ fontSize: '14px', fontWeight: 700, margin: 0, opacity: 0.95 }}>
-                {sampleExhibitionName}
-              </h2>
-            </div>
-
-            {/* Badge Category Ribbon */}
-            <div
-              style={{
-                backgroundColor: accentColor,
-                color: '#ffffff',
-                padding: '6px 12px',
-                textAlign: 'center',
-                fontSize: '11px',
-                fontWeight: 800,
-                letterSpacing: '1px'
-              }}
-            >
-              {categoryText}
-            </div>
-
-            {/* Attendee Info Body */}
-            <div
-              style={{
-                padding: '24px 20px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '12px',
-                textAlign: 'center',
-                flex: 1,
-                justifyContent: 'center'
-              }}
-            >
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  {attendeeName}
-                </h3>
-                {showJobTitle && (
-                  <p style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginTop: '3px' }}>
-                    {jobTitle}
-                  </p>
-                )}
-                {showCompany && (
-                  <p style={{ fontSize: '12px', color: '#475569', marginTop: '4px', maxWidth: '280px', lineHeight: 1.3 }}>
-                    {companyName}
-                  </p>
-                )}
-              </div>
-
-              {showHall && (
-                <div style={{ backgroundColor: '#f1f5f9', padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, color: '#334155' }}>
-                  {boothLocation}
-                </div>
-              )}
-
-              {showQR && (
-                <div style={{ marginTop: '4px', padding: '8px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
-                  <QRCodeSVG value={qrPayload} size={84} level="M" />
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div
-              style={{
-                padding: '8px 16px',
-                borderTop: '1px dashed #cbd5e1',
-                textAlign: 'center',
-                fontSize: '10px',
-                color: '#64748b',
-                backgroundColor: '#f8fafc'
-              }}
-            >
-              {footerText}
-            </div>
-          </div>
+            design={{
+              widthMm: orientation === 'Vertical' ? 86 : 120,
+              heightMm: orientation === 'Vertical' ? 120 : 86,
+              orientation,
+              headerBgColor: headerColor,
+              headerTextColor,
+              accentColor,
+              categoryBadgeText: categoryText,
+              showLogo,
+              showQRCode: showQR,
+              showBarcode: true,
+              showCompanyName: showCompany,
+              showJobTitle,
+              showHallName: showHall,
+              showDates: true,
+              footerText,
+            }}
+          />
         </div>
       </div>
     </div>

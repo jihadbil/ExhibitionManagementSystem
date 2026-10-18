@@ -10,7 +10,7 @@ using ExhibitionManagementSystem.Services.Interfaces;
 namespace ExhibitionManagementSystem.Controllers.Badges;
 
 [Route("api/[controller]")]
-[Authorize(Policy = AuthorizationPolicies.BadgeManagement)]
+[Authorize(Policy = AuthorizationPolicies.GateOperations)]
 public class BadgesController : BaseApiController
 {
     private readonly IBadgeService _badgeService;
@@ -22,6 +22,7 @@ public class BadgesController : BaseApiController
 
     // GET /api/badges/templates?exhibitionId=1
     [HttpGet("templates")]
+    [Authorize(Policy = AuthorizationPolicies.BadgeManagement)]
     public async Task<ActionResult<IList<BadgeTemplateDto>>> GetTemplates([FromQuery] int? exhibitionId)
     {
         var result = await _badgeService.GetTemplatesAsync(TenantId, exhibitionId);
@@ -30,6 +31,7 @@ public class BadgesController : BaseApiController
 
     // GET /api/badges/templates/{templateId}
     [HttpGet("templates/{templateId:int}")]
+    [Authorize(Policy = AuthorizationPolicies.BadgeManagement)]
     public async Task<ActionResult<BadgeTemplateDto>> GetTemplateById(int templateId)
     {
         var result = await _badgeService.GetTemplateByIdAsync(TenantId, templateId);
@@ -38,6 +40,7 @@ public class BadgesController : BaseApiController
 
     // POST /api/badges/templates
     [HttpPost("templates")]
+    [Authorize(Policy = AuthorizationPolicies.BadgeManagement)]
     public async Task<ActionResult<BadgeTemplateDto>> CreateTemplate([FromBody] BadgeTemplateCreateDto dto)
     {
         var result = await _badgeService.CreateTemplateAsync(TenantId, dto);
@@ -46,6 +49,7 @@ public class BadgesController : BaseApiController
 
     // PUT /api/badges/templates/{templateId}
     [HttpPut("templates/{templateId:int}")]
+    [Authorize(Policy = AuthorizationPolicies.BadgeManagement)]
     public async Task<ActionResult<BadgeTemplateDto>> UpdateTemplate(int templateId, [FromBody] BadgeTemplateUpdateDto dto)
     {
         var result = await _badgeService.UpdateTemplateAsync(TenantId, templateId, dto);
@@ -54,6 +58,7 @@ public class BadgesController : BaseApiController
 
     // DELETE /api/badges/templates/{templateId}
     [HttpDelete("templates/{templateId:int}")]
+    [Authorize(Policy = AuthorizationPolicies.BadgeManagement)]
     public async Task<ActionResult> DeleteTemplate(int templateId)
     {
         var result = await _badgeService.DeleteTemplateAsync(TenantId, templateId, UserId);
@@ -77,6 +82,11 @@ public class BadgesController : BaseApiController
     }
 
     // GET /api/badges/render-staff/{staffId}
+    [HttpPost("staff/{staffId:int}/issue")]
+    [Authorize(Policy = AuthorizationPolicies.BadgeManagement)]
+    public async Task<ActionResult<BadgePrintPayloadDto>> IssueStaffBadge(int staffId) =>
+        ToActionResult(await _badgeService.IssueStaffBadgeAsync(TenantId, staffId));
+
     [HttpGet("render-staff/{staffId:int}")]
     public async Task<ActionResult<BadgePrintPayloadDto>> RenderStaff(int staffId)
     {

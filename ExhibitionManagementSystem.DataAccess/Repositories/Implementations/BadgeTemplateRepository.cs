@@ -37,10 +37,9 @@ public class BadgeTemplateRepository : GenericRepository<BadgeTemplate>, IBadgeT
         if (tenantTemplate != null)
             return tenantTemplate;
 
-        // 3. Fallback to any default template in the tenant
-        return await _dbSet
-            .Where(t => t.TenantID == tenantId && t.IsDefault)
-            .FirstOrDefaultAsync();
+        // Do not apply a template belonging to another participant type.
+        // The caller will use safe defaults when this type has no template.
+        return null;
     }
 
     public async Task<IReadOnlyList<BadgeTemplate>> GetTemplatesByExhibitionAsync(int tenantId, int exhibitionId)

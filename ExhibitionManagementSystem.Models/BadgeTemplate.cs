@@ -75,7 +75,7 @@ public class BadgeTemplate : IAuditableEntity, ISoftDeletable, ITenantEntity
 
     public bool ShowQRCode { get; set; } = true;
 
-    public bool ShowBarcode { get; set; } = false;
+    public bool ShowBarcode { get; set; } = true;
 
     public bool ShowCompanyName { get; set; } = true;
 

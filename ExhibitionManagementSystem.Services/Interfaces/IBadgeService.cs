@@ -28,4 +28,5 @@ public interface IBadgeService
     /// استخراج حمولة الشارة لعضو طاقم جناح عارض.
     /// </summary>
     Task<ServiceResult<BadgePrintPayloadDto>> GenerateBadgePayloadForStaffAsync(int tenantId, int staffId);
+    Task<ServiceResult<BadgePrintPayloadDto>> IssueStaffBadgeAsync(int tenantId, int staffId);
 }
