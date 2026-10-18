@@ -20,6 +20,7 @@ public class BoothDto : AuditDto
     public decimal? Height { get; set; }
     public decimal? RotationAngle { get; set; }
     public string? ShapeType { get; set; }
+    public string BoothType { get; set; } = "Standard";
     public string ShapePolygonJSON { get; set; } = string.Empty;
     public int? AssignedPriceRuleID { get; set; }
 }

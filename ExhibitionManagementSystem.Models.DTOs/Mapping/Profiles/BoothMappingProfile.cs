@@ -14,10 +14,12 @@ public class BoothMappingProfile : Profile
         CreateMap<Models.Booth, BoothDto>()
             .ForMember(dest => dest.HallName, opt => opt.MapFrom(src => src.Hall != null ? src.Hall.HallName : string.Empty))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
-            .ForMember(dest => dest.ShapeType, opt => opt.MapFrom(src => src.ShapeType.HasValue ? src.ShapeType.Value.ToString() : null));
+            .ForMember(dest => dest.ShapeType, opt => opt.MapFrom(src => src.ShapeType.HasValue ? src.ShapeType.Value.ToString() : null))
+            .ForMember(dest => dest.BoothType, opt => opt.MapFrom(src => src.BoothType.ToString()));
 
         CreateMap<Models.Booth, BoothSummaryDto>()
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.BoothType, opt => opt.MapFrom(src => src.BoothType.ToString()));
 
         CreateMap<BoothCreateDto, Models.Booth>()
             .ForMember(dest => dest.BoothID, opt => opt.Ignore())
@@ -26,6 +28,7 @@ public class BoothMappingProfile : Profile
             .ForMember(dest => dest.MergeID, opt => opt.Ignore())
             .ForMember(dest => dest.CurrentAreaSqM, opt => opt.MapFrom(src => src.OriginalAreaSqM))
             .ForMember(dest => dest.ShapeType, opt => opt.MapFrom(src => ParseShapeType(src.ShapeType)))
+            .ForMember(dest => dest.BoothType, opt => opt.MapFrom(src => ParseBoothType(src.BoothType)))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
@@ -43,7 +46,8 @@ public class BoothMappingProfile : Profile
             .ForMember(dest => dest.IsMerged, opt => opt.Ignore())
             .ForMember(dest => dest.MergeID, opt => opt.Ignore())
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => Enum.Parse<BoothStatus>(src.Status, true)))
-            .ForMember(dest => dest.ShapeType, opt => opt.MapFrom(src => ParseNullableShapeType(src.ShapeType)))
+            .ForMember(dest => dest.ShapeType, opt => opt.Ignore())
+            .ForMember(dest => dest.BoothType, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
@@ -72,9 +76,10 @@ public class BoothMappingProfile : Profile
         return Enum.TryParse<BoothShapeType>(shapeType, true, out var st) ? st : BoothShapeType.Rect;
     }
 
-    private static BoothShapeType? ParseNullableShapeType(string? shapeType)
+    private static BoothType ParseBoothType(string? boothType)
     {
-        if (string.IsNullOrEmpty(shapeType)) return null;
-        return Enum.TryParse<BoothShapeType>(shapeType, true, out var st) ? (BoothShapeType?)st : null;
+        return Enum.TryParse<BoothType>(boothType, true, out var parsed)
+            ? parsed
+            : BoothType.Standard;
     }
 }

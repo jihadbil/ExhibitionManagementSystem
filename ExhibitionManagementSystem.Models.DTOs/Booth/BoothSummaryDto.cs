@@ -6,6 +6,7 @@ public class BoothSummaryDto
     public int HallID { get; set; }
     public string BoothNumber { get; set; } = string.Empty;
     public decimal CurrentAreaSqM { get; set; }
+    public string BoothType { get; set; } = "Standard";
     public string Status { get; set; } = string.Empty;
     public bool IsMerged { get; set; }
 }

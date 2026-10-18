@@ -10,6 +10,7 @@ public class BoothCreateDto
     [StringLength(20)]
     public string BoothNumber { get; set; } = string.Empty;
 
+    [Range(typeof(decimal), "0.01", "99999999.99")]
     public decimal OriginalAreaSqM { get; set; }
     public decimal? PosX { get; set; }
     public decimal? PosY { get; set; }
@@ -17,6 +18,7 @@ public class BoothCreateDto
     public decimal? Height { get; set; }
     public decimal? RotationAngle { get; set; }
     public string? ShapeType { get; set; }
+    public string BoothType { get; set; } = "Standard";
     public string ShapePolygonJSON { get; set; } = string.Empty;
     public int? AssignedPriceRuleID { get; set; }
 }

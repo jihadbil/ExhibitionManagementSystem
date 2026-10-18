@@ -43,6 +43,9 @@ public class BoothsController : BaseApiController
             .Include(b => b.Hall)
             .ThenInclude(h => h.Venue)
             .Where(b => b.Hall.Venue.TenantID == tenantId);
+        HashSet<int>? exhibitionReservedBoothIds = null;
+        HashSet<int>? exhibitionMergedBoothIds = null;
+        Dictionary<int, int>? exhibitionMergeIds = null;
 
         if (hallId.HasValue)
         {
@@ -51,25 +54,53 @@ public class BoothsController : BaseApiController
 
         if (exhibitionId.HasValue)
         {
-            var boothIds = await _unitOfWork.BoothReservations.AsQueryable()
-                .Where(r => r.ExhibitionID == exhibitionId.Value && r.BoothID.HasValue)
-                .Select(r => r.BoothID!.Value)
-                .ToListAsync();
-            query = query.Where(b => boothIds.Contains(b.BoothID));
+            var exhibition = await _unitOfWork.Exhibitions.GetByIdAsync(exhibitionId.Value);
+            if (exhibition == null || exhibition.TenantID != tenantId)
+            {
+                return NotFound(new { ErrorMessage = "المعرض غير موجود", ErrorCode = "EXHIBITION_NOT_FOUND" });
+            }
+            query = query.Where(b => b.Hall.VenueID == exhibition.VenueID);
+            exhibitionReservedBoothIds = await _unitOfWork.BoothReservations.AsQueryable()
+                .Where(reservation => reservation.ExhibitionID == exhibitionId.Value &&
+                                      reservation.BoothID.HasValue &&
+                                      reservation.Status != ReservationStatus.Cancelled)
+                .Select(reservation => reservation.BoothID!.Value)
+                .ToHashSetAsync();
+            exhibitionMergeIds = await _unitOfWork.BoothMergeItems.AsQueryable()
+                .Where(i => i.ExhibitionID == exhibitionId.Value).ToDictionaryAsync(i => i.BoothID, i => i.MergeID);
+            exhibitionMergedBoothIds = exhibitionMergeIds.Keys.ToHashSet();
         }
 
         if (!string.IsNullOrEmpty(status))
         {
             if (Enum.TryParse<BoothStatus>(status, true, out var boothStatus))
             {
-                query = query.Where(b => b.Status == boothStatus);
+                if (exhibitionReservedBoothIds != null && boothStatus == BoothStatus.Reserved)
+                {
+                    query = query.Where(b => exhibitionReservedBoothIds.Contains(b.BoothID));
+                }
+                else if (exhibitionReservedBoothIds != null && boothStatus == BoothStatus.Available)
+                {
+                    query = query.Where(b =>
+                        !exhibitionReservedBoothIds.Contains(b.BoothID) &&
+                        b.Status != BoothStatus.Maintenance &&
+                        !exhibitionMergedBoothIds!.Contains(b.BoothID));
+                }
+                else if (exhibitionMergedBoothIds != null && boothStatus == BoothStatus.Merged)
+                {
+                    query = query.Where(b => exhibitionMergedBoothIds.Contains(b.BoothID));
+                }
+                else
+                {
+                    query = query.Where(b => b.Status == boothStatus);
+                }
             }
         }
 
         var totalCount = await query.CountAsync();
 
-        var page = pageNumber ?? 1;
-        var size = pageSize ?? 10;
+        var page = Math.Max(pageNumber ?? 1, 1);
+        var size = Math.Clamp(pageSize ?? 10, 1, 200);
 
         var items = await query
             .OrderBy(b => b.BoothNumber)
@@ -78,6 +109,19 @@ public class BoothsController : BaseApiController
             .ToListAsync();
 
         var dtos = _mapper.Map<IList<BoothDto>>(items);
+        if (exhibitionReservedBoothIds != null)
+        {
+            foreach (var dto in dtos.Where(dto =>
+                         dto.Status is nameof(BoothStatus.Available) or nameof(BoothStatus.Reserved)))
+            {
+                dto.Status = exhibitionReservedBoothIds.Contains(dto.BoothID)
+                    ? BoothStatus.Reserved.ToString()
+                    : BoothStatus.Available.ToString();
+                dto.IsMerged = exhibitionMergedBoothIds!.Contains(dto.BoothID);
+                dto.MergeID = dto.IsMerged ? exhibitionMergeIds![dto.BoothID] : null;
+                if (dto.IsMerged) dto.Status = BoothStatus.Merged.ToString();
+            }
+        }
 
         return Ok(new PagedResultDto<BoothDto>
         {
@@ -135,6 +179,17 @@ public class BoothsController : BaseApiController
         [FromBody] BoothUpdateDto dto)
     {
         var result = await _boothService.UpdateAsync(TenantId, boothId, dto);
+        return ToActionResult(result);
+    }
+
+    // PUT /api/booths/hall/{hallId}/layout
+    [HttpPut("hall/{hallId:int}/layout")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<ActionResult<BoothLayoutSaveResultDto>> SaveLayout(
+        int hallId,
+        [FromBody] BoothLayoutSaveDto dto)
+    {
+        var result = await _boothService.SaveLayoutAsync(TenantId, UserId, hallId, dto);
         return ToActionResult(result);
     }
 
