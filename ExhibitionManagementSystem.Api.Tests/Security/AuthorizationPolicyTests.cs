@@ -1,7 +1,9 @@
 using ExhibitionManagementSystem.Controllers.Badges;
 using ExhibitionManagementSystem.Controllers.Booth;
 using ExhibitionManagementSystem.Controllers.Financial;
+using ExhibitionManagementSystem.Controllers.Exhibition;
 using ExhibitionManagementSystem.Controllers.Sponsorship;
+using ExhibitionManagementSystem.Controllers.Venue;
 using ExhibitionManagementSystem.Controllers.Visitor;
 using ExhibitionManagementSystem.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -38,7 +40,7 @@ public class AuthorizationPolicyTests
 
     [Theory]
     [InlineData(typeof(SponsorshipController), AuthorizationPolicies.SponsorshipManagement)]
-    [InlineData(typeof(BadgesController), AuthorizationPolicies.BadgeManagement)]
+    [InlineData(typeof(BadgesController), AuthorizationPolicies.GateOperations)]
     [InlineData(typeof(ReservationsController), AuthorizationPolicies.EventManagement)]
     [InlineData(typeof(FinancialController), AuthorizationPolicies.FinanceManagement)]
     [InlineData(typeof(TicketsController), AuthorizationPolicies.GateOperations)]
@@ -67,4 +69,45 @@ public class AuthorizationPolicyTests
                 .Cast<AuthorizeAttribute>(),
             attribute => attribute.Policy == "AdminOnly");
     }
+
+    [Fact]
+    public void VenueSitePlanSave_RequiresAdministration()
+    {
+        var action = typeof(VenuesController).GetMethod(nameof(VenuesController.SaveSitePlan));
+
+        Assert.NotNull(action);
+        Assert.Contains(
+            action.GetCustomAttributes(typeof(AuthorizeAttribute), false)
+                .Cast<AuthorizeAttribute>(),
+            attribute => attribute.Policy == "AdminOnly");
+    }
+
+    [Fact]
+    public void BoothLayoutSave_RequiresAdministration()
+    {
+        var action = typeof(BoothsController).GetMethod(nameof(BoothsController.SaveLayout));
+
+        Assert.NotNull(action);
+        Assert.Contains(
+            action.GetCustomAttributes(typeof(AuthorizeAttribute), false)
+                .Cast<AuthorizeAttribute>(),
+            attribute => attribute.Policy == "AdminOnly");
+    }
+
+    [Theory]
+    [InlineData(typeof(VisitorsController), nameof(VisitorsController.Update))]
+    [InlineData(typeof(ExhibitionsController), nameof(ExhibitionsController.UpdateSchedule))]
+    public void VisitorAndScheduleUpdates_RequireEventManagement(
+        Type controllerType,
+        string methodName)
+    {
+        var action = controllerType.GetMethod(methodName);
+
+        Assert.NotNull(action);
+        Assert.Contains(
+            action.GetCustomAttributes(typeof(AuthorizeAttribute), false)
+                .Cast<AuthorizeAttribute>(),
+            attribute => attribute.Policy == AuthorizationPolicies.EventManagement);
+    }
+
 }
