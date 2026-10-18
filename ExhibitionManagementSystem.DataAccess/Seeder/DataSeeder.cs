@@ -17,7 +17,6 @@ public static class DataSeeder
     {
         var logger = serviceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
         var dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
-        var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = serviceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
 
         try
@@ -68,93 +67,68 @@ public static class DataSeeder
             {
                 if (!await roleManager.RoleExistsAsync(roleName))
                 {
-                    await roleManager.CreateAsync(new ApplicationRole
+                    var created = await roleManager.CreateAsync(new ApplicationRole
                     {
                         Name = roleName,
                         NormalizedName = roleName.ToUpperInvariant(),
                         CreatedAt = DateTime.UtcNow
                     });
+                    if (!created.Succeeded)
+                        throw new InvalidOperationException("System role creation failed: " + string.Join(", ", created.Errors.Select(e => e.Code)));
                 }
             }
 
-            // 4. Seed Super User (masoud) with full permissions
-            const string targetUserName = "masoud";
-            const string targetEmail = "masoud@exhibition.ly";
-            const string targetPassword = "9713563@#Aa";
-
-            var adminUser = await userManager.FindByNameAsync(targetUserName) 
-                         ?? await userManager.FindByEmailAsync(targetEmail)
-                         ?? await userManager.FindByEmailAsync(targetUserName);
-
-            if (adminUser == null)
-            {
-                adminUser = new ApplicationUser
-                {
-                    UserName = targetUserName,
-                    Email = targetEmail,
-                    FullName = "Masoud",
-                    TenantID = defaultTenant.TenantID,
-                    IsActive = true,
-                    EmailConfirmed = true
-                };
-
-                var createResult = await userManager.CreateAsync(adminUser, targetPassword);
-                if (createResult.Succeeded)
-                {
-                    await userManager.AddToRolesAsync(adminUser, requiredRoles);
-                    logger.LogInformation("Seeded initial user '{UserName}' with full system permissions.", targetUserName);
-                }
-                else
-                {
-                    var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
-                    logger.LogError("Failed to create user '{UserName}': {Errors}", targetUserName, errors);
-                    throw new InvalidOperationException($"Failed to seed user '{targetUserName}': {errors}");
-                }
-            }
-            else
-            {
-                // Ensure password matches target password
-                if (!await userManager.CheckPasswordAsync(adminUser, targetPassword))
-                {
-                    var resetToken = await userManager.GeneratePasswordResetTokenAsync(adminUser);
-                    var resetResult = await userManager.ResetPasswordAsync(adminUser, resetToken, targetPassword);
-                    if (resetResult.Succeeded)
-                    {
-                        logger.LogInformation("Updated password for user '{UserName}'.", targetUserName);
-                    }
-                }
-
-                // Ensure all roles are assigned
-                var userRoles = await userManager.GetRolesAsync(adminUser);
-                var missingRoles = requiredRoles.Except(userRoles, StringComparer.OrdinalIgnoreCase).ToList();
-                if (missingRoles.Count > 0)
-                {
-                    await userManager.AddToRolesAsync(adminUser, missingRoles);
-                    logger.LogInformation("Assigned missing roles to user '{UserName}': {Roles}", targetUserName, string.Join(", ", missingRoles));
-                }
-
-                // Ensure user is active and linked to tenant
-                bool modified = false;
-                if (!adminUser.IsActive)
-                {
-                    adminUser.IsActive = true;
-                    modified = true;
-                }
-                if (adminUser.TenantID == 0)
-                {
-                    adminUser.TenantID = defaultTenant.TenantID;
-                    modified = true;
-                }
-                if (modified)
-                {
-                    await userManager.UpdateAsync(adminUser);
-                }
-            }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error occurred during initial data seeding.");
             throw;
         }
+    }
+
+    public static async Task BootstrapAdminAsync(IServiceProvider serviceProvider, BootstrapAdminOptions options)
+    {
+        if (!options.Enabled)
+            return;
+
+        var logger = serviceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
+        var db = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        var users = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        if (string.IsNullOrWhiteSpace(options.UserName) || string.IsNullOrWhiteSpace(options.Email) ||
+            string.IsNullOrWhiteSpace(options.Password) || options.TenantID <= 0)
+            throw new InvalidOperationException("BootstrapAdmin requires UserName, Email, Password and a valid TenantID.");
+
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable)
+            : null;
+
+        // Explicit bootstrap only creates the first administrator. Existing accounts
+        // keep their passwords, activation state, tenant and assigned permissions.
+        if (await users.FindByNameAsync(options.UserName.Trim()) != null ||
+            await users.FindByEmailAsync(options.Email.Trim()) != null ||
+            (await users.GetUsersInRoleAsync(SystemRoles.SuperAdmin)).Count > 0)
+        {
+            logger.LogInformation("Administrator bootstrap skipped because an account or administrator already exists.");
+            return;
+        }
+
+        if (!await db.Tenants.AnyAsync(t => t.TenantID == options.TenantID && t.IsActive))
+            throw new InvalidOperationException("BootstrapAdmin requires an existing active tenant.");
+
+        var user = new ApplicationUser
+        {
+            UserName = options.UserName.Trim(), Email = options.Email.Trim(),
+            FullName = string.IsNullOrWhiteSpace(options.FullName) ? options.UserName.Trim() : options.FullName.Trim(),
+            TenantID = options.TenantID, IsActive = true, EmailConfirmed = true
+        };
+        var created = await users.CreateAsync(user, options.Password);
+        if (!created.Succeeded)
+            throw new InvalidOperationException("Administrator bootstrap failed: " + string.Join(", ", created.Errors.Select(e => e.Code)));
+        var assigned = await users.AddToRoleAsync(user, SystemRoles.SuperAdmin);
+        if (!assigned.Succeeded)
+            throw new InvalidOperationException("Administrator role assignment failed: " + string.Join(", ", assigned.Errors.Select(e => e.Code)));
+        if (transaction != null)
+            await transaction.CommitAsync();
+        logger.LogInformation("Created the initial platform administrator through explicit bootstrap configuration.");
     }
 }

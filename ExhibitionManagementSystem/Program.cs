@@ -138,7 +138,7 @@ builder.Services.AddServiceLayer();
 
 var app = builder.Build();
 
-// Apply pending database migrations and seed initial superuser and system roles
+// Apply migrations and seed reference data. Administrator creation is opt-in.
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -150,8 +150,11 @@ using (var scope = app.Services.CreateScope())
         await dbContext.Database.MigrateAsync();
         logger.LogInformation("Database migrations applied successfully.");
 
-        logger.LogInformation("Seeding initial data and super user (masoud)...");
+        logger.LogInformation("Seeding reference data and system roles...");
         await DataSeeder.SeedInitialDataAsync(services);
+        var bootstrap = builder.Configuration.GetSection(BootstrapAdminOptions.SectionName)
+            .Get<BootstrapAdminOptions>() ?? new BootstrapAdminOptions();
+        await DataSeeder.BootstrapAdminAsync(services, bootstrap);
         logger.LogInformation("Database initialization and seeding completed successfully.");
     }
     catch (Exception ex)
