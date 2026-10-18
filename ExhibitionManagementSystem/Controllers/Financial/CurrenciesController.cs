@@ -2,6 +2,7 @@ using ExhibitionManagementSystem.Controllers.Base;
 using ExhibitionManagementSystem.Models.DTOs.Currency;
 using ExhibitionManagementSystem.Models.DTOs.Financial;
 using ExhibitionManagementSystem.Services.Interfaces;
+using ExhibitionManagementSystem.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -56,7 +57,7 @@ public class CurrenciesController : BaseApiController
 
     // PUT /api/currencies/rates
     [HttpPut("rates")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = AuthorizationPolicies.SuperAdminOnly)]
     public async Task<ActionResult<ExchangeRateDto>> UpsertRate(
         [FromBody] ExchangeRateDto dto)
     {

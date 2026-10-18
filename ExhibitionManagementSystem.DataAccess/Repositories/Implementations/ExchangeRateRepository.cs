@@ -24,37 +24,88 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task<ExchangeRate?> GetLatestRateAsync(string from, string to)
         {
+            var today = DateTime.UtcNow.Date;
             return await _dbSet.AsNoTracking()
-                .Where(r => r.FromCurrency == from && r.ToCurrency == to)
+                .Where(r => r.FromCurrency == from && r.ToCurrency == to && r.RateDate <= today)
                 .OrderByDescending(r => r.RateDate)
                 .FirstOrDefaultAsync();
         }
 
         public async Task<decimal?> ConvertAsync(string from, string to, decimal amount, DateTime? date = null)
         {
-            if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
-                return amount;
+            var result = await ConvertWithDetailsAsync(from, to, amount, date);
+            return result?.TargetAmount;
+        }
 
-            var rate = date.HasValue
-                ? await GetRateAsync(from, to, date.Value)
-                : await GetLatestRateAsync(from, to);
+        public async Task<CurrencyConversionResult?> ConvertWithDetailsAsync(
+            string from,
+            string to,
+            decimal amount,
+            DateTime? date = null,
+            string? bridgeCurrency = null)
+        {
+            from = from.Trim().ToUpperInvariant();
+            to = to.Trim().ToUpperInvariant();
+            var effectiveDate = (date ?? DateTime.UtcNow).Date;
 
-            if (rate == null)
+            if (string.Equals(from, to, StringComparison.Ordinal))
             {
-                // Try inverse rate mapping
-                var inverseRate = date.HasValue
-                    ? await GetRateAsync(to, from, date.Value)
-                    : await GetLatestRateAsync(to, from);
-
-                if (inverseRate != null && inverseRate.Rate != 0)
-                {
-                    return amount / inverseRate.Rate;
-                }
-
-                return null;
+                return CreateResult(amount, from, to, 1m, effectiveDate, "Same currency");
             }
 
-            return amount * rate.Rate;
+            var direct = await GetRateAsync(from, to, effectiveDate);
+            if (direct != null && direct.Rate > 0)
+            {
+                return CreateResult(amount, from, to, direct.Rate, direct.RateDate, direct.Source);
+            }
+
+            var inverse = await GetRateAsync(to, from, effectiveDate);
+            if (inverse != null && inverse.Rate > 0)
+            {
+                return CreateResult(amount, from, to, 1m / inverse.Rate, inverse.RateDate, $"Inverse: {inverse.Source}");
+            }
+
+            var bridge = bridgeCurrency?.Trim().ToUpperInvariant();
+            if (!string.IsNullOrWhiteSpace(bridge) && bridge != from && bridge != to)
+            {
+                var first = await ConvertWithDetailsAsync(from, bridge, 1m, effectiveDate);
+                if (first != null)
+                {
+                    var second = await ConvertWithDetailsAsync(bridge, to, 1m, effectiveDate);
+                    if (second != null)
+                    {
+                        return CreateResult(amount, from, to, first.ExchangeRate * second.ExchangeRate,
+                            first.RateDate < second.RateDate ? first.RateDate : second.RateDate,
+                            $"Bridge {bridge}: {first.Source}; {second.Source}");
+                    }
+                }
+            }
+
+            return null;
         }
-    }
+
+        private static CurrencyConversionResult CreateResult(
+            decimal amount,
+            string from,
+            string to,
+            decimal rate,
+            DateTime rateDate,
+            string source)
+        {
+            rate = decimal.Round(rate, 6, MidpointRounding.AwayFromZero);
+            return new()
+            {
+                SourceAmount = amount,
+                SourceCurrencyCode = from,
+                TargetAmount = RoundMoney(amount * rate),
+                TargetCurrencyCode = to,
+                ExchangeRate = rate,
+                RateDate = rateDate.Date,
+                Source = source.Length > 100 ? source[..100] : source
+            };
+        }
+
+        private static decimal RoundMoney(decimal amount) =>
+            decimal.Round(amount, 2, MidpointRounding.AwayFromZero);
+        }
 }

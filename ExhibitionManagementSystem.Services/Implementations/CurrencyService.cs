@@ -26,13 +26,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<IList<CurrencyDto>>> GetAllAsync()
         {
-            var currencies = await _unitOfWork.Currencies.GetAllAsync();
+            var currencies = await _unitOfWork.Currencies.FindAsync(currency => currency.IsActive);
             var dtos = _mapper.Map<IList<CurrencyDto>>(currencies);
             return ServiceResult<IList<CurrencyDto>>.Success(dtos);
         }
 
         public async Task<ServiceResult<IList<ExchangeRateDto>>> GetExchangeRatesAsync(string fromCurrency)
         {
+            fromCurrency = NormalizeCode(fromCurrency);
             var rates = await _unitOfWork.ExchangeRates.FindAsync(r => r.FromCurrency == fromCurrency);
             var dtos = _mapper.Map<IList<ExchangeRateDto>>(rates);
             return ServiceResult<IList<ExchangeRateDto>>.Success(dtos);
@@ -40,6 +41,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<decimal>> GetCurrentRateAsync(string from, string to)
         {
+            from = NormalizeCode(from);
+            to = NormalizeCode(to);
             if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase))
             {
                 return ServiceResult<decimal>.Success(1.0m);
@@ -62,6 +65,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<decimal>> ConvertAmountAsync(decimal amount, string from, string to)
         {
+            if (amount < 0)
+                return ServiceResult<decimal>.Failure("المبلغ المراد تحويله لا يمكن أن يكون سالباً", "INVALID_AMOUNT");
+            from = NormalizeCode(from);
+            to = NormalizeCode(to);
             var converted = await _unitOfWork.ExchangeRates.ConvertAsync(from, to, amount);
             if (converted == null)
                 return ServiceResult<decimal>.Failure($"سعر الصرف من {from} إلى {to} غير متوفر", "EXCHANGE_RATE_NOT_FOUND");
@@ -70,7 +77,23 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<ExchangeRateDto>> UpsertExchangeRateAsync(string userId, ExchangeRateDto dto)
         {
+            dto.FromCurrency = NormalizeCode(dto.FromCurrency);
+            dto.ToCurrency = NormalizeCode(dto.ToCurrency);
+            if (dto.FromCurrency.Length != 3 || dto.ToCurrency.Length != 3)
+                return ServiceResult<ExchangeRateDto>.Failure("رمز العملة غير صالح", "INVALID_CURRENCY");
+            if (dto.FromCurrency == dto.ToCurrency)
+                return ServiceResult<ExchangeRateDto>.Failure("يجب أن تختلف عملة المصدر عن عملة الهدف", "SAME_CURRENCY_RATE");
+            if (dto.Rate <= 0)
+                return ServiceResult<ExchangeRateDto>.Failure("سعر الصرف يجب أن يكون أكبر من صفر", "INVALID_EXCHANGE_RATE");
+
             var targetDate = dto.RateDate == default ? DateTime.UtcNow.Date : dto.RateDate.Date;
+            if (targetDate > DateTime.UtcNow.Date)
+                return ServiceResult<ExchangeRateDto>.Failure("لا يمكن تفعيل سعر صرف بتاريخ مستقبلي", "FUTURE_EXCHANGE_RATE");
+
+            var currencies = await _unitOfWork.Currencies.FindAsync(c =>
+                (c.CurrencyCode == dto.FromCurrency || c.CurrencyCode == dto.ToCurrency) && c.IsActive);
+            if (currencies.Select(c => c.CurrencyCode).Distinct().Count() != 2)
+                return ServiceResult<ExchangeRateDto>.Failure("إحدى العملتين غير موجودة أو غير نشطة", "CURRENCY_NOT_ACTIVE");
             
             var existing = await _unitOfWork.ExchangeRates.FirstOrDefaultAsync(
                 r => r.FromCurrency == dto.FromCurrency && 
@@ -107,5 +130,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<ExchangeRateDto>.Success(resultDto);
             }
         }
+
+        private static string NormalizeCode(string? code) =>
+            code?.Trim().ToUpperInvariant() ?? string.Empty;
     }
 }
