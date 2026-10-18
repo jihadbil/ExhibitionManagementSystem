@@ -61,6 +61,25 @@ public class VenuesController : BaseApiController
         return ToActionResult(result);
     }
 
+    // GET /api/venues/{venueId}/site-plan
+    [HttpGet("{venueId:int}/site-plan")]
+    public async Task<ActionResult<VenueSitePlanDto>> GetSitePlan(int venueId)
+    {
+        var result = await _venueService.GetSitePlanAsync(TenantId, venueId);
+        return ToActionResult(result);
+    }
+
+    // PUT /api/venues/{venueId}/site-plan
+    [HttpPut("{venueId:int}/site-plan")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<ActionResult<VenueSitePlanDto>> SaveSitePlan(
+        int venueId,
+        [FromBody] VenueSitePlanSaveDto dto)
+    {
+        var result = await _venueService.SaveSitePlanAsync(TenantId, venueId, dto);
+        return ToActionResult(result);
+    }
+
     // DELETE /api/venues/{venueId}
     [HttpDelete("{venueId:int}")]
     [Authorize(Policy = "AdminOnly")]

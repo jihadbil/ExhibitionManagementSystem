@@ -12,6 +12,8 @@ namespace ExhibitionManagementSystem.Services.Interfaces
         Task<ServiceResult<VenueDto>> GetByIdAsync(int tenantId, int venueId);
         Task<ServiceResult<VenueDto>> CreateAsync(int tenantId, VenueCreateDto dto);
         Task<ServiceResult<VenueDto>> UpdateAsync(int tenantId, int venueId, VenueUpdateDto dto);
+        Task<ServiceResult<VenueSitePlanDto>> GetSitePlanAsync(int tenantId, int venueId);
+        Task<ServiceResult<VenueSitePlanDto>> SaveSitePlanAsync(int tenantId, int venueId, VenueSitePlanSaveDto dto);
         Task<ServiceResult> DeleteAsync(int tenantId, int venueId);
     }
 }

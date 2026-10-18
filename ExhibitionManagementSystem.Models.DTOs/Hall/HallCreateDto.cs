@@ -15,4 +15,5 @@ public class HallCreateDto
     public decimal? FloorPlanWidth { get; set; }
     public decimal? FloorPlanHeight { get; set; }
     public string FloorPlanJSON { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
 }

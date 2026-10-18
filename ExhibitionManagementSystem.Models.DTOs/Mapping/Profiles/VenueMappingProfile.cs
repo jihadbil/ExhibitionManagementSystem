@@ -23,6 +23,8 @@ public class VenueMappingProfile : Profile
             .ForMember(dest => dest.DeletedByUserId, opt => opt.Ignore())
             .ForMember(dest => dest.Tenant, opt => opt.Ignore())
             .ForMember(dest => dest.Halls, opt => opt.Ignore())
+            .ForMember(dest => dest.SitePlanJSON, opt => opt.Ignore())
+            .ForMember(dest => dest.SitePlanVersion, opt => opt.Ignore())
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
         CreateMap<VenueUpdateDto, Models.Venue>()
@@ -34,6 +36,8 @@ public class VenueMappingProfile : Profile
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedByUserId, opt => opt.Ignore())
             .ForMember(dest => dest.Tenant, opt => opt.Ignore())
-            .ForMember(dest => dest.Halls, opt => opt.Ignore());
+            .ForMember(dest => dest.Halls, opt => opt.Ignore())
+            .ForMember(dest => dest.SitePlanJSON, opt => opt.Ignore())
+            .ForMember(dest => dest.SitePlanVersion, opt => opt.Ignore());
     }
 }

@@ -15,7 +15,8 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task<IReadOnlyList<Hall>> GetByVenueAsync(int venueId)
         {
-            return await FindAsync(h => h.VenueID == venueId);
+            return await _dbSet.AsNoTracking().Include(h => h.Venue).Include(h => h.Booths)
+                .Where(h => h.VenueID == venueId).OrderBy(h => h.HallName).ToListAsync();
         }
 
         public async Task<Hall?> GetWithBoothsAsync(int hallId)

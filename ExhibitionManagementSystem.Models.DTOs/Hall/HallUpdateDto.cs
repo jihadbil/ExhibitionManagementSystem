@@ -12,6 +12,6 @@ public class HallUpdateDto
     public int? MaxBooths { get; set; }
     public decimal? FloorPlanWidth { get; set; }
     public decimal? FloorPlanHeight { get; set; }
-    public string FloorPlanJSON { get; set; } = string.Empty;
+    public string? FloorPlanJSON { get; set; }
     public bool IsActive { get; set; }
 }

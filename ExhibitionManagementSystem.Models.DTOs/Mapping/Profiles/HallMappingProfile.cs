@@ -23,12 +23,16 @@ public class HallMappingProfile : Profile
             .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
             .ForMember(dest => dest.DeletedByUserId, opt => opt.Ignore())
             .ForMember(dest => dest.Venue, opt => opt.Ignore())
-            .ForMember(dest => dest.Booths, opt => opt.Ignore())
-            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
+            .ForMember(dest => dest.Booths, opt => opt.Ignore());
 
         CreateMap<HallUpdateDto, Models.Hall>()
             .ForMember(dest => dest.HallID, opt => opt.Ignore())
             .ForMember(dest => dest.VenueID, opt => opt.Ignore())
+            .ForMember(dest => dest.FloorPlanJSON, opt =>
+            {
+                opt.PreCondition(src => src.FloorPlanJSON is not null);
+                opt.MapFrom(src => src.FloorPlanJSON!);
+            })
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
