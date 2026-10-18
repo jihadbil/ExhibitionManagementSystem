@@ -5,17 +5,21 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Interfaces
 {
     public interface IUnitOfWork : IDisposable
     {
+        string CurrentUserId { get; }
+        bool IsSuperAdmin { get; }
         ITenantRepository Tenants { get; }
         ITenantSubscriptionRepository TenantSubscriptions { get; }
         IVenueRepository Venues { get; }
         IHallRepository Halls { get; }
         IBoothRepository Booths { get; }
         IBoothMergeRepository BoothMerges { get; }
+        IGenericRepository<ExhibitionManagementSystem.Models.BoothMergeItem> BoothMergeItems { get; }
         IExhibitionRepository Exhibitions { get; }
         IExhibitionScheduleRepository ExhibitionSchedules { get; }
         IScheduleRegistrationRepository ScheduleRegistrations { get; }
         IExhibitorRepository Exhibitors { get; }
         IBoothReservationRepository BoothReservations { get; }
+        IGenericRepository<ExhibitionManagementSystem.Models.ReservationService> ReservationServices { get; }
         IBoothStaffRepository BoothStaffs { get; }
         IProductRepository Products { get; }
         IServiceRepository Services { get; }
@@ -44,6 +48,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Interfaces
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();
+        Task BeginSerializableTransactionAsync() => BeginTransactionAsync();
         Task CommitTransactionAsync();
         Task RollbackTransactionAsync();
     }

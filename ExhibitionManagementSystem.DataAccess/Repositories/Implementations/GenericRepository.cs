@@ -123,12 +123,16 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public void Update(T entity)
         {
-            _dbSet.Update(entity);
+            // Tracked entities already carry their original values. Updating the
+            // whole graph marks unchanged financial fields as modified.
+            if (_context.Entry(entity).State == EntityState.Detached)
+                _dbSet.Update(entity);
         }
 
         public void UpdateRange(IEnumerable<T> entities)
         {
-            _dbSet.UpdateRange(entities);
+            foreach (var entity in entities)
+                Update(entity);
         }
 
         public void Remove(T entity)

@@ -19,7 +19,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         private readonly ApplicationDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private IDbContextTransaction? _transaction;
-        private static readonly HashSet<string> SensitiveAuditProperties = new(
+        private static readonly HashSet<string> ExcludedAuditProperties = new(
             StringComparer.OrdinalIgnoreCase)
         {
             "PasswordHash",
@@ -28,7 +28,12 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             "RefreshToken",
             "Token",
             "SecretKey",
-            "ConnectionString"
+            "ConnectionString",
+            // Large visual-design payloads and non-readable concurrency bytes do not belong in AuditLogs.
+            "PlanJSON",
+            "FloorPlanJSON",
+            "SitePlanJSON",
+            "RowVersion"
         };
 
         // Lazy repository backing fields
@@ -75,17 +80,22 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         }
 
         // Lazy properties exposing repositories
+        public string CurrentUserId => _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        public bool IsSuperAdmin => _httpContextAccessor.HttpContext?.User.IsInRole("SuperAdmin") ?? false;
         public ITenantRepository Tenants => _tenants ??= new TenantRepository(_context);
         public ITenantSubscriptionRepository TenantSubscriptions => _tenantSubscriptions ??= new TenantSubscriptionRepository(_context);
         public IVenueRepository Venues => _venues ??= new VenueRepository(_context);
         public IHallRepository Halls => _halls ??= new HallRepository(_context);
         public IBoothRepository Booths => _booths ??= new BoothRepository(_context);
         public IBoothMergeRepository BoothMerges => _boothMerges ??= new BoothMergeRepository(_context);
+        public IGenericRepository<BoothMergeItem> BoothMergeItems => new GenericRepository<BoothMergeItem>(_context);
         public IExhibitionRepository Exhibitions => _exhibitions ??= new ExhibitionRepository(_context);
         public IExhibitionScheduleRepository ExhibitionSchedules => _exhibitionSchedules ??= new ExhibitionScheduleRepository(_context);
         public IScheduleRegistrationRepository ScheduleRegistrations => _scheduleRegistrations ??= new ScheduleRegistrationRepository(_context);
         public IExhibitorRepository Exhibitors => _exhibitors ??= new ExhibitorRepository(_context);
         public IBoothReservationRepository BoothReservations => _boothReservations ??= new BoothReservationRepository(_context);
+        public IGenericRepository<ExhibitionManagementSystem.Models.ReservationService> ReservationServices =>
+            new GenericRepository<ExhibitionManagementSystem.Models.ReservationService>(_context);
         public IBoothStaffRepository BoothStaffs => _boothStaffs ??= new BoothStaffRepository(_context);
         public IProductRepository Products => _products ??= new ProductRepository(_context);
         public IServiceRepository Services => _services ??= new ServiceRepository(_context);
@@ -185,14 +195,14 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                         OldValues = entry.State != EntityState.Added
                             ? JsonSerializer.Serialize(entry.Properties
                                 .Where(p =>
-                                    !IsSensitiveAuditProperty(p.Metadata.Name) &&
+                                    !IsExcludedAuditProperty(p.Metadata.Name) &&
                                     (entry.State == EntityState.Deleted || p.IsModified))
                                 .ToDictionary(p => p.Metadata.Name, p => p.OriginalValue?.ToString()))
                             : string.Empty,
                         NewValues = entry.State != EntityState.Deleted
                             ? JsonSerializer.Serialize(entry.Properties
                                 .Where(p =>
-                                    !IsSensitiveAuditProperty(p.Metadata.Name) &&
+                                    !IsExcludedAuditProperty(p.Metadata.Name) &&
                                     (entry.State == EntityState.Added || p.IsModified))
                                 .ToDictionary(p => p.Metadata.Name, p => p.CurrentValue?.ToString()))
                             : string.Empty
@@ -251,19 +261,23 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return string.Join(",", values);
         }
 
-        private static bool IsSensitiveAuditProperty(string propertyName) =>
-            SensitiveAuditProperties.Contains(propertyName) ||
+        private static bool IsExcludedAuditProperty(string propertyName) =>
+            ExcludedAuditProperties.Contains(propertyName) ||
             propertyName.Contains("Password", StringComparison.OrdinalIgnoreCase) ||
             propertyName.Contains("Secret", StringComparison.OrdinalIgnoreCase) ||
             propertyName.Contains("Token", StringComparison.OrdinalIgnoreCase);
 
-        public async Task BeginTransactionAsync()
+        public Task BeginTransactionAsync() => BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
+
+        public Task BeginSerializableTransactionAsync() => BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+        private async Task BeginTransactionAsync(System.Data.IsolationLevel isolationLevel)
         {
             if (_transaction == null &&
                 _context.Database.IsRelational() &&
                 _context.Database.CurrentTransaction == null)
             {
-                _transaction = await _context.Database.BeginTransactionAsync();
+                _transaction = await _context.Database.BeginTransactionAsync(isolationLevel);
             }
         }
 
@@ -281,9 +295,15 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             if (_transaction != null)
             {
-                await _transaction.RollbackAsync();
-                await _transaction.DisposeAsync();
+                var transaction = _transaction;
                 _transaction = null;
+                try
+                {
+                    // SQL Server may have already aborted a deadlock victim's transaction.
+                    if (transaction.GetDbTransaction().Connection != null)
+                        await transaction.RollbackAsync();
+                }
+                finally { await transaction.DisposeAsync(); }
             }
         }
 
