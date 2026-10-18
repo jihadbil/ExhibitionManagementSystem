@@ -11,6 +11,12 @@ public class FinancialMappingProfile : Profile
     public FinancialMappingProfile()
     {
         CreateMap<Invoice, InvoiceDto>()
+            .ForMember(d => d.PaidAmount, o => o.MapFrom(s => InvoiceFinancialSummary.Calculate(s).NetPaid))
+            .ForMember(d => d.RemainingAmount, o => o.MapFrom(s => InvoiceFinancialSummary.Calculate(s).Remaining))
+            .ForMember(d => d.AdjustedTotalAmountInBaseCurrency, o => o.MapFrom(s => InvoiceFinancialSummary.Calculate(s).AdjustedBaseTotal))
+            .ForMember(d => d.PaidAmountInBaseCurrency, o => o.MapFrom(s => InvoiceFinancialSummary.Calculate(s).NetBasePaid))
+            .ForMember(d => d.RemainingAmountInBaseCurrency, o => o.MapFrom(s => InvoiceFinancialSummary.Calculate(s).BaseRemaining))
+            .ForMember(d => d.IsOverdue, o => o.MapFrom(s => InvoiceFinancialSummary.Calculate(s).IsOverdue))
             .ForMember(dest => dest.ExhibitorName, opt => opt.MapFrom(src => src.Reservation != null && src.Reservation.Exhibitor != null ? src.Reservation.Exhibitor.CompanyName : string.Empty))
             .ForMember(dest => dest.CurrencySymbol, opt => opt.MapFrom(src => src.Currency != null ? src.Currency.Symbol : string.Empty))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
@@ -38,6 +44,11 @@ public class FinancialMappingProfile : Profile
             .ForMember(dest => dest.Tenant, opt => opt.Ignore())
             .ForMember(dest => dest.Reservation, opt => opt.Ignore())
             .ForMember(dest => dest.Currency, opt => opt.Ignore())
+            .ForMember(dest => dest.BaseCurrency, opt => opt.Ignore())
+            .ForMember(dest => dest.BaseCurrencyCode, opt => opt.Ignore())
+            .ForMember(dest => dest.ExchangeRateUsed, opt => opt.Ignore())
+            .ForMember(dest => dest.ExchangeRateDate, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalAmountInBaseCurrency, opt => opt.Ignore())
             .ForMember(dest => dest.Payments, opt => opt.Ignore());
 
         CreateMap<Payment, PaymentDto>()
@@ -57,6 +68,11 @@ public class FinancialMappingProfile : Profile
             .ForMember(dest => dest.ReceivedByUserId, opt => opt.Ignore())
             .ForMember(dest => dest.Invoice, opt => opt.Ignore())
             .ForMember(dest => dest.Currency, opt => opt.Ignore())
+            .ForMember(dest => dest.BaseCurrency, opt => opt.Ignore())
+            .ForMember(dest => dest.BaseCurrencyCode, opt => opt.Ignore())
+            .ForMember(dest => dest.ExchangeRateUsed, opt => opt.Ignore())
+            .ForMember(dest => dest.ExchangeRateDate, opt => opt.Ignore())
+            .ForMember(dest => dest.AmountInBaseCurrency, opt => opt.Ignore())
             .ForMember(dest => dest.ReceivedByUser, opt => opt.Ignore());
 
         CreateMap<FinancialReport, FinancialReportDto>()
@@ -69,6 +85,7 @@ public class FinancialMappingProfile : Profile
             .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.Quantity * src.UnitPrice))
             .ForMember(dest => dest.Invoice, opt => opt.Ignore());
         CreateMap<InvoiceItemUpdateDto, InvoiceItem>()
+            .ForMember(dest => dest.InvoiceItemID, opt => opt.Ignore())
             .ForMember(dest => dest.InvoiceID, opt => opt.Ignore())
             .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.Quantity * src.UnitPrice))
             .ForMember(dest => dest.Invoice, opt => opt.Ignore());

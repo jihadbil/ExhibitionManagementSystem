@@ -727,6 +727,10 @@ namespace ExhibitionManagementSystem.DataAccess
                 nameof(Invoice.TaxAmount),
                 nameof(Invoice.TotalAmount),
                 nameof(Invoice.CurrencyCode),
+                nameof(Invoice.BaseCurrencyCode),
+                nameof(Invoice.ExchangeRateUsed),
+                nameof(Invoice.ExchangeRateDate),
+                nameof(Invoice.TotalAmountInBaseCurrency),
                 nameof(Invoice.DueDate),
                 nameof(Invoice.Notes),
                 nameof(Invoice.IsDeleted),
@@ -756,8 +760,12 @@ namespace ExhibitionManagementSystem.DataAccess
                     InvoiceStatus.Issued => currentStatus is InvoiceStatus.Issued or
                         InvoiceStatus.PartiallyPaid or InvoiceStatus.Paid or InvoiceStatus.Cancelled,
                     InvoiceStatus.PartiallyPaid => currentStatus is InvoiceStatus.PartiallyPaid or
-                        InvoiceStatus.Paid or InvoiceStatus.Cancelled,
-                    InvoiceStatus.Paid => currentStatus == InvoiceStatus.Paid,
+                        InvoiceStatus.Issued or InvoiceStatus.Paid or InvoiceStatus.Cancelled,
+                    InvoiceStatus.Paid => currentStatus is InvoiceStatus.Paid or
+                        InvoiceStatus.PartiallyPaid or InvoiceStatus.Issued ||
+                        (currentStatus == InvoiceStatus.Cancelled &&
+                         InvoiceFinancialSummary.Calculate(entry.Entity).NetPaid == 0 &&
+                         InvoiceFinancialSummary.Calculate(entry.Entity).AdjustedTotal == 0),
                     InvoiceStatus.Cancelled => currentStatus == InvoiceStatus.Cancelled,
                     _ => false
                 };

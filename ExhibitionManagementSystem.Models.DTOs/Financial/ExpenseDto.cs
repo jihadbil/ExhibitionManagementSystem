@@ -12,6 +12,10 @@ public class ExpenseDto
     public string Category { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = string.Empty;
+    public string BaseCurrencyCode { get; set; } = string.Empty;
+    public decimal ExchangeRateUsed { get; set; }
+    public DateTime? ExchangeRateDate { get; set; }
+    public decimal AmountInBaseCurrency { get; set; }
     public DateTime ExpenseDate { get; set; }
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }

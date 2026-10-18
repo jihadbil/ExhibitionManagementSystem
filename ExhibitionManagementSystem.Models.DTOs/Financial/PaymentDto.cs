@@ -11,6 +11,10 @@ public class PaymentDto : AuditDto
     public DateTime PaymentDate { get; set; }
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = string.Empty;
+    public string BaseCurrencyCode { get; set; } = string.Empty;
+    public decimal ExchangeRateUsed { get; set; }
+    public DateTime? ExchangeRateDate { get; set; }
+    public decimal AmountInBaseCurrency { get; set; }
     public string CurrencySymbol { get; set; } = string.Empty;
     public string Method { get; set; } = string.Empty;
     public string ReferenceNo { get; set; } = string.Empty;

@@ -9,6 +9,8 @@ namespace ExhibitionManagementSystem.Services.Interfaces
     public interface IFinancialService
     {
         Task<ServiceResult<PagedResultDto<InvoiceDto>>> GetInvoicesByTenantAsync(int tenantId, int page, int pageSize);
+        Task<ServiceResult<InvoicePageDto>> GetInvoicePageAsync(int tenantId, int page, int pageSize, string? status = null)
+            => throw new NotSupportedException();
         Task<ServiceResult<InvoiceDto>> GetInvoiceByIdAsync(int tenantId, int invoiceId);
         Task<ServiceResult<InvoiceDto>> GetInvoiceByReservationAsync(int tenantId, int reservationId);
         Task<ServiceResult<IList<InvoiceDto>>> GetOverdueInvoicesAsync(int tenantId);

@@ -18,7 +18,17 @@ public class InvoiceDto : AuditDto
     public decimal TotalAmount { get; set; }
     public decimal AdjustedTotalAmount { get; set; }
     public decimal RefundedAmount { get; set; }
+    public decimal PaidAmount { get; set; }
+    public decimal RemainingAmount { get; set; }
+    public decimal AdjustedTotalAmountInBaseCurrency { get; set; }
+    public decimal PaidAmountInBaseCurrency { get; set; }
+    public decimal RemainingAmountInBaseCurrency { get; set; }
+    public bool IsOverdue { get; set; }
     public string CurrencyCode { get; set; } = string.Empty;
+    public string BaseCurrencyCode { get; set; } = string.Empty;
+    public decimal ExchangeRateUsed { get; set; }
+    public DateTime? ExchangeRateDate { get; set; }
+    public decimal TotalAmountInBaseCurrency { get; set; }
     public string CurrencySymbol { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public DateTime? DueDate { get; set; }

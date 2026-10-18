@@ -23,6 +23,11 @@ public class ExpenseMappingProfile : Profile
             .ForMember(dest => dest.Tenant, opt => opt.Ignore())
             .ForMember(dest => dest.Exhibition, opt => opt.Ignore())
             .ForMember(dest => dest.Currency, opt => opt.Ignore())
+            .ForMember(dest => dest.BaseCurrency, opt => opt.Ignore())
+            .ForMember(dest => dest.BaseCurrencyCode, opt => opt.Ignore())
+            .ForMember(dest => dest.ExchangeRateUsed, opt => opt.Ignore())
+            .ForMember(dest => dest.ExchangeRateDate, opt => opt.Ignore())
+            .ForMember(dest => dest.AmountInBaseCurrency, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedByUser, opt => opt.Ignore());
     }
 }

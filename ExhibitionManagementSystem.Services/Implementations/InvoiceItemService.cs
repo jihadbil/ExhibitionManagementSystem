@@ -62,6 +62,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<InvoiceItemDto>> CreateItemAsync(int tenantId, int invoiceId, InvoiceItemCreateDto dto)
         {
+            if (!TryCalculateTotal(dto.Quantity, dto.UnitPrice, out var totalPrice))
+                return ServiceResult<InvoiceItemDto>.Failure("كمية البند أو سعره أو إجماليه يتجاوز الدقة أو القيمة المسموحة", "INVALID_INVOICE_ITEM_VALUES");
             var invoice = await _unitOfWork.Invoices.AsQueryable()
                 .FirstOrDefaultAsync(i => i.InvoiceID == invoiceId && i.TenantID == tenantId);
 
@@ -79,7 +81,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
             var item = _mapper.Map<InvoiceItem>(dto);
             item.InvoiceID = invoiceId;
-            item.TotalPrice = item.Quantity * item.UnitPrice;
+            item.TotalPrice = totalPrice;
 
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -101,6 +103,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<InvoiceItemDto>> UpdateItemAsync(int tenantId, int invoiceId, int itemId, InvoiceItemUpdateDto dto)
         {
+            if (!TryCalculateTotal(dto.Quantity, dto.UnitPrice, out var totalPrice))
+                return ServiceResult<InvoiceItemDto>.Failure("كمية البند أو سعره أو إجماليه يتجاوز الدقة أو القيمة المسموحة", "INVALID_INVOICE_ITEM_VALUES");
             var item = await _unitOfWork.InvoiceItems.AsQueryable()
                 .Include(i => i.Invoice)
                 .FirstOrDefaultAsync(i =>
@@ -121,7 +125,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
 
             _mapper.Map(dto, item);
-            item.TotalPrice = item.Quantity * item.UnitPrice;
+            item.TotalPrice = totalPrice;
 
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -179,6 +183,20 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
         }
 
+        private static bool TryCalculateTotal(decimal quantity, decimal unitPrice, out decimal total)
+        {
+            total = 0;
+            if (quantity <= 0 || quantity > 9999999999999999.99m || decimal.Round(quantity, 2) != quantity ||
+                unitPrice < 0 || unitPrice > 99999999999999999999.99999999m || decimal.Round(unitPrice, 8) != unitPrice)
+                return false;
+            try
+            {
+                total = InvoiceFinancialSummary.Round(quantity * unitPrice);
+                return total <= 9999999999999999.99m;
+            }
+            catch (OverflowException) { return false; }
+        }
+
         private async Task RecalculateInvoiceTotalsAsync(int tenantId, int invoiceId)
         {
             var invoice = await _unitOfWork.Invoices.AsQueryable()
@@ -188,8 +206,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
             if (invoice != null)
             {
                 invoice.SubTotal = invoice.InvoiceItems.Sum(item => item.TotalPrice);
-                invoice.TaxAmount = invoice.SubTotal * (invoice.TaxRate / 100);
+                invoice.TaxAmount = InvoiceFinancialSummary.Round(invoice.SubTotal * (invoice.TaxRate / 100));
                 invoice.TotalAmount = invoice.SubTotal + invoice.TaxAmount;
+                invoice.TotalAmountInBaseCurrency = decimal.Round(
+                    invoice.TotalAmount * invoice.ExchangeRateUsed, 2, MidpointRounding.AwayFromZero);
 
                 _unitOfWork.Invoices.Update(invoice);
                 await _unitOfWork.SaveChangesAsync();

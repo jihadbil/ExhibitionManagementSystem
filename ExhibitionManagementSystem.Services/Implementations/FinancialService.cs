@@ -39,6 +39,15 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<PagedResultDto<InvoiceDto>>> GetInvoicesByTenantAsync(int tenantId, int page, int pageSize)
         {
+            var result = await GetInvoicePageAsync(tenantId, page, pageSize);
+            return result.IsSuccess ? ServiceResult<PagedResultDto<InvoiceDto>>.Success(result.Data!)
+                : ServiceResult<PagedResultDto<InvoiceDto>>.Failure(result.ErrorMessage!, result.ErrorCode!);
+        }
+
+        public async Task<ServiceResult<InvoicePageDto>> GetInvoicePageAsync(int tenantId, int page, int pageSize, string? status = null)
+        {
+            if (page < 1 || pageSize < 1 || pageSize > 200)
+                return ServiceResult<InvoicePageDto>.Failure("بيانات التصفح غير صالحة", "INVALID_PAGINATION");
             var query = _unitOfWork.Invoices.AsQueryable()
                 .Include(i => i.Reservation)
                     .ThenInclude(r => r.Exhibitor)
@@ -48,6 +57,17 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(i => i.CreditNotes)
                 .Where(i => i.TenantID == tenantId);
 
+            var allCount = await query.CountAsync();
+            var paidCount = await query.CountAsync(i => i.Status == InvoiceStatus.Paid);
+            var pendingCount = await query.CountAsync(i => i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid);
+            var overdueCount = await OverdueQuery(query).CountAsync();
+            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All", StringComparison.OrdinalIgnoreCase))
+            {
+                if (status.Equals("Overdue", StringComparison.OrdinalIgnoreCase)) query = OverdueQuery(query);
+                else if (!Enum.TryParse<InvoiceStatus>(status, true, out var invoiceStatus) || !Enum.IsDefined(invoiceStatus))
+                    return ServiceResult<InvoicePageDto>.Failure("حالة الفاتورة غير صالحة", "INVALID_INVOICE_STATUS");
+                else query = query.Where(i => i.Status == invoiceStatus);
+            }
             var totalCount = await query.CountAsync();
             var items = await query
                 .OrderByDescending(i => i.InvoiceDate)
@@ -56,16 +76,22 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .ToListAsync();
 
             var dtos = _mapper.Map<IList<InvoiceDto>>(items);
-            var result = new PagedResultDto<InvoiceDto>
+            var result = new InvoicePageDto
             {
                 Items = dtos.ToList(),
                 TotalCount = totalCount,
                 PageNumber = page,
-                PageSize = pageSize
+                PageSize = pageSize,
+                AllCount = allCount, PaidCount = paidCount, PendingCount = pendingCount, OverdueCount = overdueCount
             };
 
-            return ServiceResult<PagedResultDto<InvoiceDto>>.Success(result);
+            return ServiceResult<InvoicePageDto>.Success(result);
         }
+
+        private static IQueryable<Invoice> OverdueQuery(IQueryable<Invoice> query) => query.Where(i =>
+            i.DueDate < DateTime.UtcNow.Date && i.Status != InvoiceStatus.Draft && i.Status != InvoiceStatus.Cancelled &&
+            i.TotalAmount - i.CreditNotes.Sum(n => n.Amount) - i.Payments.Where(p => p.Status == PaymentStatus.Completed).Sum(p => p.Amount)
+                + i.CreditNotes.Where(n => n.Type == CreditNoteType.Refund).Sum(n => n.Amount) > 0);
 
         public async Task<ServiceResult<InvoiceDto>> GetInvoiceByIdAsync(int tenantId, int invoiceId)
         {
@@ -110,17 +136,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<IList<InvoiceDto>>> GetOverdueInvoicesAsync(int tenantId)
         {
-            var overdue = await _unitOfWork.Invoices.AsQueryable()
+            var overdue = await OverdueQuery(_unitOfWork.Invoices.AsQueryable()
                 .Include(i => i.Reservation)
                     .ThenInclude(r => r.Exhibitor)
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
                 .Include(i => i.InvoiceItems)
                 .Include(i => i.CreditNotes)
-                .Where(i => i.TenantID == tenantId && 
-                            i.Status != InvoiceStatus.Paid && 
-                            i.Status != InvoiceStatus.Cancelled && 
-                            i.DueDate < DateTime.UtcNow)
+                .Where(i => i.TenantID == tenantId))
                 .ToListAsync();
 
             var dtos = _mapper.Map<IList<InvoiceDto>>(overdue);
@@ -151,7 +174,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
             decimal taxRate = decimal.TryParse(_configuration["Financial:DefaultTaxRate"], out var cfgRate)
                 ? cfgRate : 0.0m;
             decimal subTotal = reservation.TotalAmount;
-            decimal taxAmount = subTotal * (taxRate / 100);
+            decimal taxAmount = InvoiceFinancialSummary.Round(subTotal * (taxRate / 100));
             decimal totalAmount = subTotal + taxAmount;
 
             var invoice = new Invoice
@@ -165,6 +188,13 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 TaxAmount = taxAmount,
                 TotalAmount = totalAmount,
                 CurrencyCode = reservation.CurrencyCode,
+                BaseCurrencyCode = reservation.BaseCurrencyCode,
+                ExchangeRateUsed = reservation.ExchangeRateUsed,
+                ExchangeRateDate = reservation.ExchangeRateDate,
+                TotalAmountInBaseCurrency = decimal.Round(
+                    totalAmount * reservation.ExchangeRateUsed,
+                    2,
+                    MidpointRounding.AwayFromZero),
                 Status = reservation.Status == ReservationStatus.Confirmed 
                     ? InvoiceStatus.Issued 
                     : InvoiceStatus.Draft,
@@ -195,6 +225,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     var serviceName = rs.Service != null ? rs.Service.ServiceName : "خدمة إضافية";
                     var serviceItem = new InvoiceItem
                     {
+                        ReservationServiceID = rs.ReservationServiceID,
                         ItemName = serviceName,
                         Quantity = rs.Quantity,
                         UnitPrice = rs.UnitPrice,
@@ -239,10 +270,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<PaymentDto>> RecordPaymentAsync(int tenantId, string userId, PaymentCreateDto dto)
         {
-            if (dto.Amount <= 0)
+            if (!MoneyInput.IsValid(dto.Amount))
             {
                 return ServiceResult<PaymentDto>.Failure(
-                    "قيمة الدفعة يجب أن تكون أكبر من صفر",
+                    "قيمة الدفعة يجب أن تكون موجبة وبمنزلتين عشريتين كحد أقصى",
                     "INVALID_PAYMENT_AMOUNT");
             }
 
@@ -265,6 +296,11 @@ namespace ExhibitionManagementSystem.Services.Implementations
             {
                 return ServiceResult<PaymentDto>.Failure("لا يمكن سداد دفعة لفاتورة ملغاة", "INVOICE_CANCELLED");
             }
+
+            if (invoice.Status == InvoiceStatus.Draft)
+                return ServiceResult<PaymentDto>.Failure("يجب إصدار الفاتورة قبل تسجيل السداد", "INVOICE_NOT_ISSUED");
+
+            dto.CurrencyCode = dto.CurrencyCode.Trim().ToUpperInvariant();
 
             if (!string.Equals(
                     invoice.CurrencyCode,
@@ -297,7 +333,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<PaymentDto>.Failure("قيمة الدفعة تتجاوز القيمة المتبقية للفاتورة", "PAYMENT_AMOUNT_EXCEEDS_REMAINING");
             }
 
-            if (!Enum.TryParse<PaymentMethod>(dto.Method, true, out var method))
+            if (!Enum.TryParse<PaymentMethod>(dto.Method, true, out var method) || !Enum.IsDefined(method))
             {
                 return ServiceResult<PaymentDto>.Failure("طريقة الدفع غير صالحة", "INVALID_PAYMENT_METHOD");
             }
@@ -312,6 +348,13 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     PaymentDate = DateTime.UtcNow,
                     Amount = dto.Amount,
                     CurrencyCode = dto.CurrencyCode,
+                    BaseCurrencyCode = invoice.BaseCurrencyCode,
+                    ExchangeRateUsed = invoice.ExchangeRateUsed,
+                    ExchangeRateDate = invoice.ExchangeRateDate,
+                    AmountInBaseCurrency = decimal.Round(
+                        dto.Amount * invoice.ExchangeRateUsed,
+                        2,
+                        MidpointRounding.AwayFromZero),
                     Method = method,
                     ReferenceNo = dto.ReferenceNo,
                     Status = PaymentStatus.Completed,
@@ -394,17 +437,17 @@ namespace ExhibitionManagementSystem.Services.Implementations
             int invoiceId,
             CreditNoteCreateDto dto)
         {
-            if (!Enum.TryParse<CreditNoteType>(dto.Type, true, out var noteType))
+            if (!EnumInput.TryParse<CreditNoteType>(dto.Type, out var noteType))
             {
                 return ServiceResult<CreditNoteDto>.Failure(
                     "نوع المستند يجب أن يكون Credit أو Refund",
                     "INVALID_CREDIT_NOTE_TYPE");
             }
 
-            if (dto.Amount <= 0)
+            if (!MoneyInput.IsValid(dto.Amount))
             {
                 return ServiceResult<CreditNoteDto>.Failure(
-                    "قيمة الإشعار الدائن يجب أن تكون أكبر من صفر",
+                    "قيمة الإشعار الدائن يجب أن تكون موجبة وبمنزلتين عشريتين كحد أقصى",
                     "INVALID_CREDIT_NOTE_AMOUNT");
             }
 

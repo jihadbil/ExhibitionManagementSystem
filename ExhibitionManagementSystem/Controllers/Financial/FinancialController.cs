@@ -21,12 +21,13 @@ public class FinancialController : BaseApiController
 
     // GET /api/financial/invoices?page=1&pageSize=20
     [HttpGet("invoices")]
-    public async Task<ActionResult<PagedResultDto<InvoiceDto>>> GetInvoices(
+    public async Task<ActionResult<InvoicePageDto>> GetInvoices(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? status = null)
     {
-        var result = await _financialService.GetInvoicesByTenantAsync(
-            TenantId, page, pageSize);
+        var result = await _financialService.GetInvoicePageAsync(
+            TenantId, page, pageSize, status);
         return ToActionResult(result);
     }
 
