@@ -1,0 +1,285 @@
+// Diagnostic probes for the current working tree. These assertions document
+// observed defects, not desired behavior. Run only against disposable databases.
+using System.Net;
+using System.Net.Http.Json;
+using System.Data.Common;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using AutoMapper;
+using ExhibitionManagementSystem.Api.Tests.Regression;
+using ExhibitionManagementSystem.Controllers.Visitor;
+using ExhibitionManagementSystem.DataAccess;
+using ExhibitionManagementSystem.DataAccess.MultiTenancy;
+using ExhibitionManagementSystem.DataAccess.Repositories.Implementations;
+using ExhibitionManagementSystem.DataAccess.Repositories.Interfaces;
+using ExhibitionManagementSystem.Models;
+using ExhibitionManagementSystem.Models.DTOs.Mapping;
+using ExhibitionManagementSystem.Models.DTOs.Pricing;
+using ExhibitionManagementSystem.Models.DTOs.Service;
+using ExhibitionManagementSystem.Models.Enums;
+using ExhibitionManagementSystem.Security;
+using ExhibitionManagementSystem.Middleware;
+using ExhibitionManagementSystem.Services.Implementations;
+using ExhibitionManagementSystem.Services.Interfaces;
+using ExhibitionManagementSystem.Services.Options;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Xunit;
+using Xunit.Abstractions;
+
+public sealed class FeatureAuditProbes(ITestOutputHelper output)
+{
+    static readonly IMapper Mapper = new MapperConfiguration(c => c.AddMaps(typeof(MappingProfile).Assembly), NullLoggerFactory.Instance).CreateMapper();
+    static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    static void SaveEvidence(string name, object value)
+    {
+        var directory = Environment.GetEnvironmentVariable("EMS_FEATURE_EVIDENCE")!;
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, name + ".json"), JsonSerializer.Serialize(value, Json));
+    }
+    void Record(string name, object value) { SaveEvidence(name, value); output.WriteLine(JsonSerializer.Serialize(value, Json)); }
+    sealed class Scope(int tenantId) : ITenantContext { public int? TenantId => tenantId; public bool CanBypassTenantIsolation => false; }
+
+    [Fact]
+    public async Task HttpReservationWithoutNotes()
+    {
+        await using var host = await Host.Start();
+        var invalid = await host.Client.PostAsJsonAsync("/api/reservations", new {
+            exhibitionID=1, exhibitorID=1, boothID=2, boothTypeSelected="Standard", requestedAreaSqM=10,
+            exhibitorCategory="Local", currencyCode="LYD", logisticNotes=(string?)null, services=Array.Empty<object>() });
+        var valid = await host.Client.PostAsJsonAsync("/api/reservations", new {
+            exhibitionID=1, exhibitorID=1, boothID=2, boothTypeSelected="Standard", requestedAreaSqM=10,
+            exhibitorCategory="Local", currencyCode="LYD", logisticNotes="", services=Array.Empty<object>() });
+        Record("reservation-notes", new { emptyNotesStatus=(int)invalid.StatusCode, body=await invalid.Content.ReadAsStringAsync(), stringNotesStatus=(int)valid.StatusCode, validBody=await valid.Content.ReadAsStringAsync() });
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, valid.StatusCode);
+    }
+
+    [Fact]
+    public async Task HttpSponsorshipPackageLevelAndContractShape()
+    {
+        await using var host = await Host.Start();
+        var invalid = await host.Client.PostAsJsonAsync("/api/sponsorship/packages", new { exhibitionID=1, packageName="Web package", level="Gold", price=5000, currencyCode="LYD", maxSponsorsCount=3 });
+        var valid = await host.Client.PostAsJsonAsync("/api/sponsorship/packages", new { exhibitionID=1, packageName="Web package", level=2, price=5000, currencyCode="LYD", maxSponsorsCount=3 });
+        var response = await host.Client.GetAsync("/api/sponsorship/contracts?exhibitionId=1");
+        var contracts = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Record("sponsorship-contracts", contracts);
+        Record("sponsorship-level", new { webStatus=(int)invalid.StatusCode, body=await invalid.Content.ReadAsStringAsync(), numericStatus=(int)valid.StatusCode });
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode); Assert.True(valid.IsSuccessStatusCode);
+        Assert.True(contracts[0].TryGetProperty("totalAmount", out _)); Assert.False(contracts[0].TryGetProperty("contractAmount", out _));
+        Assert.Equal(JsonValueKind.Number, contracts[0].GetProperty("status").ValueKind);
+    }
+
+    [Fact]
+    public async Task HttpInvalidExhibitorCategoryAndWhitespaceEventType()
+    {
+        await using var host = await Host.Start();
+        var category = await host.Client.PostAsJsonAsync("/api/exhibitors", new {companyName="Invalid category",email="new@example.invalid",exhibitorCategory="Invalid",preferredCurrencyCode="LYD"});
+        var schedule = await host.Client.PostAsJsonAsync("/api/exhibitions/1/schedules", new {eventName="Whitespace",eventType=" ",startDateTime=DateTime.UtcNow.Date.AddHours(10),endDateTime=DateTime.UtcNow.Date.AddHours(11)});
+        Record("enum-validation", new {categoryStatus=(int)category.StatusCode,scheduleStatus=(int)schedule.StatusCode});
+        Assert.Equal(HttpStatusCode.InternalServerError,category.StatusCode);
+        Assert.Equal(HttpStatusCode.InternalServerError,schedule.StatusCode);
+    }
+
+    [Fact]
+    public async Task HttpTrailingSlashBypassesPaymentIdempotency()
+    {
+        await using var host=await Host.Start(InvoiceStatus.Issued);
+        host.Client.DefaultRequestHeaders.Remove("Idempotency-Key");
+        var payment=new {invoiceID=1,amount=25,currencyCode="USD",method="Cash"};
+        var canonical=await host.Client.PostAsJsonAsync("/api/financial/payments",payment);
+        var first=await host.Client.PostAsJsonAsync("/api/financial/payments/",payment);
+        var second=await host.Client.PostAsJsonAsync("/api/financial/payments/",payment);
+        var payments=await host.Client.GetFromJsonAsync<JsonElement>("/api/financial/payments/invoice/1");
+        Record("idempotency-path",new {canonicalStatus=(int)canonical.StatusCode,trailingSlashFirst=(int)first.StatusCode,trailingSlashSecond=(int)second.StatusCode,storedPayments=payments.GetArrayLength()});
+        Assert.Equal(HttpStatusCode.BadRequest,canonical.StatusCode);Assert.True(first.IsSuccessStatusCode);Assert.True(second.IsSuccessStatusCode);Assert.Equal(2,payments.GetArrayLength());
+    }
+
+    [Fact]
+    public async Task HttpGateOperatorCanReadTicketsButCannotPreviewThem()
+    {
+        await using var host=await Host.Start();
+        var tickets=await host.Client.GetFromJsonAsync<JsonElement>("/api/tickets/exhibition/1");
+        Record("tickets",tickets);
+        var admin=await host.Client.GetAsync("/api/badges/render-by-qr/AUDIT-TICKET");
+        host.Client.DefaultRequestHeaders.Add("Probe-Role","GateOperator");
+        var gateTickets=await host.Client.GetAsync("/api/tickets/exhibition/1");
+        var gatePreview=await host.Client.GetAsync("/api/badges/render-by-qr/AUDIT-TICKET");
+        Record("gate-preview",new {adminPreview=(int)admin.StatusCode,gateTickets=(int)gateTickets.StatusCode,gatePreview=(int)gatePreview.StatusCode});
+        Assert.True(admin.IsSuccessStatusCode);Assert.True(gateTickets.IsSuccessStatusCode);Assert.Equal(HttpStatusCode.Forbidden,gatePreview.StatusCode);
+    }
+
+    sealed class VenueCheckBarrier : DbCommandInterceptor
+    {
+        public readonly TaskCompletionSource Checked=new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public readonly TaskCompletionSource ChildSaved=new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override async ValueTask<DbDataReader> ReaderExecutedAsync(DbCommand command,CommandExecutedEventData eventData,DbDataReader reader,CancellationToken token=default)
+        {
+            if(command.CommandText.Contains("FROM [Exhibitions]",StringComparison.Ordinal))
+            {Checked.TrySetResult();await ChildSaved.Task.WaitAsync(TimeSpan.FromSeconds(20),token);}
+            return reader;
+        }
+    }
+    [Fact]
+    public async Task SqlVenueDeletionAndHallCreationBothSucceed()
+    {
+        var name="EMS_Feature_Race_"+Guid.NewGuid().ToString("N");
+        var connection=new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("EMS_SQL_TEST_CONNECTION")){InitialCatalog=name,TrustServerCertificate=true};
+        var options=new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connection.ConnectionString).Options;
+        await using var seed=new ApplicationDbContext(options,new WorkflowFixture.BypassContext());
+        try
+        {
+            await seed.Database.MigrateAsync();var fixture=await WorkflowFixture.SeedAsync(seed);
+            var target=new Venue {TenantID=fixture.TenantID,Name="Concurrent target"};seed.Venues.Add(target);await seed.SaveChangesAsync();
+            var barrier=new VenueCheckBarrier();
+            var deleteOptions=new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connection.ConnectionString).AddInterceptors(barrier).Options;
+            async Task<bool> Delete()
+            {
+                await using var db=new ApplicationDbContext(deleteOptions,new Scope(fixture.TenantID));using var uow=new UnitOfWork(db,WorkflowFixture.Actor(fixture.TenantID));
+                return (await new VenueService(uow,Mapper).DeleteAsync(fixture.TenantID,target.VenueID)).IsSuccess;
+            }
+            async Task<bool> Create()
+            {
+                await barrier.Checked.Task.WaitAsync(TimeSpan.FromSeconds(20));
+                try{await using var db=new ApplicationDbContext(options,new Scope(fixture.TenantID));using var uow=new UnitOfWork(db,WorkflowFixture.Actor(fixture.TenantID));
+                    return (await new HallService(uow,Mapper).CreateAsync(fixture.TenantID,new ExhibitionManagementSystem.Models.DTOs.Hall.HallCreateDto {VenueID=target.VenueID,HallName="Concurrent hall"})).IsSuccess;}
+                finally{barrier.ChildSaved.TrySetResult();}
+            }
+            var result=await Task.WhenAll(Delete(),Create());seed.ChangeTracker.Clear();
+            var deleted=(await seed.Venues.IgnoreQueryFilters().SingleAsync(v=>v.VenueID==target.VenueID)).IsDeleted;
+            var hall=await seed.Halls.SingleAsync(h=>h.VenueID==target.VenueID);
+            await using var read=new ApplicationDbContext(options,new Scope(fixture.TenantID));using var readUow=new UnitOfWork(read,WorkflowFixture.Actor(fixture.TenantID));
+            var visible=await new HallService(readUow,Mapper).GetByIdAsync(fixture.TenantID,hall.HallID);
+            Record("venue-delete-race",new {deleteAccepted=result[0],hallCreateAccepted=result[1],venueDeleted=deleted,hallStored=true,hallVisible=visible.IsSuccess,errorCode=visible.ErrorCode});
+            Assert.All(result,Assert.True);Assert.True(deleted);Assert.False(visible.IsSuccess);
+        }
+        finally{SqlConnection.ClearAllPools();await seed.Database.EnsureDeletedAsync();}
+    }
+
+    [Theory]
+    [InlineData("DeletePackage")]
+    [InlineData("DeleteSpace")]
+    [InlineData("SchedulesAndHalls")]
+    [InlineData("TenantPlan")]
+    [InlineData("PricingPrecision")]
+    public async Task SqlProbe(string scenario)
+    {
+        var name="EMS_Feature_Audit_"+Guid.NewGuid().ToString("N");
+        var connection=new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("EMS_SQL_TEST_CONNECTION")) {InitialCatalog=name,TrustServerCertificate=true};
+        var options=new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connection.ConnectionString).Options;
+        await using var seed=new ApplicationDbContext(options,new WorkflowFixture.BypassContext());
+        try
+        {
+            await seed.Database.MigrateAsync(); var fixture=await WorkflowFixture.SeedAsync(seed,InvoiceStatus.Draft);
+            var exhibition=await seed.Exhibitions.SingleAsync(); exhibition.StartDate=DateTime.UtcNow.Date; exhibition.EndDate=DateTime.UtcNow.Date.AddDays(3);
+            var package=new SponsorshipPackage {TenantID=fixture.TenantID,ExhibitionID=exhibition.ExhibitionID,PackageName="Purchased Gold",CurrencyCode="LYD",Price=750,MaxSponsorsCount=3};
+            var space=new AdvertisingSpace {TenantID=fixture.TenantID,ExhibitionID=exhibition.ExhibitionID,SpaceCode="A1",SpaceName="Paid billboard",CurrencyCode="LYD",IsAvailable=false};
+            var contract=new SponsorshipContract {TenantID=fixture.TenantID,ExhibitionID=exhibition.ExhibitionID,
+                Sponsor=new Sponsor {TenantID=fixture.TenantID,CompanyName="Synthetic sponsor"},Package=package,
+                ContractNumber="AUDIT-1",CurrencyCode="LYD",TotalAmount=750,Status=SponsorshipStatus.Confirmed,CreatedByUserId="workflow-user"};
+            contract.AdAssignments.Add(new SponsorAdAssignment {Space=space}); seed.SponsorshipContracts.Add(contract);
+            seed.ExhibitionSchedules.Add(new ExhibitionSchedule {ExhibitionID=exhibition.ExhibitionID,HallID=1,EventName="Real hall",StartDateTime=DateTime.UtcNow,EndDateTime=DateTime.UtcNow.AddHours(1)});
+            seed.TenantSubscriptions.Add(new TenantSubscription {TenantID=fixture.TenantID,Plan="Enterprise",CurrencyCode="LYD",StartDate=DateTime.UtcNow.Date.AddDays(-1),EndDate=DateTime.UtcNow.Date.AddDays(30),Status=SubscriptionStatus.Active});
+            await seed.SaveChangesAsync();
+            await using var db=new ApplicationDbContext(options,new Scope(fixture.TenantID));
+            using var uow=new UnitOfWork(db,WorkflowFixture.Actor(fixture.TenantID));
+            if(scenario is "DeletePackage" or "DeleteSpace")
+            {
+                var service=new SponsorshipService(uow,Mapper); var before=await service.GetContractByIdAsync(fixture.TenantID,contract.ContractID);
+                var deleted=scenario=="DeletePackage"?await service.DeletePackageAsync(fixture.TenantID,package.PackageID,"workflow-user"):await service.DeleteSpaceAsync(fixture.TenantID,space.SpaceID,"workflow-user");
+                db.ChangeTracker.Clear(); var after=await service.GetContractByIdAsync(fixture.TenantID,contract.ContractID);
+                Record(scenario,new {deleteAccepted=deleted.IsSuccess,beforePackage=before.Data!.PackageName,afterPackage=after.Data!.PackageName,beforeAssignments=before.Data.AdAssignments.Count,afterAssignments=after.Data.AdAssignments.Count,storedAssignments=await db.SponsorAdAssignments.IgnoreQueryFilters().CountAsync()});
+                Assert.True(deleted.IsSuccess);
+                if(scenario=="DeletePackage") Assert.Null(after.Data.PackageName); else Assert.Empty(after.Data.AdAssignments);
+            }
+            else if(scenario=="SchedulesAndHalls")
+            {
+                var schedules=await new ExhibitionService(uow,Mapper).GetSchedulesAsync(fixture.TenantID,exhibition.ExhibitionID);
+                var halls=await new HallService(uow,Mapper).GetByVenueAsync(fixture.TenantID,exhibition.VenueID);
+                Record(scenario,new {scheduleHall=schedules.Data![0].HallName,hallName=halls.Data![0].HallName,boothsCount=halls.Data[0].BoothsCount,storedBooths=await db.Booths.CountAsync()});
+                Assert.Equal("",schedules.Data[0].HallName); Assert.Equal(0,halls.Data[0].BoothsCount); Assert.Equal(1,await db.Booths.CountAsync());
+            }
+            else if(scenario=="TenantPlan")
+            {
+                var service=new TenantService(uow,Mapper,db,null!,null!,null!,Options.Create(new TenantInvitationOptions()),NullLogger<TenantService>.Instance);
+                var list=await service.GetAllAsync(1,20); var active=await service.GetActiveSubscriptionAsync(fixture.TenantID);
+                Record(scenario,new {listPlan=list.Data!.Items[0].CurrentPlan,activePlan=active.Data!.PlanName});
+                Assert.Null(list.Data.Items[0].CurrentPlan); Assert.Equal("Enterprise",active.Data.PlanName);
+            }
+            else if(scenario=="PricingPrecision")
+            {
+                var pricing=new PricingService(uow,Mapper);
+                var rule=await pricing.CreateBoothPriceRuleAsync(fixture.TenantID,new BoothPriceRuleCreateDto {PricePerSqM=.015m,CurrencyCode="LYD",ValidFrom=DateTime.UtcNow.Date});
+                var services=new ServiceManagementService(uow,Mapper);
+                var svc=await services.CreateAsync(fixture.TenantID,new ServiceCreateDto {ServiceName="Fractional",DefaultPrice=.015m,DefaultCurrencyCode="LYD"});
+                db.ChangeTracker.Clear(); var storedRule=await db.BoothPriceRules.SingleAsync(); var storedService=await db.Services.SingleAsync();
+                var extreme=await RecordAsync(()=>services.CreateAsync(fixture.TenantID,new ServiceCreateDto {ServiceName="Overflow",DefaultPrice=decimal.MaxValue,DefaultCurrencyCode="LYD"}));
+                Record(scenario,new {ruleAccepted=rule.IsSuccess,returnedPrice=rule.Data!.PricePerSqM,storedPrice=storedRule.PricePerSqM,serviceAccepted=svc.IsSuccess,returnedServicePrice=svc.Data!.DefaultPrice,storedServicePrice=storedService.DefaultPrice,extremeException=extreme?.GetType().Name});
+                Assert.Equal(.015m,rule.Data.PricePerSqM);Assert.Equal(.02m,storedRule.PricePerSqM);Assert.Equal(.02m,storedService.DefaultPrice);Assert.NotNull(extreme);
+            }
+        }
+        finally {SqlConnection.ClearAllPools();await seed.Database.EnsureDeletedAsync();}
+    }
+    static async Task<Exception?> RecordAsync(Func<Task> operation) {try{await operation();return null;}catch(Exception error){return error;}}
+
+    sealed class Host(WebApplication app,HttpClient client):IAsyncDisposable
+    {
+        public HttpClient Client=>client;
+        public static async Task<Host> Start(InvoiceStatus status=InvoiceStatus.Draft)
+        {
+            var b=WebApplication.CreateBuilder(new WebApplicationOptions {EnvironmentName="Development"});b.Configuration["AllowedHosts"]="127.0.0.1";b.Logging.ClearProviders();b.WebHost.UseUrls("http://127.0.0.1:0");
+            b.Services.AddHttpContextAccessor();b.Services.AddScoped<ITenantContext>(_=>new Scope(1));
+            var name="EMS_Feature_Http_Audit_"+Guid.NewGuid().ToString("N");
+            var connection=new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("EMS_SQL_TEST_CONNECTION")) {InitialCatalog=name,TrustServerCertificate=true};
+            b.Services.AddDbContext<ApplicationDbContext>(o=>o.UseSqlServer(connection.ConnectionString));
+            b.Services.AddScoped<IUnitOfWork,UnitOfWork>();b.Services.AddSingleton(Mapper);
+            b.Services.AddScoped<IReservationService,ExhibitionManagementSystem.Services.Implementations.ReservationService>();
+            b.Services.AddScoped<IPricingService,PricingService>();b.Services.AddScoped<IFinancialService,FinancialService>();
+            b.Services.AddScoped<ISponsorshipService,SponsorshipService>();b.Services.AddScoped<IExhibitorService,ExhibitorService>();
+            b.Services.AddScoped<IExhibitionService,ExhibitionService>();b.Services.AddScoped<IHallService,HallService>();
+            b.Services.AddScoped<ITicketService,TicketService>();b.Services.AddScoped<IBadgeService,BadgeService>();
+            b.Services.AddAuthentication("Probe").AddScheme<AuthenticationSchemeOptions,ProbeAuth>("Probe",_=>{});b.Services.AddAuthorization(AuthorizationPolicies.Configure);
+            b.Services.AddControllers().AddApplicationPart(typeof(TicketsController).Assembly);
+            var app=b.Build();
+            using(var scope=app.Services.CreateScope())
+            {
+                var db=scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                // Test-only bypass for fixture creation. All HTTP requests use tenant scope.
+                var opts=scope.ServiceProvider.GetRequiredService<DbContextOptions<ApplicationDbContext>>();
+                await using var seed=new ApplicationDbContext(opts,new WorkflowFixture.BypassContext());
+                await seed.Database.MigrateAsync();var invoice=await WorkflowFixture.SeedAsync(seed,status);var exhibition=await seed.Exhibitions.SingleAsync();
+                exhibition.StartDate=DateTime.UtcNow.Date;exhibition.EndDate=DateTime.UtcNow.Date.AddDays(3);
+                seed.Booths.Add(new Booth {TenantID=1,HallID=1,BoothNumber="B-2",CurrentAreaSqM=10,OriginalAreaSqM=10});
+                seed.BoothPriceRules.Add(new BoothPriceRule {TenantID=1,PricePerSqM=10,CurrencyCode="LYD",ValidFrom=DateTime.UtcNow.Date});
+                seed.SponsorshipContracts.Add(new SponsorshipContract {TenantID=1,ExhibitionID=1,Sponsor=new Sponsor {TenantID=1,CompanyName="Actual sponsor"},ContractNumber="WEB-1",CurrencyCode="LYD",TotalAmount=750,CreatedByUserId="workflow-user"});
+                seed.Tickets.Add(new Ticket {TenantID=1,ExhibitionID=1,QRCode="AUDIT-TICKET",TicketType="Regular",CurrencyCode="LYD",Status=TicketStatus.Active,Visitor=new Visitor {TenantID=1,FullName="Synthetic attendee"}});
+                await seed.SaveChangesAsync();
+            }
+            app.UseExceptionHandler(handler=>handler.Run(ctx=>{ctx.Response.StatusCode=500;return Task.CompletedTask;}));
+            app.UseAuthentication();app.UseAuthorization();app.UseMiddleware<IdempotencyMiddleware>();app.MapControllers();await app.StartAsync();
+            var url=app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+            var client=new HttpClient(new HttpClientHandler {UseProxy=false}) {BaseAddress=new Uri(url)};client.DefaultRequestHeaders.Add("Idempotency-Key",Guid.NewGuid().ToString("N"));return new Host(app,client);
+        }
+        public async ValueTask DisposeAsync(){client.Dispose();await app.StopAsync();using(var scope=app.Services.CreateScope()){var db=scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();SqlConnection.ClearAllPools();await db.Database.EnsureDeletedAsync();}await app.DisposeAsync();}
+    }
+    sealed class ProbeAuth(IOptionsMonitor<AuthenticationSchemeOptions> options,ILoggerFactory logger,UrlEncoder encoder):AuthenticationHandler<AuthenticationSchemeOptions>(options,logger,encoder)
+    {
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            var role=Request.Headers["Probe-Role"].FirstOrDefault()??"TenantAdmin";
+            var principal=new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier,"workflow-user"),new Claim("TenantId","1"),new Claim(ClaimTypes.Role,role)],Scheme.Name));
+            return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal,Scheme.Name)));
+        }
+    }
+}

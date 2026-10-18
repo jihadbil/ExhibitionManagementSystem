@@ -1,0 +1,195 @@
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using AutoMapper;
+using ExhibitionManagementSystem.Api.Tests.Regression;
+using ExhibitionManagementSystem.DataAccess;
+using ExhibitionManagementSystem.DataAccess.MultiTenancy;
+using ExhibitionManagementSystem.DataAccess.Repositories.Implementations;
+using ExhibitionManagementSystem.Models;
+using ExhibitionManagementSystem.Models.DTOs.Exhibition;
+using ExhibitionManagementSystem.Models.DTOs.Financial;
+using ExhibitionManagementSystem.Models.DTOs.Mapping;
+using ExhibitionManagementSystem.Models.DTOs.Badge;
+using ExhibitionManagementSystem.Models.Enums;
+using ExhibitionManagementSystem.Services.Implementations;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+
+var mapper = new MapperConfiguration(c => c.AddMaps(typeof(MappingProfile).Assembly), NullLoggerFactory.Instance).CreateMapper();
+await Probe("InvoiceItemQuantityPrecision", async (options, tid, invoiceId) =>
+{
+    await using var db = new ApplicationDbContext(options, new TenantScope(tid));
+    using var uow = new UnitOfWork(db, WorkflowFixture.Actor(tid));
+    var input = new InvoiceItemCreateDto { ItemName = "Precision probe", Quantity = .015m, UnitPrice = 100m };
+    var validates = Validator.TryValidateObject(input, new ValidationContext(input), [], true);
+    var result = await new InvoiceItemService(uow, mapper).CreateItemAsync(tid, invoiceId, input);
+    await using var read = new ApplicationDbContext(options, new TenantScope(tid));
+    var saved = await read.InvoiceItems.SingleAsync(i => i.ItemName == "Precision probe");
+    return new { validates, result.IsSuccess, ResponseQuantity = result.Data?.Quantity,
+        SavedQuantity = saved.Quantity, saved.UnitPrice, saved.TotalPrice,
+        ExpectedFromStoredValues = InvoiceFinancialSummary.Round(saved.Quantity * saved.UnitPrice),
+        BrokenInvariant = saved.TotalPrice != InvoiceFinancialSummary.Round(saved.Quantity * saved.UnitPrice) };
+});
+
+await Probe("DeleteExhibitionWithSponsorship", async (options, tid, _) =>
+{
+    int exhibitionId, contractId;
+    await using (var setup = new ApplicationDbContext(options, new TenantScope(tid)))
+    {
+        var venueId = await setup.Venues.Select(v => v.VenueID).SingleAsync();
+        var exhibition = NewExhibition(tid, venueId, "Sponsorship only");
+        var contract = new SponsorshipContract { TenantID = tid, Exhibition = exhibition,
+            Sponsor = new Sponsor { TenantID = tid, CompanyName = "Synthetic sponsor" },
+            ContractNumber = "REVIEW-SPN-1", TotalAmount = 750m, CurrencyCode = "LYD", CreatedByUserId = "workflow-user" };
+        setup.SponsorshipContracts.Add(contract);
+        await setup.SaveChangesAsync();
+        exhibitionId = exhibition.ExhibitionID; contractId = contract.ContractID;
+    }
+    await using var db = new ApplicationDbContext(options, new TenantScope(tid));
+    using var uow = new UnitOfWork(db, WorkflowFixture.Actor(tid));
+    var service = new SponsorshipService(uow, mapper);
+    var before = await service.GetContractByIdAsync(tid, contractId);
+    var result = await new ExhibitionService(uow, mapper).DeleteAsync(tid, exhibitionId);
+    db.ChangeTracker.Clear();
+    var after = await service.GetContractByIdAsync(tid, contractId);
+    var stored = await db.SponsorshipContracts.IgnoreQueryFilters().AnyAsync(c => c.ContractID == contractId);
+    return new { BeforeVisible = before.IsSuccess, DeleteAccepted = result.IsSuccess,
+        AfterVisible = after.IsSuccess, after.ErrorCode, ContractStillStored = stored,
+        BrokenInvariant = result.IsSuccess && before.IsSuccess && !after.IsSuccess && stored };
+});
+
+await Probe("MoveExhibitionWithAdvertisingSpace", async (options, tid, _) =>
+{
+    int exhibitionId, otherVenueId, spaceId;
+    await using (var setup = new ApplicationDbContext(options, new TenantScope(tid)))
+    {
+        var hall = await setup.Halls.SingleAsync();
+        var exhibition = NewExhibition(tid, hall.VenueID, "Advertising only");
+        var otherVenue = new Venue { TenantID = tid, Name = "Other synthetic venue" };
+        var space = new AdvertisingSpace { TenantID = tid, Exhibition = exhibition,
+            HallID = hall.HallID, VenueID = hall.VenueID, SpaceCode = "REVIEW-A1", SpaceName = "Old hall billboard", CurrencyCode = "LYD" };
+        setup.AdvertisingSpaces.Add(space); setup.Venues.Add(otherVenue);
+        await setup.SaveChangesAsync();
+        exhibitionId = exhibition.ExhibitionID; otherVenueId = otherVenue.VenueID; spaceId = space.SpaceID;
+    }
+    await using var db = new ApplicationDbContext(options, new TenantScope(tid));
+    using var uow = new UnitOfWork(db, WorkflowFixture.Actor(tid));
+    var result = await new ExhibitionService(uow, mapper).UpdateAsync(tid, exhibitionId,
+        new ExhibitionUpdateDto { Name = "Moved advertising only", VenueID = otherVenueId,
+            StartDate = DateTime.UtcNow.Date, EndDate = DateTime.UtcNow.Date.AddDays(2), Status = "Planning", EntryCurrency = "LYD" });
+    db.ChangeTracker.Clear();
+    var savedSpace = await db.AdvertisingSpaces.Include(s => s.Exhibition).Include(s => s.Hall).SingleAsync(s => s.SpaceID == spaceId);
+    return new { UpdateAccepted = result.IsSuccess, result.ErrorCode, ExhibitionVenue = savedSpace.Exhibition.VenueID,
+        AdvertisingVenue = savedSpace.VenueID, AdvertisingHallVenue = savedSpace.Hall?.VenueID,
+        BrokenInvariant = result.IsSuccess && savedSpace.Exhibition.VenueID != savedSpace.VenueID };
+});
+
+await Probe("DeleteHallWithScheduledEvent", async (options, tid, _) =>
+{
+    int hallId, scheduleId, exhibitionId;
+    await using (var setup = new ApplicationDbContext(options, new TenantScope(tid)))
+    {
+        var exhibition = await setup.Exhibitions.SingleAsync();
+        var hall = new Hall { VenueID = exhibition.VenueID, HallName = "Scheduled synthetic hall" };
+        var scheduledEvent = new ExhibitionSchedule { ExhibitionID = exhibition.ExhibitionID, Hall = hall, EventName = "Scheduled event",
+            StartDateTime = DateTime.UtcNow.Date.AddHours(10), EndDateTime = DateTime.UtcNow.Date.AddHours(11) };
+        setup.ExhibitionSchedules.Add(scheduledEvent); await setup.SaveChangesAsync();
+        hallId = hall.HallID; scheduleId = scheduledEvent.ScheduleID; exhibitionId = exhibition.ExhibitionID;
+    }
+    await using var db = new ApplicationDbContext(options, new TenantScope(tid));
+    using var uow = new UnitOfWork(db, WorkflowFixture.Actor(tid));
+    var result = await new HallService(uow, mapper).DeleteAsync(tid, hallId);
+    db.ChangeTracker.Clear();
+    var schedule = await db.ExhibitionSchedules.Include(s => s.Hall).SingleOrDefaultAsync(s => s.ScheduleID == scheduleId);
+    return new { DeleteAccepted = result.IsSuccess, ScheduleStored = await db.ExhibitionSchedules.AnyAsync(s => s.ScheduleID == scheduleId),
+        ScheduleHallId = schedule?.HallID, HallVisible = schedule?.Hall != null,
+        BrokenInvariant = result.IsSuccess && schedule != null && schedule.HallID.HasValue && schedule.Hall == null };
+});
+
+await Probe("ReportVisitorsAfterEntry", async (options, tid, _) =>
+{
+    int exhibitionId;
+    await using (var setup = new ApplicationDbContext(options, new TenantScope(tid)))
+    {
+        var exhibition = await setup.Exhibitions.SingleAsync();
+        exhibition.Status = ExhibitionStatus.Open;
+        var ticket = new Ticket { TenantID = tid, ExhibitionID = exhibition.ExhibitionID,
+            Visitor = new Visitor { TenantID = tid, FullName = "Synthetic attendee", Email = "attendee@example.invalid" },
+            TicketType = "Regular", QRCode = "REVIEW-TICKET", CurrencyCode = "LYD", Status = TicketStatus.Active };
+        setup.Tickets.Add(ticket); await setup.SaveChangesAsync();
+        exhibitionId = exhibition.ExhibitionID;
+    }
+    await using var db = new ApplicationDbContext(options, new TenantScope(tid));
+    using var uow = new UnitOfWork(db, WorkflowFixture.Actor(tid));
+    var reports = new ReportService(uow, mapper);
+    var before = await reports.GenerateExhibitionReportAsync(tid, exhibitionId, "workflow-user");
+    var scan = await new TicketService(uow, mapper).ScanTicketAsync(tid, "REVIEW-TICKET", "In", "Review gate", "workflow-user");
+    db.ChangeTracker.Clear();
+    var after = await reports.GenerateExhibitionReportAsync(tid, exhibitionId, "workflow-user");
+    return new { BeforeReportSucceeded = before.IsSuccess, BeforeVisitors = before.Data?.TotalVisitors,
+        ScanSucceeded = scan.IsSuccess, scan.ErrorCode, AfterReportSucceeded = after.IsSuccess,
+        AfterVisitors = after.Data?.TotalVisitors, StoredEntryScans = await db.TicketScans.CountAsync(s => s.Direction == ScanDirection.In),
+        BrokenInvariant = before.IsSuccess && after.IsSuccess && scan.IsSuccess && after.Data!.TotalVisitors < before.Data!.TotalVisitors };
+});
+
+await Probe("BadgeTemplateForeignExhibition", async (options, tid, _) =>
+{
+    int foreignExhibitionId;
+    await using (var setup = new ApplicationDbContext(options, new WorkflowFixture.BypassContext()))
+    {
+        var foreignTenant = new Tenant { CompanyName = "Foreign synthetic tenant", BaseCurrency = "LYD", Subdomain = "foreign-review" };
+        var foreignVenue = new Venue { Tenant = foreignTenant, Name = "Foreign venue" };
+        var foreignExhibition = new Exhibition { Tenant = foreignTenant, Venue = foreignVenue, Name = "Foreign exhibition", EntryCurrency = "LYD" };
+        setup.Exhibitions.Add(foreignExhibition); await setup.SaveChangesAsync();
+        foreignExhibitionId = foreignExhibition.ExhibitionID;
+    }
+    await using var db = new ApplicationDbContext(options, new TenantScope(tid));
+    using var uow = new UnitOfWork(db, WorkflowFixture.Actor(tid));
+    var result = await new BadgeService(uow, mapper).CreateTemplateAsync(tid, new BadgeTemplateCreateDto
+    { ExhibitionID = foreignExhibitionId, TemplateName = "Foreign linked template" });
+    db.ChangeTracker.Clear();
+    var saved = await db.BadgeTemplates.SingleOrDefaultAsync(t => t.TemplateName == "Foreign linked template");
+    return new { CreateAccepted = result.IsSuccess, result.ErrorCode, SavedTenantId = saved?.TenantID,
+        SavedExhibitionId = saved?.ExhibitionID, ForeignExhibitionId = foreignExhibitionId,
+        BrokenInvariant = result.IsSuccess && saved?.TenantID == tid && saved?.ExhibitionID == foreignExhibitionId };
+});
+
+static Exhibition NewExhibition(int tid, int venueId, string name) => new()
+{ TenantID = tid, VenueID = venueId, Name = name, EntryCurrency = "LYD", StartDate = DateTime.UtcNow.Date, EndDate = DateTime.UtcNow.Date.AddDays(2) };
+
+static async Task Probe(string name, Func<DbContextOptions<ApplicationDbContext>, int, int, Task<object>> run)
+{
+    var selectedProbes = Environment.GetEnvironmentVariable("EMS_AUDIT_PROBES");
+    if (!string.IsNullOrWhiteSpace(selectedProbes) && !selectedProbes.Split(',').Contains(name)) return;
+    var databaseName = "EMS_Review_20261017_" + Guid.NewGuid().ToString("N");
+    var conn = new SqlConnectionStringBuilder("Server=localhost;Database=master;Integrated Security=True;TrustServerCertificate=True;Connect Timeout=5")
+    { InitialCatalog = databaseName };
+    var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(conn.ConnectionString).Options;
+    await using var seed = new ApplicationDbContext(options, new WorkflowFixture.BypassContext());
+    try
+    {
+        await seed.Database.MigrateAsync();
+        var invoice = await WorkflowFixture.SeedAsync(seed, InvoiceStatus.Draft);
+        var exhibition = await seed.Exhibitions.SingleAsync();
+        exhibition.StartDate = DateTime.UtcNow.Date; exhibition.EndDate = DateTime.UtcNow.Date.AddDays(2);
+        await seed.SaveChangesAsync();
+        var observation = await run(options, invoice.TenantID, invoice.InvoiceID);
+        Console.WriteLine(JsonSerializer.Serialize(new { Scenario = name, observation }));
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(new { Scenario = name, HarnessError = ex.GetType().Name, ex.Message }));
+    }
+    finally
+    {
+        await seed.Database.EnsureDeletedAsync();
+        Console.WriteLine($"Cleanup: {databaseName} deleted");
+    }
+}
+
+sealed class TenantScope(int tenantId) : ITenantContext
+{
+    public int? TenantId => tenantId;
+    public bool CanBypassTenantIsolation => false;
+}

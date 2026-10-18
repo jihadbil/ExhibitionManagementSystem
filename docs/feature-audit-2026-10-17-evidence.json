@@ -1,0 +1,181 @@
+{
+  "auditDate": "2026-10-17",
+  "source": "Current working tree; synthetic fixtures only",
+  "baseline": {
+    "backendSkipped": 0,
+    "backendPassed": 265,
+    "backendFailed": 0,
+    "lintPassed": true,
+    "webPassed": 65,
+    "webBuildPassed": true
+  },
+  "probes": {
+    "DeletePackage": {
+      "deleteAccepted": true,
+      "beforePackage": "Purchased Gold",
+      "afterPackage": null,
+      "beforeAssignments": 1,
+      "afterAssignments": 1,
+      "storedAssignments": 1
+    },
+    "DeleteSpace": {
+      "deleteAccepted": true,
+      "beforePackage": "Purchased Gold",
+      "afterPackage": "Purchased Gold",
+      "beforeAssignments": 1,
+      "afterAssignments": 0,
+      "storedAssignments": 1
+    },
+    "enum-validation": {
+      "categoryStatus": 500,
+      "scheduleStatus": 500
+    },
+    "gate-preview": {
+      "adminPreview": 200,
+      "gateTickets": 200,
+      "gatePreview": 403
+    },
+    "idempotency-path": {
+      "canonicalStatus": 400,
+      "trailingSlashFirst": 200,
+      "trailingSlashSecond": 200,
+      "storedPayments": 2
+    },
+    "PricingPrecision": {
+      "ruleAccepted": true,
+      "returnedPrice": 0.015,
+      "storedPrice": 0.02,
+      "serviceAccepted": true,
+      "returnedServicePrice": 0.015,
+      "storedServicePrice": 0.02,
+      "extremeException": "DbUpdateException"
+    },
+    "reservation-notes": {
+      "emptyNotesStatus": 400,
+      "body": "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.1\",\"title\":\"One or more validation errors occurred.\",\"status\":400,\"errors\":{\"LogisticNotes\":[\"The LogisticNotes field is required.\"]},\"traceId\":\"0HNPC9PL8QB8V:00000001\"}",
+      "stringNotesStatus": 201,
+      "validBody": "{\"reservationID\":2,\"exhibitorID\":1,\"exhibitorName\":\"Exhibitor\",\"boothID\":2,\"boothNumber\":\"B-2\",\"exhibitionID\":1,\"exhibitionName\":\"Expo\",\"mergeID\":null,\"boothTypeSelected\":\"Standard\",\"requestedAreaSqM\":10.00,\"allocatedAreaSqM\":10.00,\"exhibitorCategory\":\"International\",\"boothAmount\":100.00,\"servicesAmount\":0,\"totalAmount\":100.00,\"currencyCode\":\"LYD\",\"currencySymbol\":\"LYD\",\"exchangeRateUsed\":1,\"amountInBaseCurrency\":100.00,\"baseCurrencyCode\":\"LYD\",\"exchangeRateDate\":\"2026-10-17T00:00:00Z\",\"exchangeRateSource\":\"Same currency\",\"boothSourceAmount\":100.0000,\"boothSourceCurrencyCode\":\"LYD\",\"boothExchangeRateUsed\":1,\"boothExchangeRateDate\":\"2026-10-17T00:00:00Z\",\"boothExchangeRateSource\":\"Same currency\",\"boothPriceRuleID\":1,\"status\":\"Pending\",\"reservationDate\":\"2026-10-17T12:59:05.3121093Z\",\"logisticNotes\":\"\",\"createdByUserId\":\"workflow-user\",\"services\":[],\"createdAt\":\"2026-10-17T12:59:05.3302902Z\",\"updatedAt\":null}"
+    },
+    "SchedulesAndHalls": {
+      "scheduleHall": "",
+      "hallName": "Hall",
+      "boothsCount": 0,
+      "storedBooths": 1
+    },
+    "sponsorship-contracts": {
+      "contractID": 1,
+      "tenantID": 1,
+      "exhibitionID": 1,
+      "exhibitionName": null,
+      "sponsorID": 1,
+      "sponsorCompanyName": "Actual sponsor",
+      "sponsorLogoUrl": null,
+      "packageID": null,
+      "packageName": null,
+      "contractNumber": "WEB-1",
+      "totalAmount": 750.0,
+      "currencyCode": "LYD",
+      "status": 3,
+      "statusName": "Confirmed",
+      "signedDate": "2026-10-17T12:59:18.735857",
+      "paymentDueDate": null,
+      "specialTerms": null,
+      "notes": null,
+      "adAssignments": [],
+      "createdAt": "2026-10-17T12:59:18.735857"
+    },
+    "sponsorship-level": {
+      "webStatus": 400,
+      "body": "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.1\",\"title\":\"One or more validation errors occurred.\",\"status\":400,\"errors\":{\"dto\":[\"The dto field is required.\"],\"$.level\":[\"The JSON value could not be converted to ExhibitionManagementSystem.Models.Enums.SponsorshipLevel. Path: $.level | LineNumber: 0 | BytePositionInLine: 60.\"]},\"traceId\":\"0HNPC9PL8QB90:00000001\"}",
+      "numericStatus": 200
+    },
+    "TenantPlan": {
+      "listPlan": null,
+      "activePlan": "Enterprise"
+    },
+    "tickets": {
+      "ticketID": 1,
+      "visitorID": 1,
+      "visitorName": "Synthetic attendee",
+      "exhibitionID": 1,
+      "exhibitionName": "Expo",
+      "ticketType": "Regular",
+      "price": 0.0,
+      "currencyCode": "LYD",
+      "currencySymbol": "LYD",
+      "qrCode": "AUDIT-TICKET",
+      "validDate": null,
+      "status": "Active",
+      "issuedAt": "2026-10-17T12:59:01.3232982",
+      "scansCount": 0,
+      "createdAt": "2026-10-17T12:59:01.3232986",
+      "updatedAt": null
+    },
+    "venue-delete-race": {
+      "deleteAccepted": true,
+      "hallCreateAccepted": true,
+      "venueDeleted": true,
+      "hallStored": true,
+      "hallVisible": false,
+      "errorCode": "HALL_NOT_FOUND"
+    },
+    "web-probes": [
+      {
+        "probe": "Actual contract JSON breaks original SponsorshipPage",
+        "error": "Cannot read properties of undefined (reading 'toLocaleString')",
+        "contractKeys": [
+          "contractID",
+          "tenantID",
+          "exhibitionID",
+          "exhibitionName",
+          "sponsorID",
+          "sponsorCompanyName",
+          "sponsorLogoUrl",
+          "packageID",
+          "packageName",
+          "contractNumber",
+          "totalAmount",
+          "currencyCode",
+          "status",
+          "statusName",
+          "signedDate",
+          "paymentDueDate",
+          "specialTerms",
+          "notes",
+          "adAssignments",
+          "createdAt"
+        ]
+      },
+      {
+        "probe": "Contract status is numeric but original page calls toLowerCase",
+        "error": "c.status.toLowerCase is not a function"
+      },
+      {
+        "probe": "Added action is absent from insertion filter and insertion counter",
+        "actualAction": "Added",
+        "selectedFilter": "insert",
+        "visibleRows": 0,
+        "stats": {
+          "total": 1,
+          "inserts": 0,
+          "updates": 0,
+          "deletes": 0
+        }
+      },
+      {
+        "probe": "A real active ticket is rendered with danger styling",
+        "serverStatus": "Active",
+        "html": "<span class=\"badge badge-danger\">Active</span>"
+      },
+      {
+        "probe": "In-flight refresh replaces tokens of a newly logged-in account",
+        "storedUserId": "account-B",
+        "storedTenant": 2,
+        "storedAccessToken": "A-new-access",
+        "replayed": [
+          "Bearer A-new-access"
+        ]
+      }
+    ]
+  }
+}
