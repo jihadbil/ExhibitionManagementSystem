@@ -93,11 +93,13 @@ public partial class BoothDesignerViewModel : ViewModelBase
     {
         await ExecuteSafeAsync(async () =>
         {
-            var result = await _exhibitionService.GetByTenantAsync(Session.TenantId, 1, 100);
+            var result = await PagedLookupLoader.LoadAllAsync((page, pageSize) =>
+                _exhibitionService.GetByTenantAsync(Session.TenantId, page, pageSize));
+            if (!result.IsSuccess) throw new InvalidOperationException(result.ErrorMessage);
             if (result.IsSuccess && result.Data is not null)
             {
                 Exhibitions.Clear();
-                foreach (var ex in result.Data.Items)
+                foreach (var ex in result.Data)
                 {
                     Exhibitions.Add(ex);
                 }

@@ -27,7 +27,7 @@ public partial class BoothsPage : UserControl
             ViewModel.EditAreaSqM = booth.OriginalAreaSqM;
             ViewModel.EditWidth = booth.Width;
             ViewModel.EditHeight = booth.Height;
-            ViewModel.EditShapeType = booth.ShapeType ?? "Standard";
+            ViewModel.EditShapeType = booth.BoothType ?? "Standard";
             ViewModel.EditStatus = booth.Status ?? "Available";
             ViewModel.EditAssignedPriceRuleId = booth.AssignedPriceRuleID ?? 0;
 

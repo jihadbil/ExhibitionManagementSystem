@@ -205,6 +205,7 @@ public partial class ExhibitionFormViewModel : ViewModelBase
             {
                 var dto = new ExhibitionUpdateDto
                 {
+                    VenueID = SelectedVenueId,
                     Name = Name,
                     Type = Type,
                     Edition = Edition,

@@ -54,8 +54,8 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- ShapeType -->
-                        <TextBlock Text="فئة / نوع الجناح" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
+                        <!-- Pricing category -->
+                        <TextBlock Text="فئة تسعير الجناح" Style="{StaticResource LabelStyle}" Margin="0,0,0,8"/>
                         <ComboBox Style="{StaticResource StandardComboBoxStyle}" 
                                   ItemsSource="{Binding ShapeTypes}" 
                                   SelectedItem="{Binding EditShapeType}"

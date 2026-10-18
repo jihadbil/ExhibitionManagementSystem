@@ -114,11 +114,13 @@ public partial class BoothsViewModel : ViewModelBase
     {
         await ExecuteSafeAsync(async () =>
         {
-            var result = await _exhibitionService.GetByTenantAsync(Session.TenantId, 1, 100);
+            var result = await PagedLookupLoader.LoadAllAsync((page, pageSize) =>
+                _exhibitionService.GetByTenantAsync(Session.TenantId, page, pageSize));
+            if (!result.IsSuccess) throw new InvalidOperationException(result.ErrorMessage);
             if (result.IsSuccess && result.Data is not null)
             {
                 Exhibitions.Clear();
-                foreach (var ex in result.Data.Items)
+                foreach (var ex in result.Data)
                 {
                     Exhibitions.Add(ex);
                 }
@@ -269,7 +271,8 @@ public partial class BoothsViewModel : ViewModelBase
                 OriginalAreaSqM = NewOriginalAreaSqM,
                 Width = NewWidth,
                 Height = NewHeight,
-                ShapeType = NewShapeType,
+                ShapeType = "Rect",
+                BoothType = NewShapeType,
                 PosX = 10, // default start position
                 PosY = 10,
                 AssignedPriceRuleID = NewAssignedPriceRuleId == 0 ? null : NewAssignedPriceRuleId
@@ -315,7 +318,8 @@ public partial class BoothsViewModel : ViewModelBase
             var dto = new BoothUpdateDto
             {
                 BoothNumber = EditBoothNumber,
-                ShapeType = EditShapeType,
+                BoothType = EditShapeType,
+                OriginalAreaSqM = EditAreaSqM,
                 Width = EditWidth,
                 Height = EditHeight,
                 Status = EditStatus,
