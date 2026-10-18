@@ -11,6 +11,7 @@ namespace ExhibitionManagementSystem.Services.Extensions
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ITenantService, TenantService>();
             services.AddScoped<ITenantInvitationSender, SmtpTenantInvitationSender>();
+            services.AddScoped<IPasswordResetSender, SmtpPasswordResetSender>();
             services.AddScoped<IVenueService, VenueService>();
             services.AddScoped<IHallService, HallService>();
             services.AddScoped<IBoothService, BoothService>();

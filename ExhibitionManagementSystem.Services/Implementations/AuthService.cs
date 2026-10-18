@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Logging;
 
 namespace ExhibitionManagementSystem.Services.Implementations
 {
@@ -34,6 +35,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
         private readonly IUnitOfWork _unitOfWork;
         private readonly ApplicationDbContext _dbContext;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IPasswordResetSender? _passwordResetSender;
+        private readonly ILogger<AuthService>? _logger;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
@@ -43,7 +46,9 @@ namespace ExhibitionManagementSystem.Services.Implementations
             IMapper mapper,
             IUnitOfWork unitOfWork,
             ApplicationDbContext dbContext,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            IPasswordResetSender? passwordResetSender = null,
+            ILogger<AuthService>? logger = null)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -53,6 +58,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
             _unitOfWork = unitOfWork;
             _dbContext = dbContext;
             _httpContextAccessor = httpContextAccessor;
+            _passwordResetSender = passwordResetSender;
+            _logger = logger;
         }
 
         // Login & Registration
@@ -77,12 +84,11 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var roles = await _userManager.GetRolesAsync(user);
 
             var tenant = await _unitOfWork.Tenants.GetByIdAsync(user.TenantID);
-            if (tenant == null)
+            if (tenant == null || !tenant.IsActive)
             {
                 return ServiceResult<LoginResponseDto>.Failure("المستأجر الخاص بالمستخدم غير موجود", "TENANT_NOT_FOUND");
             }
 
-            var accessToken = GenerateJwtToken(user, roles);
             var refreshToken = GenerateRefreshToken();
 
             var refreshExpiryDays = int.Parse(GetRequiredJwtSetting("RefreshTokenExpiryDays"));
@@ -96,12 +102,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     "LOGIN_UPDATE_FAILED");
             }
 
-            _dbContext.RefreshSessions.Add(CreateRefreshSession(
+            var refreshSession = CreateRefreshSession(
                 user.Id,
                 user.TenantID,
                 refreshToken,
-                DateTime.UtcNow.AddDays(refreshExpiryDays)));
+                DateTime.UtcNow.AddDays(refreshExpiryDays));
+            _dbContext.RefreshSessions.Add(refreshSession);
             await _dbContext.SaveChangesAsync();
+            var accessToken = GenerateJwtToken(user, roles, refreshSession.RefreshSessionID);
 
             var response = new LoginResponseDto
             {
@@ -180,6 +188,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<RefreshTokenResponseDto>.Failure("رمز التحديث غير صالح أو منتهي الصلاحية", "INVALID_REFRESH_TOKEN");
             }
 
+            if (!await _dbContext.Tenants.IgnoreQueryFilters().AnyAsync(t =>
+                t.TenantID == tenantId && t.IsActive))
+                return ServiceResult<RefreshTokenResponseDto>.Failure("المؤسسة غير نشطة", "TENANT_INACTIVE");
+
             var tokenHash = RefreshTokenProtector.Hash(dto.RefreshToken);
             var session = await _dbContext.RefreshSessions
                 .SingleOrDefaultAsync(candidate =>
@@ -201,7 +213,6 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
 
             var roles = await _userManager.GetRolesAsync(user);
-            var newAccessToken = GenerateJwtToken(user, roles);
             var newRefreshToken = GenerateRefreshToken();
 
             var refreshExpiryDays = int.Parse(GetRequiredJwtSetting("RefreshTokenExpiryDays"));
@@ -210,6 +221,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 user.TenantID,
                 newRefreshToken,
                 DateTime.UtcNow.AddDays(refreshExpiryDays));
+            var newAccessToken = GenerateJwtToken(user, roles, replacement.RefreshSessionID);
 
             session.LastUsedAt = DateTime.UtcNow;
             session.RevokedAt = DateTime.UtcNow;
@@ -284,7 +296,19 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            return ServiceResult.Success(token);
+            try
+            {
+                if (_passwordResetSender == null)
+                    throw new InvalidOperationException("Password recovery delivery is not configured.");
+                await _passwordResetSender.SendAsync(user.Email!, user.FullName, token);
+                return ServiceResult.Success();
+            }
+            catch (Exception ex)
+            {
+                // Neither the reset token nor the recipient address is written to logs or returned to the caller.
+                _logger?.LogError("Password recovery delivery failed for user {UserId}; failure type {FailureType}", user.Id, ex.GetType().Name);
+                return ServiceResult.Failure("تعذر تسليم رسالة استعادة كلمة المرور", "PASSWORD_RESET_DELIVERY_FAILED");
+            }
         }
 
         public async Task<ServiceResult> ResetPasswordAsync(ResetPasswordConfirmDto dto)
@@ -491,6 +515,9 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult.Failure(errors, "STATUS_UPDATE_FAILED");
             }
 
+            if (!isActive)
+                await RevokeAllSessionsAsync(user.Id, "User disabled");
+
             return ServiceResult.Success();
         }
 
@@ -663,7 +690,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Count() <= 1;
         }
 
-        private string GenerateJwtToken(ApplicationUser user, IList<string> roles)
+        private string GenerateJwtToken(ApplicationUser user, IList<string> roles, Guid sessionId)
         {
             var secretKey = GetRequiredJwtSetting("SecretKey");
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -674,6 +701,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
                 new Claim("TenantId", user.TenantID.ToString()),
+                new Claim("session_id", sessionId.ToString()),
+                new Claim("security_stamp", user.SecurityStamp ?? string.Empty),
                 new Claim("FullName", user.FullName)
             };
 
