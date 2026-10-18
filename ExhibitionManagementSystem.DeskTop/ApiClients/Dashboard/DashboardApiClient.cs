@@ -30,4 +30,6 @@ public class DashboardApiClient : ApiClientBase, IDashboardService
     {
         return GetAsync<IList<ActivityItemDto>>($"api/dashboard/recent-activity?limit={limit}");
     }
+    public Task<ServiceResult<IList<VisitorTrafficPointDto>>> GetVisitorTrafficAsync(int exhibitionId) =>
+        GetAsync<IList<VisitorTrafficPointDto>>($"api/dashboard/visitor-traffic?exhibitionId={exhibitionId}");
 }

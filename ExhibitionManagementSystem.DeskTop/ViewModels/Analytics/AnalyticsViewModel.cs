@@ -28,6 +28,7 @@ public partial class AnalyticsViewModel : ViewModelBase
 {
     private readonly IReportService _reportService;
     private readonly IExhibitionService _exhibitionService;
+    private readonly IDashboardService _dashboardService;
 
     // ━━━━━━━━━━━━━━ Collections ━━━━━━━━━━━━━━
     public ObservableCollection<ExhibitionSummaryDto> Exhibitions { get; } = [];
@@ -55,12 +56,14 @@ public partial class AnalyticsViewModel : ViewModelBase
     public AnalyticsViewModel(
         IReportService reportService,
         IExhibitionService exhibitionService,
+        IDashboardService dashboardService,
         INavigationService navigationService,
         INotificationService notificationService,
         SessionService session) : base(navigationService, notificationService, session)
     {
         _reportService = reportService;
         _exhibitionService = exhibitionService;
+        _dashboardService = dashboardService;
         Title = "تحليلات المعارض والإيرادات";
     }
 
@@ -74,11 +77,13 @@ public partial class AnalyticsViewModel : ViewModelBase
     {
         await ExecuteSafeAsync(async () =>
         {
-            var result = await _exhibitionService.GetByTenantAsync(Session.TenantId, 1, 100);
+            var result = await PagedLookupLoader.LoadAllAsync((page, pageSize) =>
+                _exhibitionService.GetByTenantAsync(Session.TenantId, page, pageSize));
+            if (!result.IsSuccess) throw new InvalidOperationException(result.ErrorMessage);
             if (result.IsSuccess && result.Data is not null)
             {
                 Exhibitions.Clear();
-                foreach (var ex in result.Data.Items)
+                foreach (var ex in result.Data)
                 {
                     Exhibitions.Add(ex);
                 }
@@ -114,14 +119,19 @@ public partial class AnalyticsViewModel : ViewModelBase
                 TotalVisitors = report.TotalVisitors;
                 TotalExhibitors = report.TotalExhibitors;
                 TotalBooths = report.TotalBooths;
-                OccupancyRate = (double)(report.OccupancyRate * 100);
+                OccupancyRate = (double)report.OccupancyRate;
                 TotalRevenue = report.TotalRevenue;
                 TotalExpenses = report.TotalExpenses;
                 NetProfit = report.NetProfit;
                 CurrencyCode = string.IsNullOrWhiteSpace(report.CurrencyCode) ? "LYD" : report.CurrencyCode;
 
-                // Load Mock Traffic Data for charting based on total visitors
-                LoadMockTrafficData(TotalVisitors);
+                var traffic = await _dashboardService.GetVisitorTrafficAsync(exhibitionId);
+                if (!traffic.IsSuccess || traffic.Data == null)
+                {
+                    TrafficData.Clear(); ChartSeries = []; XAxes = []; YAxes = [];
+                    NotificationService.ShowWarning(traffic.ErrorMessage ?? "تعذر تحميل حركة الدخول الفعلية");
+                }
+                else LoadTrafficData(traffic.Data);
             }
             else
             {
@@ -131,25 +141,13 @@ public partial class AnalyticsViewModel : ViewModelBase
         }, "خطأ في تحميل بيانات التحليلات");
     }
 
-    private void LoadMockTrafficData(int totalVisitors)
+    private void LoadTrafficData(System.Collections.Generic.IList<ExhibitionManagementSystem.Models.DTOs.Dashboard.VisitorTrafficPointDto> points)
     {
         TrafficData.Clear();
         
-        // Generate mock visitor flow profile by time of day
-        var points = new[]
-        {
-            new VisitorTrafficPoint { Label = "09:00", Value = Math.Round(totalVisitors * 0.05) },
-            new VisitorTrafficPoint { Label = "11:00", Value = Math.Round(totalVisitors * 0.20) },
-            new VisitorTrafficPoint { Label = "13:00", Value = Math.Round(totalVisitors * 0.15) },
-            new VisitorTrafficPoint { Label = "15:00", Value = Math.Round(totalVisitors * 0.25) },
-            new VisitorTrafficPoint { Label = "17:00", Value = Math.Round(totalVisitors * 0.20) },
-            new VisitorTrafficPoint { Label = "19:00", Value = Math.Round(totalVisitors * 0.10) },
-            new VisitorTrafficPoint { Label = "21:00", Value = Math.Round(totalVisitors * 0.05) }
-        };
-
         foreach (var p in points)
         {
-            TrafficData.Add(p);
+            TrafficData.Add(new VisitorTrafficPoint { Label = p.Label, Value = p.Value });
         }
 
         // Setup LiveCharts2 Area Chart

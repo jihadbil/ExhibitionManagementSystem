@@ -100,7 +100,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="مخطط تدفق حركة الزوار على مدار اليوم (توزيع افتراضي)" Style="{StaticResource H3Style}" Margin="0,0,0,16" Grid.Row="0"/>
+                    <TextBlock Text="عمليات الدخول المسجلة اليوم حسب الساعة (UTC)" Style="{StaticResource H3Style}" Margin="0,0,0,16" Grid.Row="0"/>
                     
                     <lvc:CartesianChart Grid.Row="1"
                                         Series="{Binding ChartSeries}"

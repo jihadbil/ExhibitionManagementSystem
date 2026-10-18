@@ -26,12 +26,10 @@
             <UniformGrid Rows="1" Columns="4" Margin="0,0,0,24">
                 <cards:StatCardControl Title="المعارض النشطة"
                     Value="{Binding ActiveExhibitions}"
-                    TrendText="+2 هذا الشهر" TrendIsPositive="True"
                     IconGeometry="{StaticResource IconExhibition}" Margin="0,0,12,0"
                     IconBackground="{StaticResource InfoLightBrush}"/>
                 <cards:StatCardControl Title="الأجنحة المحجوزة"
                     Value="{Binding OccupiedBooths}"
-                    TrendText="معدل ممتاز" TrendIsPositive="True"
                     IconGeometry="{StaticResource IconBooth}" Margin="6,0"
                     IconBackground="{StaticResource SuccessLightBrush}"/>
                 <cards:StatCardControl Title="الشركات العارضة"
@@ -41,7 +39,6 @@
                     IconBackground="{StaticResource WarningLightBrush}"/>
                 <cards:StatCardControl Title="الزوار المسجلين"
                     Value="{Binding TotalVisitors}"
-                    TrendText="نمو متزايد" TrendIsPositive="True"
                     IconGeometry="{StaticResource IconUsers}" Margin="12,0,0,0"
                     IconBackground="{StaticResource DangerLightBrush}"/>
             </UniformGrid>
@@ -55,9 +52,14 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Bar Chart -->
-                <Border Grid.Column="0" Style="{StaticResource StandardCardStyle}">
+                <Border Grid.Column="0">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource StandardCardStyle}">
+                            <Style.Triggers><DataTrigger Binding="{Binding CanViewFinancials}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <StackPanel>
-                        <TextBlock Text="إحصائيات الإيرادات الشهرية" Style="{StaticResource H3Style}"
+                        <TextBlock Text="{Binding CurrencyCode, StringFormat='إحصائيات الإيرادات الشهرية ({0})'}" Style="{StaticResource H3Style}"
                                    Margin="0,0,0,16"/>
                         <charts:BarChartControl Height="220"
                             SeriesData="{Binding MonthlyStats}"/>

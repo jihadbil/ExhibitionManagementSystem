@@ -10,4 +10,5 @@ public interface IDashboardService
     Task<ServiceResult<DashboardStatsDto>> GetStatsAsync();
     Task<ServiceResult<IList<RevenueChartPointDto>>> GetRevenueChartAsync(string period = "6m");
     Task<ServiceResult<IList<ActivityItemDto>>> GetRecentActivityAsync(int limit = 8);
+    Task<ServiceResult<IList<VisitorTrafficPointDto>>> GetVisitorTrafficAsync(int exhibitionId);
 }

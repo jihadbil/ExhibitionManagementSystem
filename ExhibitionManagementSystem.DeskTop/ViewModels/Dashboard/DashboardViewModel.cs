@@ -20,9 +20,7 @@ namespace ExhibitionManagementSystem.DeskTop.ViewModels.Dashboard
     public partial class DashboardViewModel : ViewModelBase
     {
         private readonly IExhibitionService _exhibitionService;
-        private readonly IFinancialService _financialService;
-        private readonly IVisitorService _visitorService;
-        private readonly IExhibitorService _exhibitorService;
+        private readonly IDashboardService _dashboardService;
         private readonly DispatcherTimer _clockTimer;
 
         // ━━━━━━━━━━━━━━ Stat Cards ━━━━━━━━━━━━━━
@@ -30,6 +28,8 @@ namespace ExhibitionManagementSystem.DeskTop.ViewModels.Dashboard
         [ObservableProperty] private int _occupiedBooths;
         [ObservableProperty] private int _totalExhibitors;
         [ObservableProperty] private int _totalVisitors;
+        [ObservableProperty] private bool _canViewFinancials;
+        [ObservableProperty] private string _currencyCode = string.Empty;
 
         // ━━━━━━━━━━━━━━ Clock ━━━━━━━━━━━━━━
         [ObservableProperty] private string _currentTime = string.Empty;
@@ -45,17 +45,13 @@ namespace ExhibitionManagementSystem.DeskTop.ViewModels.Dashboard
 
         public DashboardViewModel(
             IExhibitionService exhibitionService,
-            IFinancialService financialService,
-            IVisitorService visitorService,
-            IExhibitorService exhibitorService,
+            IDashboardService dashboardService,
             INavigationService navigationService,
             INotificationService notificationService,
             SessionService session) : base(navigationService, notificationService, session)
         {
             _exhibitionService = exhibitionService;
-            _financialService = financialService;
-            _visitorService = visitorService;
-            _exhibitorService = exhibitorService;
+            _dashboardService = dashboardService;
 
             // ساعة تُحدَّث كل 30 ثانية
             _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
@@ -71,20 +67,15 @@ namespace ExhibitionManagementSystem.DeskTop.ViewModels.Dashboard
             {
                 var tenantId = Session.TenantId;
 
-                // 1. Get active exhibitions count
-                var activeResult = await _exhibitionService.GetActiveAsync(tenantId);
-                ActiveExhibitions = activeResult.IsSuccess ? activeResult.Data?.Count ?? 0 : 0;
-
-                // 2. Get exhibitors count
-                var exhibResult = await _exhibitorService.GetByTenantAsync(tenantId, 1, 1);
-                TotalExhibitors = exhibResult.IsSuccess ? exhibResult.Data?.TotalCount ?? 0 : 0;
-
-                // 3. Get visitors count
-                var visitResult = await _visitorService.GetByTenantAsync(tenantId, 1, 1);
-                TotalVisitors = visitResult.IsSuccess ? visitResult.Data?.TotalCount ?? 0 : 0;
-
-                // TODO: تحتاج endpoint مخصص للأكشاك المحجوزة — مؤقتاً 0
-                OccupiedBooths = 0;
+                var stats = await _dashboardService.GetStatsAsync();
+                if (!stats.IsSuccess || stats.Data == null)
+                    throw new InvalidOperationException(stats.ErrorMessage ?? "تعذر تحميل المؤشرات");
+                ActiveExhibitions = stats.Data.ActiveExhibitions;
+                TotalExhibitors = stats.Data.TotalExhibitors;
+                TotalVisitors = stats.Data.TotalVisitors;
+                OccupiedBooths = stats.Data.OccupiedBooths;
+                CurrencyCode = stats.Data.CurrencyCode;
+                CanViewFinancials = stats.Data.CanViewFinancials;
 
                 // 4. Upcoming Exhibitions
                 var upcomingResult = await _exhibitionService.GetUpcomingAsync(tenantId, count: 10);
@@ -95,41 +86,25 @@ namespace ExhibitionManagementSystem.DeskTop.ViewModels.Dashboard
                         UpcomingExhibitions.Add(item);
                 }
 
-                // 5. Revenue Chart Data (last 6 months)
-                var startDate = DateTime.UtcNow.AddMonths(-6);
-                var invoicesResult = await _financialService.GetInvoicesByTenantAsync(tenantId, 1, 200);
-                var invoices = invoicesResult.IsSuccess && invoicesResult.Data?.Items is not null
-                    ? invoicesResult.Data.Items.Where(i => i.CreatedAt >= startDate).ToList()
-                    : new List<InvoiceDto>();
-
                 MonthlyStats.Clear();
-                for (int i = 5; i >= 0; i--)
+                if (CanViewFinancials)
                 {
-                    var monthDate = DateTime.UtcNow.AddMonths(-i);
-                    var label = monthDate.ToString("MMMM", new System.Globalization.CultureInfo("ar-SA"));
-
-                    var monthlyInvoices = invoices.Where(inv => inv.CreatedAt.Year == monthDate.Year && inv.CreatedAt.Month == monthDate.Month).ToList();
-
-                    double revenue = (double)monthlyInvoices.Sum(inv => inv.TotalAmount);
-                    double paid = (double)(monthlyInvoices.SelectMany(inv => inv.Payments).Where(p => p.Status == "Completed" || p.Status == "Paid").Sum(p => p.Amount) - monthlyInvoices.Sum(inv => inv.RefundedAmount));
-                    double pending = revenue - paid;
-                    if (pending < 0) pending = 0;
-
-                    MonthlyStats.Add(new RevenueChartPointDto
-                    {
-                        Label = label,
-                        Month = label,
-                        Revenue = revenue > 0 ? revenue : (i * 1500 + 3000), // Fallback values for visualization
-                        Paid = paid,
-                        Pending = pending
-                    });
+                    var chart = await _dashboardService.GetRevenueChartAsync("6m");
+                    if (!chart.IsSuccess || chart.Data == null)
+                        throw new InvalidOperationException(chart.ErrorMessage ?? "تعذر تحميل الإيرادات");
+                    foreach (var point in chart.Data) MonthlyStats.Add(point);
                 }
 
                 // 6. Type Distribution Chart Data
-                var exhResult = await _exhibitionService.GetByTenantAsync(tenantId, 1, 200);
-                var exhibitionsList = exhResult.IsSuccess && exhResult.Data?.Items is not null
-                    ? exhResult.Data.Items.ToList()
-                    : new List<ExhibitionSummaryDto>();
+                var exhibitionsList = new List<ExhibitionSummaryDto>();
+                for (var page = 1; ; page++)
+                {
+                    var exhResult = await _exhibitionService.GetByTenantAsync(tenantId, page, 200);
+                    if (!exhResult.IsSuccess || exhResult.Data == null)
+                        throw new InvalidOperationException(exhResult.ErrorMessage ?? "تعذر تحميل المعارض");
+                    exhibitionsList.AddRange(exhResult.Data.Items);
+                    if (page >= exhResult.Data.TotalPages) break;
+                }
 
                 var typeCounts = exhibitionsList
                     .GroupBy(e => e.Type)
@@ -149,14 +124,6 @@ namespace ExhibitionManagementSystem.DeskTop.ViewModels.Dashboard
                             Percentage = (tc.Count / total) * 100
                         });
                     }
-                }
-                else
-                {
-                    // Mock distribution for beautiful display on fresh DB
-                    TypeDistribution.Add(new ExhibitionTypeChartItem { Type = "تقنية", Count = 4, Percentage = 40 });
-                    TypeDistribution.Add(new ExhibitionTypeChartItem { Type = "طبية", Count = 3, Percentage = 30 });
-                    TypeDistribution.Add(new ExhibitionTypeChartItem { Type = "صناعية", Count = 2, Percentage = 20 });
-                    TypeDistribution.Add(new ExhibitionTypeChartItem { Type = "تجارية", Count = 1, Percentage = 10 });
                 }
 
                 Greeting = $"مرحباً، {Session.FullName}";
