@@ -5,6 +5,8 @@ namespace ExhibitionManagementSystem.Models.DTOs.Exhibition;
 
 public class ExhibitionUpdateDto
 {
+    public int? VenueID { get; set; }
+
     [Required]
     [StringLength(200)]
     public string Name { get; set; } = string.Empty;
@@ -18,8 +20,7 @@ public class ExhibitionUpdateDto
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
 
-    [Required]
-    public string Status { get; set; } = string.Empty;
+    public string Status { get; set; } = "Planning";
 
     public string Description { get; set; } = string.Empty;
     public int? ExpectedVisitors { get; set; }

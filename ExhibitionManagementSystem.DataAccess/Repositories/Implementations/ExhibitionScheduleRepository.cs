@@ -16,7 +16,8 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task<IReadOnlyList<ExhibitionSchedule>> GetByExhibitionAsync(int exhibitionId)
         {
-            return await FindAsync(s => s.ExhibitionID == exhibitionId);
+            return await _dbSet.AsNoTracking().Include(s => s.Hall)
+                .Where(s => s.ExhibitionID == exhibitionId).OrderBy(s => s.StartDateTime).ThenBy(s => s.ScheduleID).ToListAsync();
         }
 
         public async Task<IReadOnlyList<ExhibitionSchedule>> GetByHallAsync(int hallId)

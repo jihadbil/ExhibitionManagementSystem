@@ -17,7 +17,10 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task<IReadOnlyList<Exhibition>> GetByTenantAsync(int tenantId)
         {
-            return await FindAsync(e => e.TenantID == tenantId);
+            return await _dbSet.AsNoTracking()
+                .Include(e => e.Venue)
+                .Where(e => e.TenantID == tenantId)
+                .ToListAsync();
         }
 
         public async Task<IReadOnlyList<Exhibition>> GetByStatusAsync(int tenantId, ExhibitionStatus status)
@@ -36,14 +39,18 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         public async Task<IReadOnlyList<Exhibition>> GetActiveExhibitionsAsync(int tenantId)
         {
             // Active status includes Planning and Open
-            return await FindAsync(e => e.TenantID == tenantId && 
-                                        (e.Status == ExhibitionStatus.Planning || e.Status == ExhibitionStatus.Open));
+            return await _dbSet.AsNoTracking()
+                .Include(e => e.Venue)
+                .Where(e => e.TenantID == tenantId &&
+                            (e.Status == ExhibitionStatus.Planning || e.Status == ExhibitionStatus.Open))
+                .ToListAsync();
         }
 
         public async Task<IReadOnlyList<Exhibition>> GetUpcomingExhibitionsAsync(int tenantId, int count = 5)
         {
             var now = DateTime.UtcNow;
             return await _dbSet.AsNoTracking()
+                .Include(e => e.Venue)
                 .Where(e => e.TenantID == tenantId && e.StartDate > now)
                 .OrderBy(e => e.StartDate)
                 .Take(count)

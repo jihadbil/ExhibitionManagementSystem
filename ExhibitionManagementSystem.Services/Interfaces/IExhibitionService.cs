@@ -20,6 +20,7 @@ namespace ExhibitionManagementSystem.Services.Interfaces
         // Schedules
         Task<ServiceResult<IList<ExhibitionScheduleDto>>> GetSchedulesAsync(int tenantId, int exhibitionId);
         Task<ServiceResult<ExhibitionScheduleDto>> AddScheduleAsync(int tenantId, ExhibitionScheduleCreateDto dto);
+        Task<ServiceResult<ExhibitionScheduleDto>> UpdateScheduleAsync(int tenantId, int exhibitionId, int scheduleId, ExhibitionScheduleUpdateDto dto);
         Task<ServiceResult> RemoveScheduleAsync(int tenantId, int scheduleId);
     }
 }

@@ -110,7 +110,7 @@ public class ExhibitionsController : BaseApiController
     // POST /api/exhibitions/{exhibitionId}/schedules
     [HttpPost("{exhibitionId:int}/schedules")]
     [HttpPost("{exhibitionId:int}/schedule")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "EventManagement")]
     public async Task<ActionResult<ExhibitionScheduleDto>> AddSchedule(
         int exhibitionId,
         [FromBody] ExhibitionScheduleCreateDto dto)
@@ -120,9 +120,25 @@ public class ExhibitionsController : BaseApiController
         return ToActionResult(result);
     }
 
+    // PUT /api/exhibitions/{exhibitionId}/schedules/{scheduleId}
+    [HttpPut("{exhibitionId:int}/schedules/{scheduleId:int}")]
+    [Authorize(Policy = "EventManagement")]
+    public async Task<ActionResult<ExhibitionScheduleDto>> UpdateSchedule(
+        int exhibitionId,
+        int scheduleId,
+        [FromBody] ExhibitionScheduleUpdateDto dto)
+    {
+        var result = await _exhibitionService.UpdateScheduleAsync(
+            TenantId,
+            exhibitionId,
+            scheduleId,
+            dto);
+        return ToActionResult(result);
+    }
+
     // DELETE /api/exhibitions/schedules/{scheduleId}
     [HttpDelete("schedules/{scheduleId:int}")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "EventManagement")]
     public async Task<IActionResult> RemoveSchedule(int scheduleId)
     {
         var result = await _exhibitionService.RemoveScheduleAsync(TenantId, scheduleId);

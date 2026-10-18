@@ -36,8 +36,17 @@ public class ExhibitionMappingProfile : Profile
         CreateMap<ExhibitionUpdateDto, Models.Exhibition>()
             .ForMember(dest => dest.ExhibitionID, opt => opt.Ignore())
             .ForMember(dest => dest.TenantID, opt => opt.Ignore())
-            .ForMember(dest => dest.VenueID, opt => opt.Ignore())
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => Enum.Parse<ExhibitionStatus>(src.Status, true)))
+            .ForMember(dest => dest.VenueID, opt => opt.Condition(src => src.VenueID.HasValue && src.VenueID.Value > 0))
+            .ForMember(dest => dest.Edition, opt => opt.Condition(src => !string.IsNullOrWhiteSpace(src.Edition)))
+            .ForMember(dest => dest.ExpectedVisitors, opt => opt.Condition(src => src.ExpectedVisitors.HasValue))
+            .ForMember(dest => dest.EntryFee, opt => opt.Condition(src => src.EntryFee.HasValue))
+            .ForMember(dest => dest.EntryCurrency, opt => opt.Condition(src => !string.IsNullOrWhiteSpace(src.EntryCurrency)))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src =>
+                string.IsNullOrWhiteSpace(src.Status) ? ExhibitionStatus.Planning :
+                src.Status.Equals("Open", StringComparison.OrdinalIgnoreCase) || src.Status.Equals("Active", StringComparison.OrdinalIgnoreCase) ? ExhibitionStatus.Open :
+                src.Status.Equals("Closed", StringComparison.OrdinalIgnoreCase) || src.Status.Equals("Ended", StringComparison.OrdinalIgnoreCase) ? ExhibitionStatus.Closed :
+                src.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) || src.Status.Equals("Canceled", StringComparison.OrdinalIgnoreCase) ? ExhibitionStatus.Cancelled :
+                ExhibitionStatus.Planning))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
@@ -55,7 +64,7 @@ public class ExhibitionMappingProfile : Profile
 
         CreateMap<ExhibitionScheduleCreateDto, ExhibitionSchedule>()
             .ForMember(dest => dest.ScheduleID, opt => opt.Ignore())
-            .ForMember(dest => dest.EventType, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.EventType) ? (EventType?)Enum.Parse<EventType>(src.EventType, true) : null))
+            .ForMember(dest => dest.EventType, opt => opt.MapFrom(src => !string.IsNullOrWhiteSpace(src.EventType) ? (EventType?)Enum.Parse<EventType>(src.EventType, true) : null))
             .ForMember(dest => dest.Exhibition, opt => opt.Ignore())
             .ForMember(dest => dest.Hall, opt => opt.Ignore());
     }

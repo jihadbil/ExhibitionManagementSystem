@@ -11,4 +11,5 @@ public class ExhibitionSummaryDto
     public DateTime EndDate { get; set; }
     public string Status { get; set; } = string.Empty;
     public string VenueName { get; set; } = string.Empty;
+    public string EntryCurrency { get; set; } = string.Empty;
 }
