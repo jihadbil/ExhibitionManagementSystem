@@ -23,6 +23,8 @@ public class Payment : IAuditableEntity
     /// </summary>
     public int InvoiceID { get; set; }
 
+    [StringLength(100)] public string? IdempotencyKey { get; set; }
+
     /// <summary>
     /// تاريخ ووقت تسجيل الدفعة.
     /// </summary>

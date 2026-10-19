@@ -1,6 +1,7 @@
 using AutoMapper;
 using ExhibitionManagementSystem.Models;
 using ExhibitionManagementSystem.Models.DTOs.Sponsorship;
+using ExhibitionManagementSystem.Models.Enums;
 
 namespace ExhibitionManagementSystem.Models.DTOs.Mapping.Profiles;
 
@@ -15,7 +16,7 @@ public class SponsorshipMappingProfile : Profile
 
         CreateMap<SponsorshipPackage, SponsorshipPackageDto>()
             .ForMember(dest => dest.ExhibitionName, opt => opt.MapFrom(src => src.Exhibition.Name))
-            .ForMember(dest => dest.AllocatedSponsorsCount, opt => opt.MapFrom(src => src.Contracts.Count));
+            .ForMember(dest => dest.AllocatedSponsorsCount, opt => opt.MapFrom(src => src.Contracts.Count(c => c.Status != SponsorshipStatus.Cancelled)));
         CreateMap<SponsorshipPackageCreateDto, SponsorshipPackage>();
         CreateMap<SponsorshipPackageUpdateDto, SponsorshipPackage>();
 

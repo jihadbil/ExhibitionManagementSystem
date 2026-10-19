@@ -36,7 +36,7 @@ public class BadgeService : IBadgeService
             query = query.Where(t => t.ExhibitionID == exhibitionId.Value || t.ExhibitionID == null);
         }
 
-        var templates = await query.OrderBy(t => t.TargetParticipantType).ToListAsync();
+        var templates = await query.OrderBy(t => t.TargetParticipantType).ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
         var dtos = _mapper.Map<IList<BadgeTemplateDto>>(templates);
         return ServiceResult<IList<BadgeTemplateDto>>.Success(dtos);
     }
@@ -45,7 +45,7 @@ public class BadgeService : IBadgeService
     {
         var template = await _unitOfWork.BadgeTemplates.AsQueryable()
             .Include(t => t.Exhibition)
-            .FirstOrDefaultAsync(t => t.TemplateID == templateId && t.TenantID == tenantId);
+            .FirstOrDefaultAsync(t => t.TemplateID == templateId && t.TenantID == tenantId, cancellationToken: _unitOfWork.RequestCancellation);
 
         if (template == null)
         {
@@ -58,6 +58,9 @@ public class BadgeService : IBadgeService
 
     public async Task<ServiceResult<BadgeTemplateDto>> CreateTemplateAsync(int tenantId, BadgeTemplateCreateDto dto)
     {
+        if (dto.ExhibitionID.HasValue && !await _unitOfWork.Exhibitions.AsQueryable()
+            .AnyAsync(e => e.ExhibitionID == dto.ExhibitionID && e.TenantID == tenantId, cancellationToken: _unitOfWork.RequestCancellation))
+            return ServiceResult<BadgeTemplateDto>.Failure("المعرض غير موجود", "EXHIBITION_NOT_FOUND");
         if (dto.IsDefault)
         {
             // Reset existing defaults for this participant type in this tenant/exhibition
@@ -83,7 +86,7 @@ public class BadgeService : IBadgeService
 
         var fullTemplate = await _unitOfWork.BadgeTemplates.AsQueryable()
             .Include(t => t.Exhibition)
-            .FirstOrDefaultAsync(t => t.TemplateID == template.TemplateID);
+            .FirstOrDefaultAsync(t => t.TemplateID == template.TemplateID, cancellationToken: _unitOfWork.RequestCancellation);
 
         var resultDto = _mapper.Map<BadgeTemplateDto>(fullTemplate ?? template);
         return ServiceResult<BadgeTemplateDto>.Success(resultDto);
@@ -91,6 +94,9 @@ public class BadgeService : IBadgeService
 
     public async Task<ServiceResult<BadgeTemplateDto>> UpdateTemplateAsync(int tenantId, int templateId, BadgeTemplateUpdateDto dto)
     {
+        if (dto.ExhibitionID.HasValue && !await _unitOfWork.Exhibitions.AsQueryable()
+            .AnyAsync(e => e.ExhibitionID == dto.ExhibitionID && e.TenantID == tenantId, cancellationToken: _unitOfWork.RequestCancellation))
+            return ServiceResult<BadgeTemplateDto>.Failure("المعرض غير موجود", "EXHIBITION_NOT_FOUND");
         var template = await _unitOfWork.BadgeTemplates.GetByIdAsync(templateId);
         if (template == null || template.TenantID != tenantId)
         {
@@ -121,7 +127,7 @@ public class BadgeService : IBadgeService
 
         var fullTemplate = await _unitOfWork.BadgeTemplates.AsQueryable()
             .Include(t => t.Exhibition)
-            .FirstOrDefaultAsync(t => t.TemplateID == templateId);
+            .FirstOrDefaultAsync(t => t.TemplateID == templateId, cancellationToken: _unitOfWork.RequestCancellation);
 
         var resultDto = _mapper.Map<BadgeTemplateDto>(fullTemplate ?? template);
         return ServiceResult<BadgeTemplateDto>.Success(resultDto);
@@ -152,7 +158,7 @@ public class BadgeService : IBadgeService
             .Include(t => t.Visitor)
             .Include(t => t.Exhibition)
                 .ThenInclude(e => e.Venue)
-            .FirstOrDefaultAsync(t => t.QRCode == qrCode.Trim());
+            .FirstOrDefaultAsync(t => t.QRCode == qrCode.Trim(), cancellationToken: _unitOfWork.RequestCancellation);
 
         if (ticket != null && ticket.Visitor.TenantID == tenantId)
         {
@@ -169,7 +175,7 @@ public class BadgeService : IBadgeService
                     .Include(t => t.Exhibition)
                     .Where(t => t.VisitorID == visitorId)
                     .OrderByDescending(t => t.IssuedAt)
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
                 if (latestTicket != null)
                 {
@@ -191,7 +197,7 @@ public class BadgeService : IBadgeService
 
         var exhibition = await _unitOfWork.Exhibitions.AsQueryable()
             .Include(e => e.Venue)
-            .FirstOrDefaultAsync(e => e.ExhibitionID == exhibitionId && e.TenantID == tenantId);
+            .FirstOrDefaultAsync(e => e.ExhibitionID == exhibitionId && e.TenantID == tenantId, cancellationToken: _unitOfWork.RequestCancellation);
 
         if (exhibition == null)
         {
@@ -199,7 +205,7 @@ public class BadgeService : IBadgeService
         }
 
         var ticket = await _unitOfWork.Tickets.AsQueryable()
-            .FirstOrDefaultAsync(t => t.VisitorID == visitorId && t.ExhibitionID == exhibitionId);
+            .FirstOrDefaultAsync(t => t.VisitorID == visitorId && t.ExhibitionID == exhibitionId, cancellationToken: _unitOfWork.RequestCancellation);
 
         string qrCode = ticket?.QRCode ?? $"{exhibitionId}-{visitorId}-{Guid.NewGuid():N}";
         return await BuildVisitorBadgePayloadAsync(tenantId, visitor, exhibition, qrCode);
@@ -215,7 +221,7 @@ public class BadgeService : IBadgeService
             .Include(s => s.Reservation)
                 .ThenInclude(r => r.Booth)
                     .ThenInclude(b => b.Hall)
-            .FirstOrDefaultAsync(s => s.StaffID == staffId);
+            .FirstOrDefaultAsync(s => s.StaffID == staffId, cancellationToken: _unitOfWork.RequestCancellation);
 
         if (staff == null || staff.Reservation.Exhibitor.TenantID != tenantId)
         {

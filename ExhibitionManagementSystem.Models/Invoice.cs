@@ -13,6 +13,7 @@ namespace ExhibitionManagementSystem.Models;
 /// </summary>
 public class Invoice : IAuditableEntity, ISoftDeletable
 {
+    [Timestamp] public byte[] RowVersion { get; set; } = [];
     /// <summary>
     /// المعرف الفريد للفاتورة.
     /// </summary>

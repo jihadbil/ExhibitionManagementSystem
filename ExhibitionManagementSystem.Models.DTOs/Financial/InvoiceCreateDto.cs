@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using System.ComponentModel.DataAnnotations;
 
@@ -6,6 +7,7 @@ namespace ExhibitionManagementSystem.Models.DTOs.Financial;
 public class InvoiceCreateDto
 {
     public int TenantID { get; set; }
+    [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
     public int ReservationID { get; set; }
 
     [Required]
@@ -13,6 +15,7 @@ public class InvoiceCreateDto
     public string InvoiceNumber { get; set; } = string.Empty;
 
     public decimal SubTotal { get; set; }
+    [DecimalValue("0", "100")]
     public decimal TaxRate { get; set; }
     public decimal TotalAmount { get; set; }
 

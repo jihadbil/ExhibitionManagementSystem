@@ -44,7 +44,6 @@ public class VisitorsController : BaseApiController
 
     // POST /api/visitors/register
     [HttpPost("register")]
-    [AllowAnonymous]
     public async Task<ActionResult<VisitorDto>> Register(
         [FromBody] VisitorCreateDto dto)
     {

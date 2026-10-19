@@ -1,6 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using ExhibitionManagementSystem.Services.Interfaces;
 using ExhibitionManagementSystem.Services.Implementations;
+using ExhibitionManagementSystem.Services.Messaging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using ExhibitionManagementSystem.DataAccess.Repositories.Interfaces;
+using ExhibitionManagementSystem.DataAccess.Repositories.Implementations;
 
 namespace ExhibitionManagementSystem.Services.Extensions
 {
@@ -9,6 +13,7 @@ namespace ExhibitionManagementSystem.Services.Extensions
         public static IServiceCollection AddServiceLayer(this IServiceCollection services)
         {
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IUserRoleReader, UserRoleReader>();
             services.AddScoped<ITenantService, TenantService>();
             services.AddScoped<IVenueService, VenueService>();
             services.AddScoped<IHallService, HallService>();
@@ -28,6 +33,14 @@ namespace ExhibitionManagementSystem.Services.Extensions
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<IBadgeService, BadgeService>();
             services.AddScoped<ISponsorshipService, SponsorshipService>();
+            services.TryAddSingleton(TimeProvider.System);
+            services.AddOptions<PasswordResetOptions>().BindConfiguration("PasswordReset")
+                .Validate(o => o.IsValid(), "PasswordReset requires a valid SMTP sender, host, port and HTTPS reset URL.")
+                .ValidateOnStart();
+            services.AddScoped<IPasswordResetDelivery, PasswordResetDelivery>();
+            services.AddScoped<IPasswordResetEmailTransport, SmtpPasswordResetEmailTransport>();
+            services.AddScoped<PasswordResetDispatcher>();
+            services.AddHostedService<PasswordResetEmailWorker>();
 
             return services;
         }

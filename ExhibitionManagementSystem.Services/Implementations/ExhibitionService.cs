@@ -130,7 +130,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<ExhibitionDto>.Failure("المعرض غير موجود", "EXHIBITION_NOT_FOUND");
             }
 
-            if (!Enum.TryParse<ExhibitionStatus>(status, true, out var newStatus))
+            if (!Enum.TryParse<ExhibitionStatus>(status, true, out var newStatus) || !Enum.IsDefined(newStatus))
             {
                 return ServiceResult<ExhibitionDto>.Failure("حالة المعرض غير صالحة", "INVALID_STATUS");
             }
@@ -212,7 +212,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
         {
             var schedule = await _unitOfWork.ExhibitionSchedules.AsQueryable()
                 .Include(s => s.Exhibition)
-                .FirstOrDefaultAsync(s => s.ScheduleID == scheduleId);
+                .FirstOrDefaultAsync(s => s.ScheduleID == scheduleId, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (schedule == null || schedule.Exhibition == null || schedule.Exhibition.TenantID != tenantId)
             {

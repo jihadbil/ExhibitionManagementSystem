@@ -70,12 +70,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<ExchangeRateDto>> UpsertExchangeRateAsync(string userId, ExchangeRateDto dto)
         {
+            if (dto.Rate <= 0 || string.Equals(dto.FromCurrency, dto.ToCurrency, StringComparison.OrdinalIgnoreCase))
+                return ServiceResult<ExchangeRateDto>.Failure("سعر الصرف يجب أن يكون موجبًا وبين عملتين مختلفتين", "INVALID_EXCHANGE_RATE");
             var targetDate = dto.RateDate == default ? DateTime.UtcNow.Date : dto.RateDate.Date;
             
             var existing = await _unitOfWork.ExchangeRates.FirstOrDefaultAsync(
                 r => r.FromCurrency == dto.FromCurrency && 
                      r.ToCurrency == dto.ToCurrency && 
-                     r.RateDate == targetDate);
+                     r.RateDate == targetDate, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (existing != null)
             {

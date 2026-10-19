@@ -43,12 +43,12 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(r => r.Exhibition)
                 .Where(r => r.ExhibitionID == exhibitionId);
 
-            var totalCount = await query.CountAsync();
+            var totalCount = await query.CountAsync(cancellationToken: _unitOfWork.RequestCancellation);
             var items = await query
                 .OrderByDescending(r => r.ReservationDate)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<BoothReservationSummaryDto>>(items);
             var result = new PagedResultDto<BoothReservationSummaryDto>
@@ -75,7 +75,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(r => r.Booth)
                 .Include(r => r.Exhibition)
                 .Where(r => r.ExhibitorID == exhibitorId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<BoothReservationSummaryDto>>(items);
             return ServiceResult<IList<BoothReservationSummaryDto>>.Success(dtos);
@@ -90,7 +90,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(r => r.Currency)
                 .Include(r => r.ReservationServices)
                     .ThenInclude(rs => rs.Service)
-                .FirstOrDefaultAsync(r => r.ReservationID == reservationId);
+                .FirstOrDefaultAsync(r => r.ReservationID == reservationId, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (reservation == null || reservation.Exhibitor.TenantID != tenantId)
             {
@@ -154,17 +154,17 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 }
             }
 
-            if (!Enum.TryParse<BoothType>(dto.BoothTypeSelected, true, out var boothType))
+            if (!Enum.TryParse<BoothType>(dto.BoothTypeSelected, true, out var boothType) || !Enum.IsDefined(boothType))
             {
                 return ServiceResult<BoothReservationDto>.Failure("نوع الكشك غير صالح", "INVALID_BOOTH_TYPE");
             }
 
-            if (!Enum.TryParse<ExhibitorCategory>(dto.ExhibitorCategory, true, out var exhibitorCategory))
+            if (!Enum.TryParse<ExhibitorCategory>(dto.ExhibitorCategory, true, out var exhibitorCategory) || !Enum.IsDefined(exhibitorCategory))
             {
                 return ServiceResult<BoothReservationDto>.Failure("فئة العارض غير صالحة", "INVALID_EXHIBITOR_CATEGORY");
             }
 
-            var priceResult = await _pricingService.CalculateBoothPriceAsync(tenantId, dto.ExhibitionID, boothType, exhibitorCategory, dto.RequestedAreaSqM, dto.BoothID);
+            var priceResult = await _pricingService.CalculateBoothPriceAsync(tenantId, dto.ExhibitionID, boothType, exhibitorCategory, dto.RequestedAreaSqM, dto.BoothID, dto.CurrencyCode);
             if (!priceResult.IsSuccess)
             {
                 return ServiceResult<BoothReservationDto>.Failure(priceResult.ErrorMessage ?? "فشل حساب سعر الكشك", priceResult.ErrorCode ?? "PRICING_ERROR");
@@ -248,15 +248,15 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     .Include(r => r.Booth)
                     .Include(r => r.Exhibition)
                     .Include(r => r.Currency)
-                    .FirstOrDefaultAsync(r => r.ReservationID == reservation.ReservationID);
+                    .FirstOrDefaultAsync(r => r.ReservationID == reservation.ReservationID, cancellationToken: _unitOfWork.RequestCancellation);
 
                 var resultDto = _mapper.Map<BoothReservationDto>(fullReservation ?? reservation);
                 return ServiceResult<BoothReservationDto>.Success(resultDto);
             }
-            catch (Exception ex)
+            catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<BoothReservationDto>.Failure($"فشل إنشاء الحجز: {ex.Message}", "RESERVATION_CREATION_FAILED");
+                throw;
             }
         }
 
@@ -266,17 +266,27 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(r => r.Exhibitor)
                 .Include(r => r.Booth)
                 .Include(r => r.ReservationServices)
-                .FirstOrDefaultAsync(r => r.ReservationID == id);
+                .FirstOrDefaultAsync(r => r.ReservationID == id, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (reservation == null || reservation.Exhibitor.TenantID != tenantId)
             {
                 return ServiceResult<BoothReservationDto>.Failure("الحجز غير موجود", "RESERVATION_NOT_FOUND");
             }
 
-            if (!Enum.TryParse<ReservationStatus>(dto.Status, true, out var newStatus))
+            if (!Enum.TryParse<ReservationStatus>(dto.Status, true, out var newStatus) || !Enum.IsDefined(newStatus))
             {
                 return ServiceResult<BoothReservationDto>.Failure("حالة الحجز غير صالحة", "INVALID_RESERVATION_STATUS");
             }
+
+            // Reallocation/repricing requires a new booking; a general update
+            // cannot silently move the financial document to another resource.
+            if (dto.BoothID != reservation.BoothID || dto.MergeID != reservation.MergeID)
+                return ServiceResult<BoothReservationDto>.Failure("لتغيير الجناح، ألغِ الحجز غير المسدد وأنشئ حجزًا جديدًا", "RESERVATION_RESOURCE_IMMUTABLE");
+            if ((reservation.Status == ReservationStatus.Cancelled && newStatus != ReservationStatus.Cancelled)
+                || (reservation.Status == ReservationStatus.Confirmed && newStatus == ReservationStatus.Pending))
+                return ServiceResult<BoothReservationDto>.Failure("انتقال حالة الحجز غير مسموح", "INVALID_RESERVATION_TRANSITION");
+            if (newStatus == ReservationStatus.Cancelled && await HasCompletedPaymentsAsync(id))
+                return ServiceResult<BoothReservationDto>.Failure("تجب تسوية الدفعات قبل إلغاء الحجز", "RESERVATION_HAS_PAYMENTS");
 
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -317,7 +327,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
                     // تحديث حالة الفاتورة المقابلة بناءً على حالة الحجز الجديدة
                     var invoice = await _unitOfWork.Invoices.AsQueryable()
-                        .FirstOrDefaultAsync(i => i.ReservationID == id);
+                        .FirstOrDefaultAsync(i => i.ReservationID == id, cancellationToken: _unitOfWork.RequestCancellation);
                     if (invoice != null)
                     {
                         if (newStatus == ReservationStatus.Cancelled)
@@ -364,10 +374,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
                 return await GetByIdAsync(tenantId, id);
             }
-            catch (Exception ex)
+            catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<BoothReservationDto>.Failure($"فشل تحديث الحجز: {ex.Message}", "RESERVATION_UPDATE_FAILED");
+                throw;
             }
         }
 
@@ -375,7 +385,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
         {
             var reservation = await _unitOfWork.BoothReservations.AsQueryable()
                 .Include(r => r.Exhibitor)
-                .FirstOrDefaultAsync(r => r.ReservationID == id);
+                .FirstOrDefaultAsync(r => r.ReservationID == id, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (reservation == null || reservation.Exhibitor.TenantID != tenantId)
             {
@@ -386,6 +396,9 @@ namespace ExhibitionManagementSystem.Services.Implementations
             {
                 return ServiceResult.Success();
             }
+
+            if (await HasCompletedPaymentsAsync(id))
+                return ServiceResult.Failure("تجب تسوية الدفعات قبل إلغاء الحجز", "RESERVATION_HAS_PAYMENTS");
 
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -406,7 +419,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
                 // إلغاء الفاتورة المرافقة للحجز تلقائياً
                 var invoice = await _unitOfWork.Invoices.AsQueryable()
-                    .FirstOrDefaultAsync(i => i.ReservationID == id);
+                    .FirstOrDefaultAsync(i => i.ReservationID == id, cancellationToken: _unitOfWork.RequestCancellation);
                 if (invoice != null)
                 {
                     invoice.Status = InvoiceStatus.Cancelled;
@@ -417,10 +430,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 await _unitOfWork.CommitTransactionAsync();
                 return ServiceResult.Success();
             }
-            catch (Exception ex)
+            catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult.Failure($"فشل إلغاء الحجز: {ex.Message}", "CANCEL_FAILED");
+                throw;
             }
         }
 
@@ -428,7 +441,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
         {
             var reservation = await _unitOfWork.BoothReservations.AsQueryable()
                 .Include(r => r.Exhibitor)
-                .FirstOrDefaultAsync(r => r.ReservationID == id);
+                .FirstOrDefaultAsync(r => r.ReservationID == id, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (reservation == null || reservation.Exhibitor.TenantID != tenantId)
             {
@@ -439,6 +452,9 @@ namespace ExhibitionManagementSystem.Services.Implementations
             {
                 return await GetByIdAsync(tenantId, id);
             }
+
+            if (reservation.Status != ReservationStatus.Pending)
+                return ServiceResult<BoothReservationDto>.Failure("لا يمكن اعتماد حجز ملغى", "INVALID_RESERVATION_TRANSITION");
 
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -459,7 +475,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
                 // تحويل الفاتورة المبدئية إلى فاتورة صادرة مستحقة
                 var invoice = await _unitOfWork.Invoices.AsQueryable()
-                    .FirstOrDefaultAsync(i => i.ReservationID == id);
+                    .FirstOrDefaultAsync(i => i.ReservationID == id, cancellationToken: _unitOfWork.RequestCancellation);
                 if (invoice != null && invoice.Status == InvoiceStatus.Draft)
                 {
                     invoice.Status = InvoiceStatus.Issued;
@@ -470,10 +486,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 await _unitOfWork.CommitTransactionAsync();
                 return await GetByIdAsync(tenantId, id);
             }
-            catch (Exception ex)
+            catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<BoothReservationDto>.Failure($"فشل تأكيد الحجز: {ex.Message}", "APPROVE_FAILED");
+                throw;
             }
         }
 
@@ -482,12 +498,15 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var reservation = await _unitOfWork.BoothReservations.AsQueryable()
                 .Include(r => r.Exhibitor)
                 .Include(r => r.ReservationServices)
-                .FirstOrDefaultAsync(r => r.ReservationID == reservationId);
+                .FirstOrDefaultAsync(r => r.ReservationID == reservationId, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (reservation == null || reservation.Exhibitor.TenantID != tenantId)
             {
                 return ServiceResult<ReservationServiceDto>.Failure("الحجز غير موجود", "RESERVATION_NOT_FOUND");
             }
+
+            if (!await CanEditInvoiceAsync(reservationId))
+                return ServiceResult<ReservationServiceDto>.Failure("الفاتورة المسددة أو الملغاة غير قابلة للتعديل", "INVOICE_LOCKED");
 
             var service = await _unitOfWork.Services.GetByIdAsync(dto.ServiceID);
             if (service == null || service.TenantID != tenantId)
@@ -495,7 +514,11 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<ReservationServiceDto>.Failure("الخدمة غير موجودة", "SERVICE_NOT_FOUND");
             }
 
-            var servicePriceResult = await _pricingService.CalculateServicePriceAsync(tenantId, dto.ServiceID, reservation.ExhibitionID, (int)dto.Quantity);
+            if (!string.Equals(dto.CurrencyCode, reservation.CurrencyCode, StringComparison.OrdinalIgnoreCase))
+                return ServiceResult<ReservationServiceDto>.Failure("عملة الخدمة يجب أن تطابق الحجز", "SERVICE_CURRENCY_MISMATCH");
+            if (reservation.Status == ReservationStatus.Cancelled)
+                return ServiceResult<ReservationServiceDto>.Failure("لا يمكن تعديل حجز ملغى", "RESERVATION_CANCELLED");
+            var servicePriceResult = await _pricingService.CalculateServicePriceAsync(tenantId, dto.ServiceID, reservation.ExhibitionID, dto.Quantity, reservation.CurrencyCode);
             if (!servicePriceResult.IsSuccess)
             {
                 return ServiceResult<ReservationServiceDto>.Failure(servicePriceResult.ErrorMessage ?? "فشل حساب سعر الخدمة", servicePriceResult.ErrorCode ?? "PRICING_ERROR");
@@ -528,7 +551,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 // إضافة البند المقابل للخدمة المضافة حديثاً في الفاتورة وإعادة احتساب القيم
                 var invoice = await _unitOfWork.Invoices.AsQueryable()
                     .Include(i => i.InvoiceItems)
-                    .FirstOrDefaultAsync(i => i.ReservationID == reservationId);
+                    .FirstOrDefaultAsync(i => i.ReservationID == reservationId, cancellationToken: _unitOfWork.RequestCancellation);
                 if (invoice != null)
                 {
                     var invoiceItem = new InvoiceItem
@@ -542,7 +565,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     invoice.InvoiceItems.Add(invoiceItem);
 
                     invoice.SubTotal = invoice.InvoiceItems.Sum(item => item.TotalPrice);
-                    invoice.TaxAmount = invoice.SubTotal * (invoice.TaxRate / 100);
+                    invoice.TaxAmount = decimal.Round(invoice.SubTotal * invoice.TaxRate / 100, 2, MidpointRounding.AwayFromZero);
                     invoice.TotalAmount = invoice.SubTotal + invoice.TaxAmount;
                     _unitOfWork.Invoices.Update(invoice);
                 }
@@ -554,10 +577,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 mappedDto.ServiceName = service.ServiceName; // Populate navigation field manually if Mapper didn't
                 return ServiceResult<ReservationServiceDto>.Success(mappedDto);
             }
-            catch (Exception ex)
+            catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<ReservationServiceDto>.Failure($"فشل إضافة الخدمة للحجز: {ex.Message}", "ADD_SERVICE_FAILED");
+                throw;
             }
         }
 
@@ -566,12 +589,15 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var reservation = await _unitOfWork.BoothReservations.AsQueryable()
                 .Include(r => r.Exhibitor)
                 .Include(r => r.ReservationServices)
-                .FirstOrDefaultAsync(r => r.ReservationID == reservationId);
+                .FirstOrDefaultAsync(r => r.ReservationID == reservationId, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (reservation == null || reservation.Exhibitor.TenantID != tenantId)
             {
                 return ServiceResult.Failure("الحجز غير موجود", "RESERVATION_NOT_FOUND");
             }
+
+            if (reservation.Status == ReservationStatus.Cancelled || !await CanEditInvoiceAsync(reservationId))
+                return ServiceResult.Failure("الحجز أو الفاتورة غير قابل للتعديل", "INVOICE_LOCKED");
 
             var resService = reservation.ReservationServices.FirstOrDefault(rs => rs.ReservationServiceID == rsId);
             if (resService == null)
@@ -588,6 +614,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 reservation.UpdatedAt = DateTime.UtcNow;
 
                 reservation.ReservationServices.Remove(resService);
+                _unitOfWork.ReservationServices.Remove(resService);
                 _unitOfWork.BoothReservations.Update(reservation);
 
                 // إزالة بند الفاتورة المقابل للخدمة المحذوفة وإعادة احتساب قيم الفاتورة
@@ -596,7 +623,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 
                 var invoice = await _unitOfWork.Invoices.AsQueryable()
                     .Include(i => i.InvoiceItems)
-                    .FirstOrDefaultAsync(i => i.ReservationID == reservationId);
+                    .FirstOrDefaultAsync(i => i.ReservationID == reservationId, cancellationToken: _unitOfWork.RequestCancellation);
                 if (invoice != null && serviceName != null)
                 {
                     var invoiceItem = invoice.InvoiceItems.FirstOrDefault(item => 
@@ -607,9 +634,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     if (invoiceItem != null)
                     {
                         invoice.InvoiceItems.Remove(invoiceItem);
+                        _unitOfWork.InvoiceItems.Remove(invoiceItem);
 
                         invoice.SubTotal = invoice.InvoiceItems.Sum(item => item.TotalPrice);
-                        invoice.TaxAmount = invoice.SubTotal * (invoice.TaxRate / 100);
+                        invoice.TaxAmount = decimal.Round(invoice.SubTotal * invoice.TaxRate / 100, 2, MidpointRounding.AwayFromZero);
                         invoice.TotalAmount = invoice.SubTotal + invoice.TaxAmount;
                         _unitOfWork.Invoices.Update(invoice);
                     }
@@ -620,10 +648,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
                 return ServiceResult.Success();
             }
-            catch (Exception ex)
+            catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult.Failure($"فشل حذف الخدمة من الحجز: {ex.Message}", "REMOVE_SERVICE_FAILED");
+                throw;
             }
         }
 
@@ -639,5 +667,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var dtos = _mapper.Map<IList<BoothReservationSummaryDto>>(unpaidList);
             return ServiceResult<IList<BoothReservationSummaryDto>>.Success(dtos);
         }
+
+        private Task<bool> HasCompletedPaymentsAsync(int reservationId) =>
+            _unitOfWork.Payments.AsQueryable().AnyAsync(p => p.Invoice.ReservationID == reservationId
+                && p.Status == PaymentStatus.Completed, cancellationToken: _unitOfWork.RequestCancellation);
+
+        private async Task<bool> CanEditInvoiceAsync(int reservationId) =>
+            !await _unitOfWork.Invoices.AsQueryable().AnyAsync(i => i.ReservationID == reservationId
+                && (i.Status == InvoiceStatus.Paid || i.Status == InvoiceStatus.PartiallyPaid
+                    || i.Status == InvoiceStatus.Cancelled || i.Payments.Any(p => p.Status == PaymentStatus.Completed)), cancellationToken: _unitOfWork.RequestCancellation);
     }
 }

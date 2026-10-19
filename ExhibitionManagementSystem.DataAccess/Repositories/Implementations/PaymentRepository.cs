@@ -24,7 +24,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             return await _dbSet.AsNoTracking()
                 .Where(p => p.InvoiceID == invoiceId && p.Status == PaymentStatus.Completed)
-                .SumAsync(p => (decimal?)p.Amount) ?? 0m;
+                .SumAsync(p => (decimal?)p.Amount, cancellationToken: _context.RequestCancellation) ?? 0m;
         }
 
         public async Task<IReadOnlyList<Payment>> GetByDateRangeAsync(int tenantId, DateTime from, DateTime to)
@@ -32,7 +32,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return await _dbSet.AsNoTracking()
                 .Include(p => p.Invoice)
                 .Where(p => p.Invoice.TenantID == tenantId && p.PaymentDate >= from && p.PaymentDate <= to)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _context.RequestCancellation);
         }
     }
 }

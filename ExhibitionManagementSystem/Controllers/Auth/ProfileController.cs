@@ -57,12 +57,12 @@ public class ProfileController : BaseApiController
             .Include(a => a.User)
             .Where(a => a.TenantID == tenantId && a.UserId == userId);
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(cancellationToken: _unitOfWork.RequestCancellation);
         var items = await query
             .OrderByDescending(a => a.ActionAt)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
         var dtos = _mapper.Map<IList<AuditLogDto>>(items);
 

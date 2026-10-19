@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using System.Linq;
 using AutoMapper;
@@ -18,8 +19,8 @@ public class PricingMappingProfile : Profile
 
         CreateMap<BoothPriceRuleCreateDto, BoothPriceRule>()
             .ForMember(dest => dest.RuleID, opt => opt.Ignore())
-            .ForMember(dest => dest.BoothType, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.BoothType) ? (BoothType?)Enum.Parse<BoothType>(src.BoothType, true) : null))
-            .ForMember(dest => dest.ExhibitorCategory, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.ExhibitorCategory) ? (ExhibitorCategory?)Enum.Parse<ExhibitorCategory>(src.ExhibitorCategory, true) : null))
+            .ForMember(dest => dest.BoothType, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.BoothType) ? (BoothType?)EnumValues.Parse<BoothType>(src.BoothType, true) : null))
+            .ForMember(dest => dest.ExhibitorCategory, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.ExhibitorCategory) ? (ExhibitorCategory?)EnumValues.Parse<ExhibitorCategory>(src.ExhibitorCategory, true) : null))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
@@ -38,7 +39,7 @@ public class PricingMappingProfile : Profile
 
         CreateMap<ServicePriceRuleCreateDto, ServicePriceRule>()
             .ForMember(dest => dest.PriceRuleID, opt => opt.Ignore())
-            .ForMember(dest => dest.ExhibitorCategory, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.ExhibitorCategory) ? (ExhibitorCategory?)Enum.Parse<ExhibitorCategory>(src.ExhibitorCategory, true) : null))
+            .ForMember(dest => dest.ExhibitorCategory, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.ExhibitorCategory) ? (ExhibitorCategory?)EnumValues.Parse<ExhibitorCategory>(src.ExhibitorCategory, true) : null))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())

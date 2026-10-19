@@ -18,7 +18,7 @@ public class SponsorAdAssignmentRepository : GenericRepository<SponsorAdAssignme
         return await _dbSet
             .Include(a => a.Space)
             .Where(a => a.ContractID == contractId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: _context.RequestCancellation);
     }
 
     public async Task<IReadOnlyList<SponsorAdAssignment>> GetAssignmentsBySpaceAsync(int spaceId)
@@ -27,6 +27,6 @@ public class SponsorAdAssignmentRepository : GenericRepository<SponsorAdAssignme
             .Include(a => a.Contract)
                 .ThenInclude(c => c.Sponsor)
             .Where(a => a.SpaceID == spaceId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: _context.RequestCancellation);
     }
 }

@@ -35,7 +35,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var booths = await _unitOfWork.Booths.AsQueryable()
                 .Include(b => b.Hall)
                 .Where(b => b.HallID == hallId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
             var dtos = _mapper.Map<IList<BoothDto>>(booths);
             return ServiceResult<IList<BoothDto>>.Success(dtos);
         }
@@ -83,6 +83,9 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<BoothDto>> CreateAsync(int tenantId, BoothCreateDto dto)
         {
+            if (dto.AssignedPriceRuleID.HasValue && !await _unitOfWork.BoothPriceRules.AsQueryable()
+                .AnyAsync(r => r.RuleID == dto.AssignedPriceRuleID && r.TenantID == tenantId, cancellationToken: _unitOfWork.RequestCancellation))
+                return ServiceResult<BoothDto>.Failure("قاعدة التسعير غير موجودة", "PRICING_RULE_NOT_FOUND");
             var hall = await _unitOfWork.Halls.GetByIdWithIncludesAsync(dto.HallID, h => h.Venue);
             if (hall == null || hall.Venue == null || hall.Venue.TenantID != tenantId)
             {
@@ -100,6 +103,9 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<BoothDto>> UpdateAsync(int tenantId, int boothId, BoothUpdateDto dto)
         {
+            if (dto.AssignedPriceRuleID.HasValue && !await _unitOfWork.BoothPriceRules.AsQueryable()
+                .AnyAsync(r => r.RuleID == dto.AssignedPriceRuleID && r.TenantID == tenantId, cancellationToken: _unitOfWork.RequestCancellation))
+                return ServiceResult<BoothDto>.Failure("قاعدة التسعير غير موجودة", "PRICING_RULE_NOT_FOUND");
             var booth = await _unitOfWork.Booths.GetByIdWithIncludesAsync(boothId, b => b.Hall, b => b.Hall.Venue);
             if (booth == null || booth.Hall == null || booth.Hall.Venue == null || booth.Hall.Venue.TenantID != tenantId)
             {
@@ -197,22 +203,23 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     .Include(m => m.MergeItems)
                         .ThenInclude(mi => mi.Booth)
                             .ThenInclude(b => b.Hall)
-                    .FirstOrDefaultAsync(m => m.MergeID == boothMerge.MergeID);
+                    .FirstOrDefaultAsync(m => m.MergeID == boothMerge.MergeID, cancellationToken: _unitOfWork.RequestCancellation);
 
                 var resultDto = _mapper.Map<BoothMergeDto>(fullMerge ?? boothMerge);
                 return ServiceResult<BoothMergeDto>.Success(resultDto);
             }
-            catch (Exception ex)
+            catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<BoothMergeDto>.Failure($"فشل دمج الأكشاك: {ex.Message}", "MERGE_FAILED");
+                throw;
             }
         }
 
         public async Task<ServiceResult> UnmergeBoothsAsync(int tenantId, int mergeId)
         {
             var merge = await _unitOfWork.BoothMerges.GetByIdWithIncludesAsync(mergeId, m => m.MergeItems);
-            if (merge == null)
+            var exhibition = merge == null ? null : await _unitOfWork.Exhibitions.GetByIdAsync(merge.ExhibitionID);
+            if (merge == null || exhibition == null || exhibition.TenantID != tenantId)
             {
                 return ServiceResult.Failure("عملية الدمج غير موجودة", "MERGE_NOT_FOUND");
             }
@@ -235,16 +242,17 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     _unitOfWork.Booths.Update(b);
                 }
 
+                _unitOfWork.BoothMergeItems.RemoveRange(merge.MergeItems.ToList());
                 _unitOfWork.BoothMerges.Remove(merge);
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 return ServiceResult.Success();
             }
-            catch (Exception ex)
+            catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult.Failure($"فشل فك دمج الأكشاك: {ex.Message}", "UNMERGE_FAILED");
+                throw;
             }
         }
 

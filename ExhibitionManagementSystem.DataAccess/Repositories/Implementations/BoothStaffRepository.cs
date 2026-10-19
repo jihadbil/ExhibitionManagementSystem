@@ -23,7 +23,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return await _dbSet.AsNoTracking()
                 .Include(s => s.Reservation)
                 .Where(s => s.Reservation.ExhibitorID == exhibitorId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _context.RequestCancellation);
         }
     }
 }

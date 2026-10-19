@@ -19,15 +19,15 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return await _dbSet.AsNoTracking()
                 .Where(r => r.FromCurrency == from && r.ToCurrency == to && r.RateDate <= targetDate)
                 .OrderByDescending(r => r.RateDate)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<ExchangeRate?> GetLatestRateAsync(string from, string to)
         {
             return await _dbSet.AsNoTracking()
-                .Where(r => r.FromCurrency == from && r.ToCurrency == to)
+                .Where(r => r.FromCurrency == from && r.ToCurrency == to && r.RateDate <= DateTime.UtcNow.Date && r.Rate > 0)
                 .OrderByDescending(r => r.RateDate)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<decimal?> ConvertAsync(string from, string to, decimal amount, DateTime? date = null)

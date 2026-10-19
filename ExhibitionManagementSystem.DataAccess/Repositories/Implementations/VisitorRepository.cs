@@ -32,20 +32,20 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
             {
-                return await FindAsync(v => v.TenantID == tenantId);
+                return [];
             }
 
-            return await FindAsync(v => v.TenantID == tenantId && 
-                                        (v.FullName.Contains(searchTerm) || 
-                                         v.Email.Contains(searchTerm) || 
-                                         v.Phone.Contains(searchTerm)));
+            return await _dbSet.AsNoTracking().Where(v => v.TenantID == tenantId &&
+                                        (v.FullName.Contains(searchTerm) ||
+                                         v.Email.Contains(searchTerm) ||
+                                         v.Phone.Contains(searchTerm))).OrderBy(v => v.FullName).ThenBy(v => v.VisitorID).Take(100).ToListAsync(cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<Visitor?> GetWithTicketsAsync(int visitorId)
         {
             return await _dbSet.AsNoTracking()
                 .Include(v => v.Tickets)
-                .FirstOrDefaultAsync(v => v.VisitorID == visitorId);
+                .FirstOrDefaultAsync(v => v.VisitorID == visitorId, cancellationToken: _context.RequestCancellation);
         }
     }
 }

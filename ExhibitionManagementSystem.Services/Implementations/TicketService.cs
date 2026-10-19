@@ -59,7 +59,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(t => t.Exhibition)
                 .Include(t => t.Currency)
                 .Include(t => t.TicketScans)
-                .FirstOrDefaultAsync(t => t.TicketID == ticket.TicketID);
+                .FirstOrDefaultAsync(t => t.TicketID == ticket.TicketID, cancellationToken: _unitOfWork.RequestCancellation);
 
             var resultDto = _mapper.Map<TicketDto>(fullTicket ?? ticket);
             return ServiceResult<TicketDto>.Success(resultDto);
@@ -79,7 +79,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(t => t.Currency)
                 .Include(t => t.TicketScans)
                 .Where(t => t.VisitorID == visitorId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<TicketDto>>(tickets);
             return ServiceResult<IList<TicketDto>>.Success(dtos);
@@ -99,7 +99,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(t => t.Currency)
                 .Include(t => t.TicketScans)
                 .Where(t => t.ExhibitionID == exhibitionId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<TicketDto>>(tickets);
             return ServiceResult<IList<TicketDto>>.Success(dtos);
@@ -111,7 +111,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(t => t.Visitor)
                 .Include(t => t.Exhibition)
                 .Include(t => t.TicketScans)
-                .FirstOrDefaultAsync(t => t.QRCode == qrCode);
+                .FirstOrDefaultAsync(t => t.QRCode == qrCode, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (ticket == null || ticket.Visitor.TenantID != tenantId)
             {
@@ -122,6 +122,9 @@ namespace ExhibitionManagementSystem.Services.Implementations
             {
                 return ServiceResult<TicketScanDto>.Failure("التذكرة ملغاة أو غير صالحة حالياً", "TICKET_NOT_VALID");
             }
+
+            if (ticket.ValidDate.HasValue && ticket.ValidDate.Value.Date > DateTime.UtcNow.Date)
+                return ServiceResult<TicketScanDto>.Failure("التذكرة غير صالحة لهذا اليوم", "TICKET_NOT_YET_VALID");
 
             if (ticket.ValidDate.HasValue && ticket.ValidDate.Value.Date < DateTime.UtcNow.Date)
             {
@@ -140,7 +143,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<TicketScanDto>.Failure("التذكرة منتهية الصلاحية", "TICKET_EXPIRED");
             }
 
-            if (!Enum.TryParse<ScanDirection>(direction, true, out var scanDirection))
+            if (!Enum.TryParse<ScanDirection>(direction, true, out var scanDirection) || !Enum.IsDefined(scanDirection))
             {
                 return ServiceResult<TicketScanDto>.Failure("اتجاه المسح غير صالح", "INVALID_SCAN_DIRECTION");
             }
@@ -169,15 +172,15 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
                 var fullScan = await _unitOfWork.TicketScans.AsQueryable()
                     .Include(s => s.Ticket)
-                    .FirstOrDefaultAsync(s => s.ScanID == scan.ScanID);
+                    .FirstOrDefaultAsync(s => s.ScanID == scan.ScanID, cancellationToken: _unitOfWork.RequestCancellation);
 
                 var resultDto = _mapper.Map<TicketScanDto>(fullScan ?? scan);
                 return ServiceResult<TicketScanDto>.Success(resultDto);
             }
-            catch (Exception ex)
+            catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<TicketScanDto>.Failure($"فشل تسجيل مسح التذكرة: {ex.Message}", "SCAN_FAILED");
+                throw;
             }
         }
 
@@ -185,7 +188,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
         {
             var ticket = await _unitOfWork.Tickets.AsQueryable()
                 .Include(t => t.Visitor)
-                .FirstOrDefaultAsync(t => t.TicketID == ticketId);
+                .FirstOrDefaultAsync(t => t.TicketID == ticketId, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (ticket == null || ticket.Visitor.TenantID != tenantId)
             {
@@ -196,7 +199,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(s => s.Ticket)
                 .Where(s => s.TicketID == ticketId)
                 .OrderByDescending(s => s.ScanDateTime)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<TicketScanDto>>(scans);
             return ServiceResult<IList<TicketScanDto>>.Success(dtos);
@@ -206,7 +209,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
         {
             var ticket = await _unitOfWork.Tickets.AsQueryable()
                 .Include(t => t.Visitor)
-                .FirstOrDefaultAsync(t => t.TicketID == ticketId);
+                .FirstOrDefaultAsync(t => t.TicketID == ticketId, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (ticket == null || ticket.Visitor.TenantID != tenantId)
             {

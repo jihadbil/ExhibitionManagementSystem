@@ -34,7 +34,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             return await _dbSet.AsNoTracking()
                 .Include(r => r.Invoice)
-                .FirstOrDefaultAsync(r => r.ReservationID == reservationId);
+                .FirstOrDefaultAsync(r => r.ReservationID == reservationId, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<BoothReservation?> GetWithServicesAsync(int reservationId)
@@ -42,7 +42,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return await _dbSet.AsNoTracking()
                 .Include(r => r.ReservationServices)
                     .ThenInclude(rs => rs.Service)
-                .FirstOrDefaultAsync(r => r.ReservationID == reservationId);
+                .FirstOrDefaultAsync(r => r.ReservationID == reservationId, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<BoothReservation?> GetFullDetailAsync(int reservationId)
@@ -53,7 +53,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                     .ThenInclude(rs => rs.Service)
                 .Include(r => r.Invoice)
                     .ThenInclude(i => i.Payments)
-                .FirstOrDefaultAsync(r => r.ReservationID == reservationId);
+                .FirstOrDefaultAsync(r => r.ReservationID == reservationId, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<bool> IsBoothReservedAsync(int boothId, int exhibitionId)
@@ -74,7 +74,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             return await _dbSet.AsNoTracking()
                 .Where(r => r.ExhibitionID == exhibitionId && r.Status != ReservationStatus.Cancelled)
-                .SumAsync(r => (decimal?)r.TotalAmount) ?? 0m;
+                .SumAsync(r => (decimal?)r.TotalAmount, cancellationToken: _context.RequestCancellation) ?? 0m;
         }
 
         public async Task<IReadOnlyList<BoothReservation>> GetUnpaidReservationsAsync(int exhibitionId)
@@ -85,7 +85,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 .Where(r => r.ExhibitionID == exhibitionId && 
                             r.Status != ReservationStatus.Cancelled && 
                             (r.Invoice == null || r.Invoice.Status != InvoiceStatus.Paid))
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _context.RequestCancellation);
         }
     }
 }

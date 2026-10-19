@@ -24,7 +24,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return await _dbSet.AsNoTracking()
                 .Where(s => s.TicketID == ticketId)
                 .OrderByDescending(s => s.ScanDateTime)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<int> GetTodayScansCountAsync(int exhibitionId)
@@ -33,7 +33,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return await _dbSet.AsNoTracking()
                 .Include(s => s.Ticket)
                 .Where(s => s.Ticket.ExhibitionID == exhibitionId && s.ScanDateTime.Date == today)
-                .CountAsync();
+                .CountAsync(cancellationToken: _context.RequestCancellation);
         }
     }
 }

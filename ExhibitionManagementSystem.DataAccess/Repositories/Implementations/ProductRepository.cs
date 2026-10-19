@@ -36,7 +36,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                                          p.Description.Contains(searchTerm));
             }
 
-            return await query.ToListAsync();
+            return await query.ToListAsync(cancellationToken: _context.RequestCancellation);
         }
     }
 }

@@ -12,6 +12,7 @@ using ExhibitionManagementSystem.Services.Common;
 using ExhibitionManagementSystem.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Data.SqlClient;
 
 namespace ExhibitionManagementSystem.Services.Implementations
 {
@@ -36,14 +37,15 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
                 .Include(i => i.InvoiceItems)
+                .AsSplitQuery()
                 .Where(i => i.TenantID == tenantId);
 
-            var totalCount = await query.CountAsync();
+            var totalCount = await query.CountAsync(cancellationToken: _unitOfWork.RequestCancellation);
             var items = await query
                 .OrderByDescending(i => i.InvoiceDate)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<InvoiceDto>>(items);
             var result = new PagedResultDto<InvoiceDto>
@@ -66,7 +68,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(i => i.Payments)
                     .ThenInclude(p => p.ReceivedByUser)
                 .Include(i => i.InvoiceItems)
-                .FirstOrDefaultAsync(i => i.InvoiceID == invoiceId && i.TenantID == tenantId);
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(i => i.InvoiceID == invoiceId && i.TenantID == tenantId, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (invoice == null)
             {
@@ -85,7 +88,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
                 .Include(i => i.InvoiceItems)
-                .FirstOrDefaultAsync(i => i.ReservationID == reservationId && i.TenantID == tenantId);
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(i => i.ReservationID == reservationId && i.TenantID == tenantId, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (invoice == null)
             {
@@ -104,11 +108,12 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
                 .Include(i => i.InvoiceItems)
+                .AsSplitQuery()
                 .Where(i => i.TenantID == tenantId && 
                             i.Status != InvoiceStatus.Paid && 
                             i.Status != InvoiceStatus.Cancelled && 
                             i.DueDate < DateTime.UtcNow)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<InvoiceDto>>(overdue);
             return ServiceResult<IList<InvoiceDto>>.Success(dtos);
@@ -121,7 +126,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(r => r.Booth)
                 .Include(r => r.ReservationServices)
                     .ThenInclude(rs => rs.Service)
-                .FirstOrDefaultAsync(r => r.ReservationID == reservationId);
+                .FirstOrDefaultAsync(r => r.ReservationID == reservationId, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (reservation == null || reservation.Exhibitor.TenantID != tenantId)
             {
@@ -137,8 +142,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
             string invoiceNumber = await _unitOfWork.Invoices.GenerateNextInvoiceNumberAsync(tenantId);
             decimal taxRate = decimal.TryParse(_configuration["Financial:DefaultTaxRate"], out var cfgRate)
                 ? cfgRate : 0.0m;
+            if (taxRate < 0 || taxRate > 100)
+                return ServiceResult<InvoiceDto>.Failure("إعداد الضريبة غير صالح", "INVALID_TAX_CONFIGURATION");
             decimal subTotal = reservation.TotalAmount;
-            decimal taxAmount = subTotal * (taxRate / 100);
+            decimal taxAmount = decimal.Round(subTotal * taxRate / 100, 2, MidpointRounding.AwayFromZero);
             decimal totalAmount = subTotal + taxAmount;
 
             var invoice = new Invoice
@@ -200,7 +207,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
                 .Include(i => i.InvoiceItems)
-                .FirstOrDefaultAsync(i => i.InvoiceID == invoice.InvoiceID);
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(i => i.InvoiceID == invoice.InvoiceID, cancellationToken: _unitOfWork.RequestCancellation);
 
             var dto = _mapper.Map<InvoiceDto>(fullInvoice ?? invoice);
             return ServiceResult<InvoiceDto>.Success(dto);
@@ -210,7 +218,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
         {
             var reservation = await _unitOfWork.BoothReservations.AsQueryable()
                 .Include(r => r.Exhibitor)
-                .FirstOrDefaultAsync(r => r.ReservationID == dto.ReservationID);
+                .FirstOrDefaultAsync(r => r.ReservationID == dto.ReservationID, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (reservation == null || reservation.Exhibitor.TenantID != tenantId)
             {
@@ -224,6 +232,14 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
 
             var invoice = _mapper.Map<Invoice>(dto);
+            if (dto.TaxRate < 0 || dto.TaxRate > 100
+                || !string.Equals(dto.CurrencyCode, reservation.CurrencyCode, StringComparison.OrdinalIgnoreCase))
+                return ServiceResult<InvoiceDto>.Failure("الضريبة أو عملة الفاتورة غير صالحة", "INVALID_INVOICE");
+            invoice.SubTotal = reservation.TotalAmount;
+            invoice.TaxAmount = decimal.Round(invoice.SubTotal * dto.TaxRate / 100, 2, MidpointRounding.AwayFromZero);
+            invoice.TotalAmount = invoice.SubTotal + invoice.TaxAmount;
+            invoice.InvoiceItems.Add(new InvoiceItem { ItemName = "حجز أجنحة وخدمات", Quantity = 1,
+                UnitPrice = invoice.SubTotal, TotalPrice = invoice.SubTotal });
             invoice.TenantID = tenantId;
             invoice.Status = InvoiceStatus.Issued;
             invoice.InvoiceDate = DateTime.UtcNow;
@@ -237,7 +253,8 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(i => i.Currency)
                 .Include(i => i.Payments)
                 .Include(i => i.InvoiceItems)
-                .FirstOrDefaultAsync(i => i.InvoiceID == invoice.InvoiceID);
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(i => i.InvoiceID == invoice.InvoiceID, cancellationToken: _unitOfWork.RequestCancellation);
 
             var resultDto = _mapper.Map<InvoiceDto>(fullInvoice ?? invoice);
             return ServiceResult<InvoiceDto>.Success(resultDto);
@@ -245,24 +262,37 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
         public async Task<ServiceResult<PaymentDto>> RecordPaymentAsync(int tenantId, string userId, PaymentCreateDto dto)
         {
+            if (dto.Amount <= 0 || decimal.Round(dto.Amount, 2) != dto.Amount)
+                return ServiceResult<PaymentDto>.Failure("قيمة الدفعة يجب أن تكون موجبة وبدقة منزلتين عشريتين", "INVALID_PAYMENT_AMOUNT");
+            if (string.IsNullOrEmpty(dto.IdempotencyKey) || dto.IdempotencyKey.Length > 100
+                || !System.Text.RegularExpressions.Regex.IsMatch(dto.IdempotencyKey, "^[A-Za-z0-9._:-]+$"))
+                return ServiceResult<PaymentDto>.Failure("مفتاح إعادة الطلب مطلوب", "INVALID_IDEMPOTENCY_KEY");
+            if (!Enum.TryParse<PaymentMethod>(dto.Method, true, out var method) || !Enum.IsDefined(method))
+                return ServiceResult<PaymentDto>.Failure("طريقة الدفع غير صالحة", "INVALID_PAYMENT_METHOD");
             var invoice = await _unitOfWork.Invoices.AsQueryable()
                 .Include(i => i.Payments)
-                .FirstOrDefaultAsync(i => i.InvoiceID == dto.InvoiceID && i.TenantID == tenantId);
+                .FirstOrDefaultAsync(i => i.InvoiceID == dto.InvoiceID && i.TenantID == tenantId, cancellationToken: _unitOfWork.RequestCancellation);
 
             if (invoice == null)
             {
                 return ServiceResult<PaymentDto>.Failure("الفاتورة غير موجودة", "INVOICE_NOT_FOUND");
             }
 
+            var previous = await FindRecordedPaymentAsync(tenantId, dto.InvoiceID, dto.IdempotencyKey);
+            if (previous != null) return ReplayPayment(previous, dto, method);
+
             if (invoice.Status == InvoiceStatus.Paid)
             {
                 return ServiceResult<PaymentDto>.Failure("الفاتورة مدفوعة بالكامل بالفعل", "INVOICE_ALREADY_PAID");
             }
 
-            if (invoice.Status == InvoiceStatus.Cancelled)
+            if (invoice.Status == InvoiceStatus.Cancelled || invoice.Status == InvoiceStatus.Draft)
             {
                 return ServiceResult<PaymentDto>.Failure("لا يمكن سداد دفعة لفاتورة ملغاة", "INVOICE_CANCELLED");
             }
+
+            if (!string.Equals(invoice.CurrencyCode, dto.CurrencyCode, StringComparison.OrdinalIgnoreCase))
+                return ServiceResult<PaymentDto>.Failure("عملة الدفعة يجب أن تطابق عملة الفاتورة", "PAYMENT_CURRENCY_MISMATCH");
 
             decimal totalPaidBefore = invoice.Payments
                 .Where(p => p.Status == PaymentStatus.Completed)
@@ -275,24 +305,20 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<PaymentDto>.Failure("قيمة الدفعة تتجاوز القيمة المتبقية للفاتورة", "PAYMENT_AMOUNT_EXCEEDS_REMAINING");
             }
 
-            if (!Enum.TryParse<PaymentMethod>(dto.Method, true, out var method))
-            {
-                return ServiceResult<PaymentDto>.Failure("طريقة الدفع غير صالحة", "INVALID_PAYMENT_METHOD");
-            }
-
             await _unitOfWork.BeginTransactionAsync();
             try
             {
                 var payment = new Payment
                 {
                     InvoiceID = dto.InvoiceID,
+                    IdempotencyKey = dto.IdempotencyKey,
                     PaymentDate = DateTime.UtcNow,
                     Amount = dto.Amount,
-                    CurrencyCode = dto.CurrencyCode,
+                    CurrencyCode = invoice.CurrencyCode,
                     Method = method,
-                    ReferenceNo = dto.ReferenceNo,
+                    ReferenceNo = dto.ReferenceNo ?? string.Empty,
                     Status = PaymentStatus.Completed,
-                    Notes = dto.Notes,
+                    Notes = dto.Notes ?? string.Empty,
                     ReceivedByUserId = userId,
                     CreatedAt = DateTime.UtcNow
                 };
@@ -318,17 +344,36 @@ namespace ExhibitionManagementSystem.Services.Implementations
                     .Include(p => p.Invoice)
                     .Include(p => p.Currency)
                     .Include(p => p.ReceivedByUser)
-                    .FirstOrDefaultAsync(p => p.PaymentID == payment.PaymentID);
+                    .FirstOrDefaultAsync(p => p.PaymentID == payment.PaymentID, cancellationToken: _unitOfWork.RequestCancellation);
 
                 var resultDto = _mapper.Map<PaymentDto>(fullPayment ?? payment);
                 return ServiceResult<PaymentDto>.Success(resultDto);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ExhibitionManagementSystem.DataAccess.DatabaseConflicts.IsConflict(ex))
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return ServiceResult<PaymentDto>.Failure($"فشل تسجيل الدفعة: {ex.Message}", "PAYMENT_RECORDING_FAILED");
+                previous = await FindRecordedPaymentAsync(tenantId, dto.InvoiceID, dto.IdempotencyKey);
+                return previous != null ? ReplayPayment(previous, dto, method)
+                    : ServiceResult<PaymentDto>.Failure("تعارض التحديث؛ أعد الطلب بالمفتاح نفسه", "CONFLICT");
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
             }
         }
+
+        private Task<Payment?> FindRecordedPaymentAsync(int tenantId, int invoiceId, string key) =>
+            _unitOfWork.Payments.AsQueryable().AsNoTracking().Include(p => p.Invoice)
+                .Include(p => p.Currency).Include(p => p.ReceivedByUser)
+                .SingleOrDefaultAsync(p => p.InvoiceID == invoiceId && p.Invoice.TenantID == tenantId && p.IdempotencyKey == key, cancellationToken: _unitOfWork.RequestCancellation);
+
+        private ServiceResult<PaymentDto> ReplayPayment(Payment payment, PaymentCreateDto dto, PaymentMethod method) =>
+            payment.Amount == dto.Amount && payment.Method == method
+                && string.Equals(payment.CurrencyCode, dto.CurrencyCode, StringComparison.OrdinalIgnoreCase)
+                && payment.ReferenceNo == (dto.ReferenceNo ?? string.Empty) && payment.Notes == (dto.Notes ?? string.Empty)
+            ? ServiceResult<PaymentDto>.Success(_mapper.Map<PaymentDto>(payment))
+            : ServiceResult<PaymentDto>.Failure("المفتاح مستخدم لطلب مختلف", "IDEMPOTENCY_CONFLICT");
 
         public async Task<ServiceResult<IList<PaymentDto>>> GetPaymentsByInvoiceAsync(int tenantId, int invoiceId)
         {
@@ -343,7 +388,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(p => p.Currency)
                 .Include(p => p.ReceivedByUser)
                 .Where(p => p.InvoiceID == invoiceId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<PaymentDto>>(payments);
             return ServiceResult<IList<PaymentDto>>.Success(dtos);

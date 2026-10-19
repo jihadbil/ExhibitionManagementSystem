@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using ExhibitionManagementSystem.Models.Enums;
 
@@ -26,9 +27,12 @@ public class SponsorshipPackageCreateDto
 {
     public int ExhibitionID { get; set; }
     public string PackageName { get; set; } = string.Empty;
+    [DefinedEnum(typeof(SponsorshipLevel))]
     public SponsorshipLevel Level { get; set; } = SponsorshipLevel.Gold;
+    [DecimalValue("0", "9999999999999999.99")]
     public decimal Price { get; set; }
     public string CurrencyCode { get; set; } = "LYD";
+    [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
     public int MaxSponsorsCount { get; set; } = 1;
     public string? EntitlementsDescription { get; set; }
     public bool IsActive { get; set; } = true;

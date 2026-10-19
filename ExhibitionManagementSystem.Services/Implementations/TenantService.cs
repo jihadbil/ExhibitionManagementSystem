@@ -104,8 +104,10 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult.Failure("المستأجر غير موجود", "TENANT_NOT_FOUND");
             }
 
-            // Using "System" as the default deleting user for service layer
-            await _unitOfWork.Tenants.SoftDeleteAsync(tenantId, "System");
+            // Preserve the tenant's financial/history records. Deactivation also
+            // invalidates access and refresh requests through the auth checks.
+            tenant.IsActive = false;
+            _unitOfWork.Tenants.Update(tenant);
             await _unitOfWork.SaveChangesAsync();
 
             return ServiceResult.Success();

@@ -36,7 +36,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 .FirstOrDefaultAsync(t => t.TenantID == tenantId &&
                     t.TenantSubscriptions.Any(s => (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Trial) &&
                                                     s.StartDate <= today &&
-                                                    s.EndDate >= today));
+                                                    s.EndDate >= today), cancellationToken: _context.RequestCancellation);
         }
     }
 }

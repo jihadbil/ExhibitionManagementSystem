@@ -56,7 +56,7 @@ public class CurrenciesController : BaseApiController
 
     // PUT /api/currencies/rates
     [HttpPut("rates")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "SuperAdminOnly")]
     public async Task<ActionResult<ExchangeRateDto>> UpsertRate(
         [FromBody] ExchangeRateDto dto)
     {

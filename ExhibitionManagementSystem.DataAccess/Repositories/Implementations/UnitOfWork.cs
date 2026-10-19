@@ -27,6 +27,8 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         private IHallRepository? _halls;
         private IBoothRepository? _booths;
         private IBoothMergeRepository? _boothMerges;
+        private IGenericRepository<BoothMergeItem>? _boothMergeItems;
+        private IGenericRepository<ReservationService>? _reservationServices;
         private IExhibitionRepository? _exhibitions;
         private IExhibitionScheduleRepository? _exhibitionSchedules;
         private IScheduleRegistrationRepository? _scheduleRegistrations;
@@ -70,6 +72,8 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         public IHallRepository Halls => _halls ??= new HallRepository(_context);
         public IBoothRepository Booths => _booths ??= new BoothRepository(_context);
         public IBoothMergeRepository BoothMerges => _boothMerges ??= new BoothMergeRepository(_context);
+        public IGenericRepository<BoothMergeItem> BoothMergeItems => _boothMergeItems ??= new GenericRepository<BoothMergeItem>(_context);
+        public IGenericRepository<ReservationService> ReservationServices => _reservationServices ??= new GenericRepository<ReservationService>(_context);
         public IExhibitionRepository Exhibitions => _exhibitions ??= new ExhibitionRepository(_context);
         public IExhibitionScheduleRepository ExhibitionSchedules => _exhibitionSchedules ??= new ExhibitionScheduleRepository(_context);
         public IScheduleRegistrationRepository ScheduleRegistrations => _scheduleRegistrations ??= new ScheduleRegistrationRepository(_context);
@@ -100,7 +104,29 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         public IAdvertisingSpaceRepository AdvertisingSpaces => _advertisingSpaces ??= new AdvertisingSpaceRepository(_context);
         public ISponsorAdAssignmentRepository SponsorAdAssignments => _sponsorAdAssignments ??= new SponsorAdAssignmentRepository(_context);
 
+        public System.Threading.CancellationToken RequestCancellation => _context.RequestCancellation;
+
         public async Task<int> SaveChangesAsync()
+        {
+            if (_context.Database.CurrentTransaction != null)
+                return await SaveChangesWithAuditAsync();
+
+            await using var transaction = await _context.Database.BeginTransactionAsync(RequestCancellation);
+            try
+            {
+                var count = await SaveChangesWithAuditAsync();
+                await transaction.CommitAsync(RequestCancellation);
+                return count;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                _context.ChangeTracker.Clear();
+                throw;
+            }
+        }
+
+        private async Task<int> SaveChangesWithAuditAsync()
         {
             var now = DateTime.UtcNow;
 
@@ -125,7 +151,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             var userId = httpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userId))
             {
-                userId = _context.Users.OrderBy(u => u.Id).Select(u => u.Id).FirstOrDefault();
+                throw new InvalidOperationException("An explicit audit actor is required for application writes.");
             }
 
             var tenantIdClaim = httpContext?.User?.FindFirst("TenantId")?.Value;
@@ -153,8 +179,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 var logTenantId = entityTenantId ?? tenantId;
                 if (logTenantId == 0)
                 {
-                    logTenantId = _context.Tenants.OrderBy(t => t.TenantID).Select(t => t.TenantID).FirstOrDefault();
-                    if (logTenantId == 0) logTenantId = 1;
+                    throw new InvalidOperationException("An explicit tenant is required for application writes.");
                 }
 
                 var auditLog = new AuditLog
@@ -182,7 +207,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             }
 
             // 3. Save actual entities
-            var result = await _context.SaveChangesAsync();
+            var result = await _context.SaveChangesAsync(RequestCancellation);
 
             // 4. Save audit logs with resolved PK values
             if (auditWrappers.Any())
@@ -193,7 +218,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 }
 
                 _context.AuditLogs.AddRange(auditWrappers.Select(w => w.AuditLog));
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(RequestCancellation);
             }
 
             return result;
@@ -211,14 +236,14 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task BeginTransactionAsync()
         {
-            _transaction = await _context.Database.BeginTransactionAsync();
+            _transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, RequestCancellation);
         }
 
         public async Task CommitTransactionAsync()
         {
             if (_transaction != null)
             {
-                await _transaction.CommitAsync();
+                await _transaction.CommitAsync(RequestCancellation);
                 await _transaction.DisposeAsync();
                 _transaction = null;
             }
@@ -231,6 +256,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 await _transaction.RollbackAsync();
                 await _transaction.DisposeAsync();
                 _transaction = null;
+                _context.ChangeTracker.Clear();
             }
         }
 

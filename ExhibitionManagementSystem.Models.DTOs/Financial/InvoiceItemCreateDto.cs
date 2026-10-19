@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using System.ComponentModel.DataAnnotations;
 
@@ -9,8 +10,10 @@ namespace ExhibitionManagementSystem.Models.DTOs.Financial
         [StringLength(150)]
         public string ItemName { get; set; } = string.Empty;
 
-        public decimal Quantity { get; set; }
+        [DecimalValue("0.01", "99999999.99")]
+    public decimal Quantity { get; set; }
 
-        public decimal UnitPrice { get; set; }
+        [DecimalValue("0", "9999999999999999.99")]
+    public decimal UnitPrice { get; set; }
     }
 }

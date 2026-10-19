@@ -27,7 +27,7 @@ public class RolesController : BaseApiController
     [HttpPost("assign")]
     public async Task<IActionResult> Assign([FromBody] AssignRoleDto dto)
     {
-        var result = await _authService.AssignRoleAsync(dto);
+        var result = await _authService.AssignRoleAsync(TenantId, dto, User.IsInRole("SuperAdmin"));
         return ToActionResult(result);
     }
 
@@ -35,7 +35,7 @@ public class RolesController : BaseApiController
     [HttpDelete("{userId}/roles/{roleName}")]
     public async Task<IActionResult> Remove(string userId, string roleName)
     {
-        var result = await _authService.RemoveRoleAsync(userId, roleName);
+        var result = await _authService.RemoveRoleAsync(TenantId, userId, roleName, User.IsInRole("SuperAdmin"));
         return ToActionResult(result);
     }
 }

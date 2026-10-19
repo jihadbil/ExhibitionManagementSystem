@@ -3,6 +3,7 @@ using ExhibitionManagementSystem.Models.DTOs.Auth;
 using ExhibitionManagementSystem.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ExhibitionManagementSystem.Controllers.Auth;
 
@@ -16,6 +17,7 @@ public class AuthController : BaseApiController
 
     // POST /api/auth/login
     [HttpPost("login")]
+    [EnableRateLimiting("authentication")]
     [AllowAnonymous]
     public async Task<ActionResult<LoginResponseDto>> Login(
         [FromBody] LoginRequestDto dto)
@@ -28,11 +30,11 @@ public class AuthController : BaseApiController
 
     // POST /api/auth/register
     [HttpPost("register")]
-    [AllowAnonymous]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<UserManagementDto>> Register(
         [FromBody] RegisterRequestDto dto)
     {
-        var result = await _authService.RegisterAsync(dto);
+        var result = await _authService.RegisterAsync(TenantId, dto);
         return ToActionResult(result);
     }
 
@@ -46,6 +48,7 @@ public class AuthController : BaseApiController
 
     // POST /api/auth/refresh-token
     [HttpPost("refresh-token")]
+    [EnableRateLimiting("authentication")]
     [AllowAnonymous]
     public async Task<ActionResult<RefreshTokenResponseDto>> RefreshToken(
         [FromBody] RefreshTokenRequestDto dto)
@@ -64,18 +67,22 @@ public class AuthController : BaseApiController
 
     // POST /api/auth/forgot-password
     [HttpPost("forgot-password")]
+    [EnableRateLimiting("authentication")]
     [HttpPost("reset-password")]
     [AllowAnonymous]
     public async Task<IActionResult> ForgotPassword(
         [FromBody] ResetPasswordRequestDto dto)
     {
-        // دائماً 200 OK بغض النظر عن وجود البريد — سلوك أمني مقصود
-        await _authService.ForgotPasswordAsync(dto);
+        // نفس الاستجابة للحساب المعروف والمجهول؛ تعطل التهيئة يعيد 503 لكليهما.
+        var result = await _authService.ForgotPasswordAsync(dto);
+        if (!result.IsSuccess)
+            return StatusCode(503, new { result.ErrorMessage, result.ErrorCode });
         return Ok(new { message = "إذا كان البريد الإلكتروني مسجلاً، ستصلك رسالة لإعادة تعيين كلمة المرور." });
     }
 
     // POST /api/auth/reset-password/confirm
     [HttpPost("reset-password/confirm")]
+    [EnableRateLimiting("authentication")]
     [AllowAnonymous]
     public async Task<IActionResult> ResetPassword(
         [FromBody] ResetPasswordConfirmDto dto)

@@ -5,7 +5,9 @@ namespace ExhibitionManagementSystem.Models.DTOs.Visitor;
 
 public class TicketCreateDto
 {
+    [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
     public int VisitorID { get; set; }
+    [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
     public int ExhibitionID { get; set; }
 
     [Required]

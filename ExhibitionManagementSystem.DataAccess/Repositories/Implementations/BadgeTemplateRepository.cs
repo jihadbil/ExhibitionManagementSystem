@@ -22,7 +22,7 @@ public class BadgeTemplateRepository : GenericRepository<BadgeTemplate>, IBadgeT
             var exhibitionTemplate = await _dbSet
                 .Where(t => t.TenantID == tenantId && t.ExhibitionID == exhibitionId.Value && t.TargetParticipantType == participantType)
                 .OrderByDescending(t => t.IsDefault)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken: _context.RequestCancellation);
 
             if (exhibitionTemplate != null)
                 return exhibitionTemplate;
@@ -32,7 +32,7 @@ public class BadgeTemplateRepository : GenericRepository<BadgeTemplate>, IBadgeT
         var tenantTemplate = await _dbSet
             .Where(t => t.TenantID == tenantId && (t.ExhibitionID == null || t.ExhibitionID == 0) && t.TargetParticipantType == participantType)
             .OrderByDescending(t => t.IsDefault)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken: _context.RequestCancellation);
 
         if (tenantTemplate != null)
             return tenantTemplate;
@@ -40,7 +40,7 @@ public class BadgeTemplateRepository : GenericRepository<BadgeTemplate>, IBadgeT
         // 3. Fallback to any default template in the tenant
         return await _dbSet
             .Where(t => t.TenantID == tenantId && t.IsDefault)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken: _context.RequestCancellation);
     }
 
     public async Task<IReadOnlyList<BadgeTemplate>> GetTemplatesByExhibitionAsync(int tenantId, int exhibitionId)
@@ -48,6 +48,6 @@ public class BadgeTemplateRepository : GenericRepository<BadgeTemplate>, IBadgeT
         return await _dbSet
             .Where(t => t.TenantID == tenantId && (t.ExhibitionID == exhibitionId || t.ExhibitionID == null))
             .OrderBy(t => t.TargetParticipantType)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: _context.RequestCancellation);
     }
 }

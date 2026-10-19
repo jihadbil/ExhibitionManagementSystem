@@ -9,6 +9,8 @@ using ExhibitionManagementSystem.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ExhibitionManagementSystem.DataAccess.Repositories.Interfaces;
+using ExhibitionManagementSystem.Services.Common;
 
 namespace ExhibitionManagementSystem.Controllers.Dashboard
 {
@@ -16,10 +18,12 @@ namespace ExhibitionManagementSystem.Controllers.Dashboard
     public class DashboardController : BaseApiController
     {
         private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public DashboardController(ApplicationDbContext context)
+        public DashboardController(ApplicationDbContext context, IUnitOfWork unitOfWork)
         {
             _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         // GET /api/Dashboard/stats
@@ -29,37 +33,33 @@ namespace ExhibitionManagementSystem.Controllers.Dashboard
             var tenantId = TenantId;
             var tenant = await _context.Tenants
                 .Include(t => t.Currency)
-                .FirstOrDefaultAsync(t => t.TenantID == tenantId);
+                .FirstOrDefaultAsync(t => t.TenantID == tenantId, cancellationToken: _context.RequestCancellation);
 
-            var totalExhibitions = await _context.Exhibitions.CountAsync(e => e.TenantID == tenantId);
-            var activeExhibitions = await _context.Exhibitions.CountAsync(e => e.TenantID == tenantId && e.Status == ExhibitionStatus.Open);
-            var totalExhibitors = await _context.Exhibitors.CountAsync(e => e.TenantID == tenantId);
-            var totalVisitors = await _context.Visitors.CountAsync(v => v.TenantID == tenantId);
+            var totalExhibitions = await _context.Exhibitions.CountAsync(e => e.TenantID == tenantId, cancellationToken: _context.RequestCancellation);
+            var activeExhibitions = await _context.Exhibitions.CountAsync(e => e.TenantID == tenantId && e.Status == ExhibitionStatus.Open, cancellationToken: _context.RequestCancellation);
+            var totalExhibitors = await _context.Exhibitors.CountAsync(e => e.TenantID == tenantId, cancellationToken: _context.RequestCancellation);
+            var totalVisitors = await _context.Visitors.CountAsync(v => v.TenantID == tenantId, cancellationToken: _context.RequestCancellation);
 
             // Booth calculations
-            var totalBooths = await _context.Booths.CountAsync(b => b.Hall.Venue.TenantID == tenantId);
-            var occupiedBooths = await _context.Booths.CountAsync(b => b.Hall.Venue.TenantID == tenantId && b.Status == BoothStatus.Reserved);
+            var totalBooths = await _context.Booths.CountAsync(b => b.Hall.Venue.TenantID == tenantId, cancellationToken: _context.RequestCancellation);
+            var occupiedBooths = await _context.Booths.CountAsync(b => b.Hall.Venue.TenantID == tenantId && b.Status == BoothStatus.Reserved, cancellationToken: _context.RequestCancellation);
             double occupancyRate = totalBooths > 0 ? ((double)occupiedBooths / totalBooths) * 100 : 0;
 
-            var pendingReservations = await _context.BoothReservations.CountAsync(r => r.Exhibition.TenantID == tenantId && r.Status == ReservationStatus.Pending);
+            var pendingReservations = await _context.BoothReservations.CountAsync(r => r.Exhibition.TenantID == tenantId && r.Status == ReservationStatus.Pending, cancellationToken: _context.RequestCancellation);
 
             // Financials
             var invoices = await _context.Invoices
+                .Include(i => i.Payments)
                 .Where(i => i.TenantID == tenantId)
-                .ToListAsync();
-
-            double totalRevenue = (double)invoices.Where(i => i.Status == InvoiceStatus.Paid || i.Status == InvoiceStatus.PartiallyPaid).Sum(i => i.TotalAmount);
-
-            // Since there is a PaidAmount/payments check
-            double totalPaid = (double)await _context.Payments
-                .Where(p => p.Invoice.TenantID == tenantId && p.Status == PaymentStatus.Completed)
-                .SumAsync(p => p.Amount);
-
-            double totalPending = (double)invoices
-                .Where(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Cancelled)
-                .Sum(i => i.TotalAmount) - totalPaid;
-
-            if (totalPending < 0) totalPending = 0;
+                .ToListAsync(cancellationToken: _context.RequestCancellation);
+            var currency = tenant?.BaseCurrency ?? "USD";
+            var paid = await CurrencyTotals.SumAsync(_unitOfWork,
+                invoices.SelectMany(i => i.Payments).Where(p => p.Status == PaymentStatus.Completed).Select(p => (p.Amount, p.CurrencyCode)), currency);
+            var pending = await CurrencyTotals.SumAsync(_unitOfWork,
+                invoices.Where(i => i.Status != InvoiceStatus.Cancelled && i.Status != InvoiceStatus.Draft)
+                    .Select(i => (Math.Max(0, i.TotalAmount - i.Payments.Where(p => p.Status == PaymentStatus.Completed).Sum(p => p.Amount)), i.CurrencyCode)), currency);
+            if (!paid.IsSuccess || !pending.IsSuccess)
+                return BadRequest(new { ErrorCode = "EXCHANGE_RATE_NOT_FOUND", ErrorMessage = "سعر صرف مطلوب للإحصائيات غير متوفر" });
 
             return Ok(new DashboardStatsDto
             {
@@ -67,8 +67,8 @@ namespace ExhibitionManagementSystem.Controllers.Dashboard
                 ActiveExhibitions = activeExhibitions,
                 TotalExhibitors = totalExhibitors,
                 TotalVisitors = totalVisitors,
-                TotalRevenue = totalPaid > 0 ? totalPaid : totalRevenue, // use actual paid amount from payments if available
-                PendingRevenue = totalPending,
+                TotalRevenue = (double)paid.Data,
+                PendingRevenue = (double)pending.Data,
                 TotalBooths = totalBooths,
                 OccupiedBooths = occupiedBooths,
                 OccupancyRate = occupancyRate,
@@ -88,7 +88,7 @@ namespace ExhibitionManagementSystem.Controllers.Dashboard
                 .Where(a => a.TenantID == tenantId)
                 .OrderByDescending(a => a.ActionAt)
                 .Take(limit)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _context.RequestCancellation);
 
             var activities = logs.Select(log => new ActivityItemDto
             {
@@ -118,8 +118,9 @@ namespace ExhibitionManagementSystem.Controllers.Dashboard
 
             var invoices = await _context.Invoices
                 .Include(i => i.Payments)
-                .Where(i => i.TenantID == tenantId && i.CreatedAt >= startDate)
-                .ToListAsync();
+                .Where(i => i.TenantID == tenantId && (i.InvoiceDate >= startDate || i.Payments.Any(p => p.PaymentDate >= startDate)))
+                .ToListAsync(cancellationToken: _context.RequestCancellation);
+            var currency = await _context.Tenants.Where(t => t.TenantID == tenantId).Select(t => t.BaseCurrency).SingleAsync(cancellationToken: _context.RequestCancellation);
 
             var chartPoints = new List<RevenueChartPointDto>();
 
@@ -128,20 +129,24 @@ namespace ExhibitionManagementSystem.Controllers.Dashboard
                 var monthDate = DateTime.UtcNow.AddMonths(-i);
                 var label = monthDate.ToString("MMMM"); // e.g. "June"
 
-                var monthlyInvoices = invoices.Where(inv => inv.CreatedAt.Year == monthDate.Year && inv.CreatedAt.Month == monthDate.Month).ToList();
-
-                double revenue = (double)monthlyInvoices.Sum(inv => inv.TotalAmount);
-                double paid = (double)monthlyInvoices.SelectMany(inv => inv.Payments).Where(p => p.Status == PaymentStatus.Completed).Sum(p => p.Amount);
-                double pending = revenue - paid;
-                if (pending < 0) pending = 0;
+                var monthlyInvoices = invoices.Where(inv => inv.InvoiceDate.Year == monthDate.Year && inv.InvoiceDate.Month == monthDate.Month
+                    && inv.Status != InvoiceStatus.Cancelled && inv.Status != InvoiceStatus.Draft).ToList();
+                var revenue = await CurrencyTotals.SumAsync(_unitOfWork, monthlyInvoices.Select(inv => (inv.TotalAmount, inv.CurrencyCode)), currency);
+                var paid = await CurrencyTotals.SumAsync(_unitOfWork,
+                    invoices.SelectMany(inv => inv.Payments).Where(p => p.Status == PaymentStatus.Completed
+                        && p.PaymentDate.Year == monthDate.Year && p.PaymentDate.Month == monthDate.Month).Select(p => (p.Amount, p.CurrencyCode)), currency);
+                var pending = await CurrencyTotals.SumAsync(_unitOfWork, monthlyInvoices.Select(inv =>
+                    (Math.Max(0, inv.TotalAmount - inv.Payments.Where(p => p.Status == PaymentStatus.Completed).Sum(p => p.Amount)), inv.CurrencyCode)), currency);
+                if (!revenue.IsSuccess || !paid.IsSuccess || !pending.IsSuccess)
+                    return BadRequest(new { ErrorCode = "EXCHANGE_RATE_NOT_FOUND", ErrorMessage = "سعر صرف مطلوب للرسم غير متوفر" });
 
                 chartPoints.Add(new RevenueChartPointDto
                 {
                     Label = label,
                     Month = label,
-                    Revenue = revenue,
-                    Paid = paid,
-                    Pending = pending
+                    Revenue = (double)revenue.Data,
+                    Paid = (double)paid.Data,
+                    Pending = (double)pending.Data
                 });
             }
 

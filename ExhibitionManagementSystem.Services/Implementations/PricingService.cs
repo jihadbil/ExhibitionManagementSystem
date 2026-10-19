@@ -30,16 +30,29 @@ namespace ExhibitionManagementSystem.Services.Implementations
             BoothType boothType, 
             ExhibitorCategory category, 
             decimal areaSqM,
-            int? boothId = null)
+            int? boothId = null, string? currencyCode = null)
         {
+            if (areaSqM <= 0 || !Enum.IsDefined(boothType) || !Enum.IsDefined(category))
+                return ServiceResult<decimal>.Failure("المساحة أو تصنيف الجناح غير صالح", "INVALID_PRICING_INPUT");
             BoothPriceRule? rule = null;
 
             if (boothId.HasValue && boothId.Value > 0)
             {
-                var booth = await _unitOfWork.Booths.GetByIdAsync(boothId.Value);
+                var booth = await _unitOfWork.Booths.GetByIdWithIncludesAsync(boothId.Value, b => b.Hall.Venue);
+                if (booth == null || booth.Hall.Venue.TenantID != tenantId)
+                    return ServiceResult<decimal>.Failure("الجناح غير موجود", "BOOTH_NOT_FOUND");
                 if (booth != null && booth.AssignedPriceRuleID.HasValue)
                 {
                     rule = await _unitOfWork.BoothPriceRules.GetByIdAsync(booth.AssignedPriceRuleID.Value);
+                    if (rule == null || rule.TenantID != tenantId
+                        || (rule.ExhibitionID.HasValue && rule.ExhibitionID != exhibitionId)
+                        || (rule.BoothType.HasValue && rule.BoothType != boothType)
+                        || (rule.ExhibitorCategory.HasValue && rule.ExhibitorCategory != category)
+                        || rule.ValidFrom.Date > DateTime.UtcNow.Date
+                        || (rule.ValidTo.HasValue && rule.ValidTo.Value.Date < DateTime.UtcNow.Date)
+                        || (rule.MinAreaSqM.HasValue && areaSqM < rule.MinAreaSqM)
+                        || (rule.MaxAreaSqM.HasValue && areaSqM > rule.MaxAreaSqM))
+                        return ServiceResult<decimal>.Failure("قاعدة التسعير المعينة غير صالحة لهذا الحجز", "INVALID_ASSIGNED_PRICE_RULE");
                 }
             }
 
@@ -60,15 +73,20 @@ namespace ExhibitionManagementSystem.Services.Implementations
             }
 
             var price = rule.PricePerSqM * areaSqM;
-            return ServiceResult<decimal>.Success(price);
+            return await ConvertPriceAsync(tenantId, price, rule.CurrencyCode, currencyCode);
         }
 
         public async Task<ServiceResult<decimal>> CalculateServicePriceAsync(
             int tenantId, 
             int serviceId, 
             int? exhibitionId, 
-            int quantity)
+            decimal quantity, string? currencyCode = null)
         {
+            if (quantity <= 0 || quantity > 99999999.99m || decimal.Round(quantity, 2) != quantity)
+                return ServiceResult<decimal>.Failure("الكمية يجب أن تكون موجبة", "INVALID_QUANTITY");
+            var service = await _unitOfWork.Services.GetByIdAsync(serviceId);
+            if (service == null || service.TenantID != tenantId)
+                return ServiceResult<decimal>.Failure("الخدمة غير موجودة", "SERVICE_NOT_FOUND");
             // ExhibitorCategory is null as we don't have category context in parameters.
             var rule = await _unitOfWork.ServicePriceRules.GetApplicableRuleAsync(
                 serviceId, 
@@ -79,18 +97,33 @@ namespace ExhibitionManagementSystem.Services.Implementations
             if (rule == null)
             {
                 // Fallback: If no rule is found, try to get the service itself and use its DefaultPrice
-                var service = await _unitOfWork.Services.GetByIdAsync(serviceId);
                 if (service != null && service.TenantID == tenantId && service.DefaultPrice.HasValue)
                 {
                     var fallbackPrice = service.DefaultPrice.Value * quantity;
-                    return ServiceResult<decimal>.Success(fallbackPrice);
+                    var tenant = await _unitOfWork.Tenants.GetByIdAsync(tenantId);
+                    return await ConvertPriceAsync(tenantId, fallbackPrice, tenant!.BaseCurrency, currencyCode);
                 }
 
                 return ServiceResult<decimal>.Failure("لا توجد قاعدة تسعير مناسبة للخدمة المحددة", "PRICING_RULE_NOT_FOUND");
             }
 
+            if (rule.TenantID != tenantId)
+                return ServiceResult<decimal>.Failure("قاعدة التسعير غير موجودة", "PRICING_RULE_NOT_FOUND");
+
             var price = rule.UnitPrice * quantity;
-            return ServiceResult<decimal>.Success(price);
+            return await ConvertPriceAsync(tenantId, price, rule.CurrencyCode, currencyCode);
+        }
+
+        private async Task<ServiceResult<decimal>> ConvertPriceAsync(int tenantId, decimal amount, string source, string? target)
+        {
+            var tenant = await _unitOfWork.Tenants.GetByIdAsync(tenantId);
+            if (tenant == null || amount < 0)
+                return ServiceResult<decimal>.Failure("إعداد التسعير غير صالح", "INVALID_PRICING_INPUT");
+            target = string.IsNullOrWhiteSpace(target) ? tenant.BaseCurrency : target;
+            var converted = await _unitOfWork.ExchangeRates.ConvertAsync(source, target, amount, DateTime.UtcNow.Date);
+            return converted.HasValue
+                ? ServiceResult<decimal>.Success(decimal.Round(converted.Value, 2, MidpointRounding.AwayFromZero))
+                : ServiceResult<decimal>.Failure("سعر الصرف غير متوفر", "EXCHANGE_RATE_NOT_FOUND");
         }
 
         // Booth Price Rules
@@ -105,7 +138,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 query = query.Where(r => r.ExhibitionID == exhibitionId.Value);
             }
 
-            var rules = await query.ToListAsync();
+            var rules = await query.ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
             var dtos = _mapper.Map<IList<BoothPriceRuleDto>>(rules);
             return ServiceResult<IList<BoothPriceRuleDto>>.Success(dtos);
         }
@@ -129,7 +162,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
             var createdRule = await _unitOfWork.BoothPriceRules.AsQueryable()
                 .Include(r => r.Exhibition)
-                .FirstOrDefaultAsync(r => r.RuleID == rule.RuleID);
+                .FirstOrDefaultAsync(r => r.RuleID == rule.RuleID, cancellationToken: _unitOfWork.RequestCancellation);
 
             var resultDto = _mapper.Map<BoothPriceRuleDto>(createdRule ?? rule);
             return ServiceResult<BoothPriceRuleDto>.Success(resultDto);
@@ -160,7 +193,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
             var updatedRule = await _unitOfWork.BoothPriceRules.AsQueryable()
                 .Include(r => r.Exhibition)
-                .FirstOrDefaultAsync(r => r.RuleID == rule.RuleID);
+                .FirstOrDefaultAsync(r => r.RuleID == rule.RuleID, cancellationToken: _unitOfWork.RequestCancellation);
 
             var resultDto = _mapper.Map<BoothPriceRuleDto>(updatedRule ?? rule);
             return ServiceResult<BoothPriceRuleDto>.Success(resultDto);
@@ -193,7 +226,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 query = query.Where(r => r.ExhibitionID == exhibitionId.Value);
             }
 
-            var rules = await query.ToListAsync();
+            var rules = await query.ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
             var dtos = _mapper.Map<IList<ServicePriceRuleDto>>(rules);
             return ServiceResult<IList<ServicePriceRuleDto>>.Success(dtos);
         }
@@ -224,7 +257,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
             var createdRule = await _unitOfWork.ServicePriceRules.AsQueryable()
                 .Include(r => r.Service)
                 .Include(r => r.Exhibition)
-                .FirstOrDefaultAsync(r => r.PriceRuleID == rule.PriceRuleID);
+                .FirstOrDefaultAsync(r => r.PriceRuleID == rule.PriceRuleID, cancellationToken: _unitOfWork.RequestCancellation);
 
             var resultDto = _mapper.Map<ServicePriceRuleDto>(createdRule ?? rule);
             return ServiceResult<ServicePriceRuleDto>.Success(resultDto);
@@ -238,7 +271,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(p => p.PackageServices)
                     .ThenInclude(ps => ps.Service)
                 .Where(p => p.TenantID == tenantId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<PricingPackageDto>>(packages);
             return ServiceResult<IList<PricingPackageDto>>.Success(dtos);
@@ -277,7 +310,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(p => p.Currency)
                 .Include(p => p.PackageServices)
                     .ThenInclude(ps => ps.Service)
-                .FirstOrDefaultAsync(p => p.PackageID == package.PackageID);
+                .FirstOrDefaultAsync(p => p.PackageID == package.PackageID, cancellationToken: _unitOfWork.RequestCancellation);
 
             var resultDto = _mapper.Map<PricingPackageDto>(fullPackage ?? package);
             return ServiceResult<PricingPackageDto>.Success(resultDto);

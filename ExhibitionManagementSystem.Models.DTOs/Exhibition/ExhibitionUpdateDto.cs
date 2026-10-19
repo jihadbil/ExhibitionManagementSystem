@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using System.ComponentModel.DataAnnotations;
 
@@ -16,13 +17,17 @@ public class ExhibitionUpdateDto
     public string Edition { get; set; } = string.Empty;
 
     public DateTime StartDate { get; set; }
+    [DateAfter(nameof(StartDate))]
     public DateTime EndDate { get; set; }
 
     [Required]
+    [DefinedEnum(typeof(ExhibitionManagementSystem.Models.Enums.ExhibitionStatus))]
     public string Status { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
     public int? ExpectedVisitors { get; set; }
+    [DecimalValue("0", "9999999999999999.99")]
     public decimal? EntryFee { get; set; }
 
     [StringLength(3)]

@@ -3,6 +3,7 @@ using ExhibitionManagementSystem.Models.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,10 @@ namespace ExhibitionManagementSystem.DataAccess
         {
             using var scope = serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var environment = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
+            if (!environment.IsDevelopment()
+                || !context.Database.GetDbConnection().Database.StartsWith("ExhibitionDemo_", StringComparison.Ordinal))
+                throw new InvalidOperationException("Demo seeding requires Development and a dedicated ExhibitionDemo_ database.");
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
 

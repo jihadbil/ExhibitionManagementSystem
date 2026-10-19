@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using AutoMapper;
 using ExhibitionManagementSystem.Models;
@@ -22,6 +23,7 @@ public class FinancialMappingProfile : Profile
             .ForMember(dest => dest.InvoiceID, opt => opt.Ignore())
             .ForMember(dest => dest.InvoiceDate, opt => opt.MapFrom(src => DateTime.UtcNow))
             .ForMember(dest => dest.TaxAmount, opt => opt.MapFrom(src => src.SubTotal * (src.TaxRate / 100)))
+            .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => decimal.Round(src.SubTotal + src.SubTotal * src.TaxRate / 100, 2)))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => InvoiceStatus.Draft))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
@@ -44,7 +46,7 @@ public class FinancialMappingProfile : Profile
             .ForMember(dest => dest.PaymentID, opt => opt.Ignore())
             .ForMember(dest => dest.PaymentDate, opt => opt.MapFrom(src => DateTime.UtcNow))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => PaymentStatus.Completed))
-            .ForMember(dest => dest.Method, opt => opt.MapFrom(src => Enum.Parse<PaymentMethod>(src.Method, true)))
+            .ForMember(dest => dest.Method, opt => opt.MapFrom(src => EnumValues.Parse<PaymentMethod>(src.Method, true)))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.ReceivedByUserId, opt => opt.Ignore())

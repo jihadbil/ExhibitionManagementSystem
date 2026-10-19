@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using System.Linq;
 using AutoMapper;
@@ -42,7 +43,7 @@ public class BoothMappingProfile : Profile
             .ForMember(dest => dest.CurrentAreaSqM, opt => opt.Ignore())
             .ForMember(dest => dest.IsMerged, opt => opt.Ignore())
             .ForMember(dest => dest.MergeID, opt => opt.Ignore())
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => Enum.Parse<BoothStatus>(src.Status, true)))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => EnumValues.Parse<BoothStatus>(src.Status, true)))
             .ForMember(dest => dest.ShapeType, opt => opt.MapFrom(src => ParseNullableShapeType(src.ShapeType)))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())

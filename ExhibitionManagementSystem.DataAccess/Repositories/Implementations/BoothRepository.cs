@@ -33,7 +33,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             return await _dbSet.AsNoTracking()
                 .Include(b => b.BoothMerge)
-                .FirstOrDefaultAsync(b => b.BoothID == boothId);
+                .FirstOrDefaultAsync(b => b.BoothID == boothId, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<IReadOnlyList<Booth>> GetBoothsForFloorPlanAsync(int hallId)

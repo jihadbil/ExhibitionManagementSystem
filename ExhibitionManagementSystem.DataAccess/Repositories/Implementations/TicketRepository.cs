@@ -17,7 +17,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         public async Task<Ticket?> GetByQRCodeAsync(string qrCode)
         {
             return await _dbSet.IgnoreQueryFilters().AsNoTracking()
-                .FirstOrDefaultAsync(t => t.QRCode == qrCode);
+                .FirstOrDefaultAsync(t => t.QRCode == qrCode, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<IReadOnlyList<Ticket>> GetByVisitorAsync(int visitorId)
@@ -37,7 +37,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task<bool> IsQRCodeUniqueAsync(string qrCode)
         {
-            return !await _dbSet.IgnoreQueryFilters().AnyAsync(t => t.QRCode == qrCode);
+            return !await _dbSet.IgnoreQueryFilters().AnyAsync(t => t.QRCode == qrCode, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<int> GetActiveTicketCountAsync(int exhibitionId)

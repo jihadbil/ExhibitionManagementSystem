@@ -29,6 +29,6 @@ public class AdvertisingSpaceRepository : GenericRepository<AdvertisingSpace>, I
             query = query.Where(a => a.IsAvailable == availableOnly.Value);
         }
 
-        return await query.OrderBy(a => a.SpaceCode).ToListAsync();
+        return await query.OrderBy(a => a.SpaceCode).ToListAsync(cancellationToken: _context.RequestCancellation);
     }
 }

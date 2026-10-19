@@ -33,7 +33,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return await _dbSet.AsNoTracking()
                 .Include(p => p.PackageServices)
                     .ThenInclude(ps => ps.Service)
-                .FirstOrDefaultAsync(p => p.PackageID == packageId);
+                .FirstOrDefaultAsync(p => p.PackageID == packageId, cancellationToken: _context.RequestCancellation);
         }
     }
 }

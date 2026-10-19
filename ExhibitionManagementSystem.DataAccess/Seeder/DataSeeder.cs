@@ -3,6 +3,7 @@ using ExhibitionManagementSystem.Models.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -91,14 +92,24 @@ namespace ExhibitionManagementSystem.DataAccess
             }
 
             // 3. Seed Roles
-            string adminRole = "Admin";
-            if (!await roleManager.RoleExistsAsync(adminRole))
+            foreach (var roleName in new[] { "Admin", "SuperAdmin", "Staff", "Exhibitor" })
             {
-                await roleManager.CreateAsync(new ApplicationRole { Name = adminRole, TenantID = defaultTenant.TenantID });
+                if (!await roleManager.RoleExistsAsync(roleName))
+                {
+                    var roleResult = await roleManager.CreateAsync(new ApplicationRole { Name = roleName, TenantID = defaultTenant.TenantID });
+                    if (!roleResult.Succeeded) throw new InvalidOperationException("Failed to initialize application roles.");
+                }
             }
 
             // 4. Seed Admin User
-            string adminEmail = "admin@example.com";
+            var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+            var adminEmail = configuration["Bootstrap:AdminEmail"];
+            if (string.IsNullOrWhiteSpace(adminEmail))
+            {
+                var administrators = await userManager.GetUsersInRoleAsync("SuperAdmin");
+                adminEmail = administrators.FirstOrDefault(u => u.IsActive)?.Email
+                    ?? throw new InvalidOperationException("Set Bootstrap:AdminEmail and Bootstrap:AdminPassword for the first administrator.");
+            }
             if (await userManager.FindByEmailAsync(adminEmail) == null)
             {
                 var adminUser = new ApplicationUser
@@ -111,11 +122,11 @@ namespace ExhibitionManagementSystem.DataAccess
                     IsActive = true
                 };
 
-                var result = await userManager.CreateAsync(adminUser, "Admin@123");
-                if (result.Succeeded)
-                {
-                    await userManager.AddToRoleAsync(adminUser, adminRole);
-                }
+                var password = configuration["Bootstrap:AdminPassword"];
+                if (string.IsNullOrWhiteSpace(password))
+                    throw new InvalidOperationException("Bootstrap:AdminPassword is required to create the first administrator.");
+                var result = await userManager.CreateAsync(adminUser, password);
+                if (!result.Succeeded) throw new InvalidOperationException("Failed to create the bootstrap administrator.");
             }
 
             // Retrieve admin user ID for exchange rates seeding
@@ -125,6 +136,11 @@ namespace ExhibitionManagementSystem.DataAccess
                 throw new InvalidOperationException("Failed to find or create the default Admin User.");
             }
             string adminUserId = adminUserObj.Id;
+            if (!await userManager.IsInRoleAsync(adminUserObj, "SuperAdmin"))
+            {
+                var assignment = await userManager.AddToRoleAsync(adminUserObj, "SuperAdmin");
+                if (!assignment.Succeeded) throw new InvalidOperationException("Failed to assign the bootstrap administrator role.");
+            }
 
             // 5. Seed Exchange Rates
             if (!await context.ExchangeRates.AnyAsync(r => r.FromCurrency == "USD" && r.ToCurrency == "LYD"))

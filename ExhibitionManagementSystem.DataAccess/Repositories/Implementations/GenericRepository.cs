@@ -22,34 +22,34 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
 
         public async Task<T?> GetByIdAsync(object id)
         {
-            return await _dbSet.FindAsync(id);
+            return await _dbSet.FindAsync([id], _context.RequestCancellation);
         }
 
         public async Task<IReadOnlyList<T>> GetAllAsync()
         {
-            return await _dbSet.AsNoTracking().ToListAsync();
+            return await _dbSet.AsNoTracking().ToListAsync(cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
-            return await _dbSet.AsNoTracking().Where(predicate).ToListAsync();
+            return await _dbSet.AsNoTracking().Where(predicate).ToListAsync(cancellationToken: _context.RequestCancellation);
         }
 
-        public async Task<T?> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
+        public async Task<T?> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate, System.Threading.CancellationToken cancellationToken = default)
         {
-            return await _dbSet.AsNoTracking().FirstOrDefaultAsync(predicate);
+            return await _dbSet.AsNoTracking().FirstOrDefaultAsync(predicate, cancellationToken.CanBeCanceled ? cancellationToken : _context.RequestCancellation);
         }
 
         public async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate)
         {
-            return await _dbSet.AnyAsync(predicate);
+            return await _dbSet.AnyAsync(predicate, cancellationToken: _context.RequestCancellation);
         }
 
-        public async Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null)
+        public async Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null, System.Threading.CancellationToken cancellationToken = default)
         {
             return predicate != null 
-                ? await _dbSet.CountAsync(predicate) 
-                : await _dbSet.CountAsync();
+                ? await _dbSet.CountAsync(predicate, cancellationToken.CanBeCanceled ? cancellationToken : _context.RequestCancellation)
+                : await _dbSet.CountAsync(cancellationToken.CanBeCanceled ? cancellationToken : _context.RequestCancellation);
         }
 
         public async Task<IReadOnlyList<T>> GetAllWithIncludesAsync(params Expression<Func<T, object>>[] includes)
@@ -59,7 +59,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             {
                 query = query.Include(include);
             }
-            return await query.AsNoTracking().ToListAsync();
+            return await query.AsNoTracking().ToListAsync(cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<T?> GetByIdWithIncludesAsync(object id, params Expression<Func<T, object>>[] includes)
@@ -80,7 +80,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             var body = Expression.Equal(property, convertedId);
             var lambda = Expression.Lambda<Func<T, bool>>(body, parameter);
 
-            return await query.FirstOrDefaultAsync(lambda);
+            return await query.FirstOrDefaultAsync(lambda, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<(IReadOnlyList<T> Items, int TotalCount)> GetPagedAsync(
@@ -96,7 +96,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 query = query.Where(predicate);
             }
 
-            var totalCount = await query.CountAsync();
+            var totalCount = await query.CountAsync(cancellationToken: _context.RequestCancellation);
 
             if (orderBy != null)
             {
@@ -106,7 +106,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             var items = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _context.RequestCancellation);
 
             return (items, totalCount);
         }
@@ -172,7 +172,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             var body = Expression.Equal(property, convertedId);
             var lambda = Expression.Lambda<Func<T, bool>>(body, parameter);
 
-            var entity = await _dbSet.IgnoreQueryFilters().FirstOrDefaultAsync(lambda);
+            var entity = await _dbSet.IgnoreQueryFilters().FirstOrDefaultAsync(lambda, cancellationToken: _context.RequestCancellation);
             if (entity == null) 
                 return;
 
@@ -196,7 +196,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 return await _dbSet.IgnoreQueryFilters()
                     .Where(e => ((ISoftDeletable)e).IsDeleted)
                     .AsNoTracking()
-                    .ToListAsync();
+                    .ToListAsync(cancellationToken: _context.RequestCancellation);
             }
             else
             {

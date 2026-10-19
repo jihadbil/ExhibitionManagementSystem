@@ -45,7 +45,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                             (r.MaxAreaSqM == null || areaSqM <= r.MaxAreaSqM) &&
                             r.ValidFrom <= targetDate &&
                             (r.ValidTo == null || r.ValidTo >= targetDate))
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _context.RequestCancellation);
 
             if (!rules.Any())
                 return null;

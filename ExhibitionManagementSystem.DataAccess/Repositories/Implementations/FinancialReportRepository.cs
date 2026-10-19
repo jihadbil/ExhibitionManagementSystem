@@ -29,7 +29,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return await _dbSet.AsNoTracking()
                 .Where(r => r.TenantID == tenantId)
                 .OrderByDescending(r => r.GeneratedAt)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken: _context.RequestCancellation);
         }
     }
 }

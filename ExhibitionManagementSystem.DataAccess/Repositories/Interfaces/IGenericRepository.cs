@@ -12,9 +12,9 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Interfaces
         Task<T?> GetByIdAsync(object id);
         Task<IReadOnlyList<T>> GetAllAsync();
         Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate);
-        Task<T?> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate);
+        Task<T?> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate, System.Threading.CancellationToken cancellationToken = default);
         Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate);
-        Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null);
+        Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null, System.Threading.CancellationToken cancellationToken = default);
 
         // Query with Navigation Properties
         Task<IReadOnlyList<T>> GetAllWithIncludesAsync(params Expression<Func<T, object>>[] includes);

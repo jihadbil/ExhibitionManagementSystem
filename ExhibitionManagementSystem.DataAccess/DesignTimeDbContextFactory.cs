@@ -11,20 +11,28 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Applicatio
     {
         var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
 
-        // نحدد مسار مجلد مشروع الـ Web API للوصول لملف الإعدادات appsettings.json
-        var basePath = Path.Combine(Directory.GetCurrentDirectory(), "../ExhibitionManagementSystem");
-        if (!Directory.Exists(basePath))
+        var basePath = Directory.GetCurrentDirectory();
+        for (var directory = new DirectoryInfo(basePath); directory != null; directory = directory.Parent)
         {
-            basePath = Directory.GetCurrentDirectory();
+            var candidate = Path.Combine(directory.FullName, "ExhibitionManagementSystem");
+            if (File.Exists(Path.Combine(candidate, "appsettings.json")))
+            {
+                basePath = candidate;
+                break;
+            }
         }
 
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
         var configuration = new ConfigurationBuilder()
             .SetBasePath(basePath)
             .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile($"appsettings.{environment}.json", optional: true)
+            .AddEnvironmentVariables()
             .Build();
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Server=(local);Database=MyDatabase;Trusted_Connection=True;TrustServerCertificate=True;";
+            ?? throw new InvalidOperationException("Set ConnectionStrings__DefaultConnection explicitly for EF tooling.");
 
         optionsBuilder.UseSqlServer(connectionString);
 

@@ -19,7 +19,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return await _dbSet.AsNoTracking()
                 .Include(bm => bm.MergeItems)
                     .ThenInclude(bmi => bmi.Booth)
-                .FirstOrDefaultAsync(bm => bm.MergeID == mergeId);
+                .FirstOrDefaultAsync(bm => bm.MergeID == mergeId, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<IReadOnlyList<BoothMerge>> GetByExhibitionAsync(int exhibitionId)
@@ -31,7 +31,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             var merge = await _dbSet.AsNoTracking()
                 .Include(bm => bm.Reservation)
-                .FirstOrDefaultAsync(bm => bm.MergeID == mergeId);
+                .FirstOrDefaultAsync(bm => bm.MergeID == mergeId, cancellationToken: _context.RequestCancellation);
 
             if (merge == null || merge.ReservationID == null || merge.Reservation == null)
                 return false;

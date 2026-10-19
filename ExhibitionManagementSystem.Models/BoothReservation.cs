@@ -13,6 +13,7 @@ namespace ExhibitionManagementSystem.Models;
 /// </summary>
 public class BoothReservation : IAuditableEntity, ISoftDeletable
 {
+    [Timestamp] public byte[] RowVersion { get; set; } = [];
 
     /// <summary>
     /// المعرف الفريد للحجز.

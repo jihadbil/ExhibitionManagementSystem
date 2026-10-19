@@ -5,12 +5,15 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Interfaces
 {
     public interface IUnitOfWork : IDisposable
     {
+        System.Threading.CancellationToken RequestCancellation { get; }
         ITenantRepository Tenants { get; }
         ITenantSubscriptionRepository TenantSubscriptions { get; }
         IVenueRepository Venues { get; }
         IHallRepository Halls { get; }
         IBoothRepository Booths { get; }
         IBoothMergeRepository BoothMerges { get; }
+        IGenericRepository<ExhibitionManagementSystem.Models.BoothMergeItem> BoothMergeItems { get; }
+        IGenericRepository<ExhibitionManagementSystem.Models.ReservationService> ReservationServices { get; }
         IExhibitionRepository Exhibitions { get; }
         IExhibitionScheduleRepository ExhibitionSchedules { get; }
         IScheduleRegistrationRepository ScheduleRegistrations { get; }

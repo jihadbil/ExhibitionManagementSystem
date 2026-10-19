@@ -147,7 +147,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(r => r.Exhibition)
                 .Include(r => r.Exhibitor)
                 .Where(r => r.ExhibitorID == exhibitorId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<BoothReservationSummaryDto>>(reservations);
             return ServiceResult<IList<BoothReservationSummaryDto>>.Success(dtos);

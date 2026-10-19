@@ -33,7 +33,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             return await _dbSet.AsNoTracking()
                 .Include(e => e.BoothReservations)
-                .FirstOrDefaultAsync(e => e.ExhibitorID == exhibitorId);
+                .FirstOrDefaultAsync(e => e.ExhibitorID == exhibitorId, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<bool> ExistsForUserAsync(string userId)

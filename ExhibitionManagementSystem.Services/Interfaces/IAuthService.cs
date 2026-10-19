@@ -10,7 +10,7 @@ namespace ExhibitionManagementSystem.Services.Interfaces
     {
         // Login & Registration
         Task<ServiceResult<LoginResponseDto>> LoginAsync(LoginRequestDto dto);
-        Task<ServiceResult<UserManagementDto>> RegisterAsync(RegisterRequestDto dto);
+        Task<ServiceResult<UserManagementDto>> RegisterAsync(int tenantId, RegisterRequestDto dto);
         Task<ServiceResult> LogoutAsync(string userId);
 
         // JWT & Refresh Token Management
@@ -28,14 +28,14 @@ namespace ExhibitionManagementSystem.Services.Interfaces
 
         // User Administration (Tenant-scoped)
         Task<ServiceResult<PagedResultDto<UserManagementDto>>> GetUsersAsync(int tenantId, int page, int pageSize);
-        Task<ServiceResult<UserManagementDto>> GetUserByIdAsync(string userId);
-        Task<ServiceResult<UserManagementDto>> CreateUserAsync(int tenantId, UserManagementCreateDto dto);
-        Task<ServiceResult> UpdateUserStatusAsync(string userId, bool isActive);
-        Task<ServiceResult> DeleteUserAsync(string userId);
+        Task<ServiceResult<UserManagementDto>> GetUserByIdAsync(int tenantId, string userId);
+        Task<ServiceResult<UserManagementDto>> CreateUserAsync(int tenantId, UserManagementCreateDto dto, bool canManagePlatformRoles = false);
+        Task<ServiceResult> UpdateUserStatusAsync(int tenantId, string userId, bool isActive, bool canManagePlatformRoles = false);
+        Task<ServiceResult> DeleteUserAsync(int tenantId, string userId, bool canManagePlatformRoles = false);
 
         // Role Management
         Task<ServiceResult<IList<RoleDto>>> GetRolesAsync(int tenantId);
-        Task<ServiceResult> AssignRoleAsync(AssignRoleDto dto);
-        Task<ServiceResult> RemoveRoleAsync(string userId, string roleName);
+        Task<ServiceResult> AssignRoleAsync(int tenantId, AssignRoleDto dto, bool canManagePlatformRoles = false);
+        Task<ServiceResult> RemoveRoleAsync(int tenantId, string userId, string roleName, bool canManagePlatformRoles = false);
     }
 }

@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System.ComponentModel.DataAnnotations;
 
 namespace ExhibitionManagementSystem.Models.DTOs.Exhibitor;
@@ -25,6 +26,7 @@ public class ExhibitorUpdateDto
     public string Nationality { get; set; } = string.Empty;
 
     [Required]
+    [DefinedEnum(typeof(ExhibitionManagementSystem.Models.Enums.ExhibitorCategory))]
     public string ExhibitorCategory { get; set; } = string.Empty;
 
     [StringLength(500)]

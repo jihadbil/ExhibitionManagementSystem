@@ -4,6 +4,7 @@ namespace ExhibitionManagementSystem.Models.DTOs.Hall;
 
 public class HallCreateDto
 {
+    [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
     public int VenueID { get; set; }
 
     [Required]

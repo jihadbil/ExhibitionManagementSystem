@@ -14,13 +14,13 @@ namespace ExhibitionManagementSystem.Services.Interfaces
             BoothType boothType, 
             ExhibitorCategory category, 
             decimal areaSqM,
-            int? boothId = null);
+            int? boothId = null, string? currencyCode = null);
 
         Task<ServiceResult<decimal>> CalculateServicePriceAsync(
             int tenantId, 
             int serviceId, 
             int? exhibitionId, 
-            int quantity);
+            decimal quantity, string? currencyCode = null);
 
         // Booth Price Rules
         Task<ServiceResult<IList<BoothPriceRuleDto>>> GetBoothPriceRulesAsync(int tenantId, int? exhibitionId);

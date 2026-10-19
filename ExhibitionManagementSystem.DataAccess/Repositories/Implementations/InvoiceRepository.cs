@@ -34,7 +34,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             return await _dbSet.AsNoTracking()
                 .Include(i => i.Payments)
-                .FirstOrDefaultAsync(i => i.InvoiceID == invoiceId);
+                .FirstOrDefaultAsync(i => i.InvoiceID == invoiceId, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<IReadOnlyList<Invoice>> GetOverdueInvoicesAsync(int tenantId)
@@ -50,23 +50,11 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             var year = DateTime.UtcNow.Year;
             var prefix = $"INV-{tenantId:D4}-{year}-";
 
-            var lastInvoiceNumber = await _dbSet.AsNoTracking()
-                .Where(i => i.TenantID == tenantId && i.InvoiceNumber.StartsWith(prefix))
-                .OrderByDescending(i => i.InvoiceNumber)
-                .Select(i => i.InvoiceNumber)
-                .FirstOrDefaultAsync();
-
-            int nextSeq = 1;
-            if (!string.IsNullOrEmpty(lastInvoiceNumber))
-            {
-                var parts = lastInvoiceNumber.Split('-');
-                if (parts.Length == 4 && int.TryParse(parts[3], out int lastSeq))
-                {
-                    nextSeq = lastSeq + 1;
-                }
-            }
-
-            return $"{prefix}{nextSeq:D5}";
+            // SQL sequences allocate atomically across requests and instances.
+            // Gaps on rollback are intentional; these are unique document IDs.
+            var values = await _context.Database.SqlQueryRaw<long>(
+                "SELECT NEXT VALUE FOR [InvoiceNumbers] AS [Value]").ToListAsync(cancellationToken: _context.RequestCancellation);
+            return $"{prefix}{values[0]:D10}";
         }
     }
 }

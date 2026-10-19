@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using AutoMapper;
 using ExhibitionManagementSystem.Models;
@@ -37,7 +38,7 @@ public class ExhibitionMappingProfile : Profile
             .ForMember(dest => dest.ExhibitionID, opt => opt.Ignore())
             .ForMember(dest => dest.TenantID, opt => opt.Ignore())
             .ForMember(dest => dest.VenueID, opt => opt.Ignore())
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => Enum.Parse<ExhibitionStatus>(src.Status, true)))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => EnumValues.Parse<ExhibitionStatus>(src.Status, true)))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
@@ -55,7 +56,7 @@ public class ExhibitionMappingProfile : Profile
 
         CreateMap<ExhibitionScheduleCreateDto, ExhibitionSchedule>()
             .ForMember(dest => dest.ScheduleID, opt => opt.Ignore())
-            .ForMember(dest => dest.EventType, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.EventType) ? (EventType?)Enum.Parse<EventType>(src.EventType, true) : null))
+            .ForMember(dest => dest.EventType, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.EventType) ? (EventType?)EnumValues.Parse<EventType>(src.EventType, true) : null))
             .ForMember(dest => dest.Exhibition, opt => opt.Ignore())
             .ForMember(dest => dest.Hall, opt => opt.Ignore());
     }

@@ -54,7 +54,7 @@ public class BoothsController : BaseApiController
             var boothIds = await _unitOfWork.BoothReservations.AsQueryable()
                 .Where(r => r.ExhibitionID == exhibitionId.Value && r.BoothID.HasValue)
                 .Select(r => r.BoothID!.Value)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
             query = query.Where(b => boothIds.Contains(b.BoothID));
         }
 
@@ -66,7 +66,7 @@ public class BoothsController : BaseApiController
             }
         }
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
         var page = pageNumber ?? 1;
         var size = pageSize ?? 10;
@@ -75,7 +75,7 @@ public class BoothsController : BaseApiController
             .OrderBy(b => b.BoothNumber)
             .Skip((page - 1) * size)
             .Take(size)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
         var dtos = _mapper.Map<IList<BoothDto>>(items);
 

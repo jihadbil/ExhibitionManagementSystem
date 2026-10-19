@@ -31,12 +31,12 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(a => a.User)
                 .Where(a => a.TenantID == tenantId);
 
-            var totalCount = await query.CountAsync();
+            var totalCount = await query.CountAsync(cancellationToken: _unitOfWork.RequestCancellation);
             var items = await query
                 .OrderByDescending(a => a.ActionAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<AuditLogDto>>(items);
             
@@ -59,7 +59,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                             a.TableName == tableName && 
                             a.RecordID == recordId)
                 .OrderByDescending(a => a.ActionAt)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<AuditLogDto>>(logs);
             return ServiceResult<IList<AuditLogDto>>.Success(dtos);
@@ -71,7 +71,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 .Include(s => s.Tenant)
                 .Where(s => s.TenantID == tenantId)
                 .OrderByDescending(s => s.StartDate)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _unitOfWork.RequestCancellation);
 
             var dtos = _mapper.Map<IList<TenantSubscriptionDto>>(subs);
             return ServiceResult<IList<TenantSubscriptionDto>>.Success(dtos);
@@ -85,10 +85,13 @@ namespace ExhibitionManagementSystem.Services.Implementations
                 return ServiceResult<TenantSubscriptionDto>.Failure("المستأجر غير موجود", "TENANT_NOT_FOUND");
             }
 
-            if (!Enum.TryParse<SubscriptionStatus>(dto.Status, true, out var status))
+            if (!Enum.TryParse<SubscriptionStatus>(dto.Status, true, out var status) || !Enum.IsDefined(status))
             {
-                status = SubscriptionStatus.Active;
+                return ServiceResult<TenantSubscriptionDto>.Failure("حالة الاشتراك غير صالحة", "INVALID_STATUS");
             }
+
+            if (dto.Price < 0 || dto.EndDate < dto.StartDate)
+                return ServiceResult<TenantSubscriptionDto>.Failure("سعر الاشتراك أو تواريخه غير صالحة", "INVALID_SUBSCRIPTION");
 
             var sub = new TenantSubscription
             {
@@ -107,7 +110,7 @@ namespace ExhibitionManagementSystem.Services.Implementations
 
             var fullSub = await _unitOfWork.TenantSubscriptions.AsQueryable()
                 .Include(s => s.Tenant)
-                .FirstOrDefaultAsync(s => s.SubID == sub.SubID);
+                .FirstOrDefaultAsync(s => s.SubID == sub.SubID, cancellationToken: _unitOfWork.RequestCancellation);
 
             var resultDto = _mapper.Map<TenantSubscriptionDto>(fullSub ?? sub);
             return ServiceResult<TenantSubscriptionDto>.Success(resultDto);

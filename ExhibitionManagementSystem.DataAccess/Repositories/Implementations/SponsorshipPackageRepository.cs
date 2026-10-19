@@ -20,6 +20,6 @@ public class SponsorshipPackageRepository : GenericRepository<SponsorshipPackage
             .Include(p => p.Contracts)
             .Where(p => p.TenantID == tenantId && p.ExhibitionID == exhibitionId && p.IsActive)
             .OrderBy(p => p.Level)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: _context.RequestCancellation);
     }
 }

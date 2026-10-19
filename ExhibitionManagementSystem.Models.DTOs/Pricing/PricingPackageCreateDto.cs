@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -15,6 +16,7 @@ public class PricingPackageCreateDto
     [StringLength(500)]
     public string Description { get; set; } = string.Empty;
 
+    [DecimalValue("0", "9999999999999999.99")]
     public decimal TotalPrice { get; set; }
 
     [Required]
@@ -22,6 +24,7 @@ public class PricingPackageCreateDto
     public string CurrencyCode { get; set; } = string.Empty;
 
     public DateTime ValidFrom { get; set; }
+    [DateAfter(nameof(ValidFrom))]
     public DateTime? ValidTo { get; set; }
 
     [Required]

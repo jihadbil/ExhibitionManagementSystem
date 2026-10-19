@@ -12,6 +12,9 @@ using Microsoft.OpenApi;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.OpenApi;
 using Scalar.AspNetCore;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +23,15 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDataAccess(connectionString);
 builder.Services.AddHttpContextAccessor();
+var protection = builder.Services.AddDataProtection().SetApplicationName("ExhibitionManagementSystem");
+var keyDirectory = builder.Configuration["DataProtection:KeysPath"];
+if (builder.Configuration.GetValue<bool>("PasswordReset:Enabled") && (string.IsNullOrWhiteSpace(keyDirectory) || !Path.IsPathRooted(keyDirectory)))
+    throw new InvalidOperationException("Password reset delivery requires an absolute persistent DataProtection:KeysPath.");
+if (!string.IsNullOrWhiteSpace(keyDirectory)) protection.PersistKeysToFileSystem(new DirectoryInfo(keyDirectory));
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = TimeSpan.FromHours(1));
+var signingKey = builder.Configuration["JwtSettings:SecretKey"];
+if (string.IsNullOrWhiteSpace(signingKey) || Encoding.UTF8.GetByteCount(signingKey) < 32)
+    throw new InvalidOperationException("Set JwtSettings:SecretKey to a secret containing at least 32 bytes.");
 
 // Add ASP.NET Core Identity
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -28,6 +40,8 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     options.Password.RequireLowercase = true;
     options.Password.RequireUppercase = true;
     options.Password.RequiredLength = 8;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
@@ -41,7 +55,6 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-    var secretKey = jwtSettings["SecretKey"] ?? "SuperSecretKeyForExhibitionManagementSystemSecurity2026";
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -50,20 +63,47 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"] ?? "ExhibitionManagementSystem",
         ValidAudience = jwtSettings["Audience"] ?? "ExhibitionManagementSystemClients",
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
         ClockSkew = TimeSpan.Zero
+    };
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var id = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+            var stamp = context.Principal?.FindFirstValue("security_stamp");
+            var tenantClaim = context.Principal?.FindFirstValue("TenantId");
+            var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+            var user = await db.Users.AsNoTracking().Include(u => u.Tenant)
+                .SingleOrDefaultAsync(u => u.Id == id, context.HttpContext.RequestAborted);
+            if (user == null || !user.IsActive || !user.Tenant.IsActive
+                || string.IsNullOrEmpty(stamp) || stamp != user.SecurityStamp
+                || !int.TryParse(tenantClaim, out var tenantId) || tenantId != user.TenantID)
+                context.Fail("The session is no longer valid.");
+        }
     };
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => options.Filters.Add<RequestBoundsFilter>());
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("authentication", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+        }));
+});
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("ConfiguredOrigins", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        if (origins.Length > 0)
+            policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod();
     });
 });
 
@@ -89,27 +129,16 @@ builder.Services.AddServiceLayer();
 
 var app = builder.Build();
 
-// Seed Database
-try
-{
-    await DataSeeder.SeedDataAsync(app.Services);
-    // await DataSeederTest.SeedDataAsync(app.Services);
-}
-catch (Exception ex)
-{
-    var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "An error occurred while seeding the database.");
-}
-using var scope = app.Services.CreateScope();
-var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-Console.WriteLine(db.Database.GetConnectionString());
+// A failed schema/bootstrap must prevent this instance from accepting requests.
+await DataSeeder.SeedDataAsync(app.Services);
 // Configure the HTTP request pipeline.
 
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
-app.UseCors("AllowAll");
+app.UseCors("ConfiguredOrigins");
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -128,6 +157,8 @@ if (app.Environment.IsDevelopment())
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }
 
 // OpenAPI transformer لدعم JWT في Scalar
 internal sealed class BearerSecuritySchemeTransformer(IAuthenticationSchemeProvider authenticationSchemeProvider) : IOpenApiDocumentTransformer

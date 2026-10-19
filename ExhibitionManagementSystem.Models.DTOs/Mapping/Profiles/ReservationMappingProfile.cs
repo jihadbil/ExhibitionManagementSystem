@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using AutoMapper;
 using ExhibitionManagementSystem.Models;
@@ -28,8 +29,8 @@ public class ReservationMappingProfile : Profile
 
         CreateMap<BoothReservationCreateDto, BoothReservation>()
             .ForMember(dest => dest.ReservationID, opt => opt.Ignore())
-            .ForMember(dest => dest.BoothTypeSelected, opt => opt.MapFrom(src => Enum.Parse<BoothType>(src.BoothTypeSelected, true)))
-            .ForMember(dest => dest.ExhibitorCategory, opt => opt.MapFrom(src => Enum.Parse<ExhibitorCategory>(src.ExhibitorCategory, true)))
+            .ForMember(dest => dest.BoothTypeSelected, opt => opt.MapFrom(src => EnumValues.Parse<BoothType>(src.BoothTypeSelected, true)))
+            .ForMember(dest => dest.ExhibitorCategory, opt => opt.MapFrom(src => EnumValues.Parse<ExhibitorCategory>(src.ExhibitorCategory, true)))
             .ForMember(dest => dest.AllocatedAreaSqM, opt => opt.MapFrom(src => 0))
             .ForMember(dest => dest.BoothAmount, opt => opt.MapFrom(src => 0))
             .ForMember(dest => dest.ServicesAmount, opt => opt.MapFrom(src => 0))
@@ -54,6 +55,10 @@ public class ReservationMappingProfile : Profile
             .ForMember(dest => dest.ReservationServices, opt => opt.Ignore());
 
         CreateMap<BoothReservationUpdateDto, BoothReservation>()
+            .ForMember(dest => dest.BoothAmount, opt => opt.Ignore())
+            .ForMember(dest => dest.ServicesAmount, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalAmount, opt => opt.Ignore())
+            .ForMember(dest => dest.AllocatedAreaSqM, opt => opt.Ignore())
             .ForMember(dest => dest.ReservationID, opt => opt.Ignore())
             .ForMember(dest => dest.ExhibitorID, opt => opt.Ignore())
             .ForMember(dest => dest.ExhibitionID, opt => opt.Ignore())
@@ -78,7 +83,7 @@ public class ReservationMappingProfile : Profile
             .ForMember(dest => dest.CreatedByUser, opt => opt.Ignore())
             .ForMember(dest => dest.Invoice, opt => opt.Ignore())
             .ForMember(dest => dest.ReservationServices, opt => opt.Ignore())
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => Enum.Parse<ReservationStatus>(src.Status, true)));
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => EnumValues.Parse<ReservationStatus>(src.Status, true)));
 
         CreateMap<ReservationService, ReservationServiceDto>()
             .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service != null ? src.Service.ServiceName : string.Empty));

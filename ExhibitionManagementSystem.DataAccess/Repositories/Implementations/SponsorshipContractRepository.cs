@@ -24,7 +24,7 @@ public class SponsorshipContractRepository : GenericRepository<SponsorshipContra
                 .ThenInclude(a => a.Space)
             .Where(c => c.TenantID == tenantId && c.ExhibitionID == exhibitionId)
             .OrderByDescending(c => c.SignedDate)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: _context.RequestCancellation);
     }
 
     public async Task<IReadOnlyList<SponsorshipContract>> GetContractsBySponsorAsync(int tenantId, int sponsorId)
@@ -35,7 +35,7 @@ public class SponsorshipContractRepository : GenericRepository<SponsorshipContra
             .Include(c => c.Currency)
             .Where(c => c.TenantID == tenantId && c.SponsorID == sponsorId)
             .OrderByDescending(c => c.SignedDate)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: _context.RequestCancellation);
     }
 
     public async Task<SponsorshipContract?> GetContractWithDetailsAsync(int tenantId, int contractId)
@@ -47,13 +47,13 @@ public class SponsorshipContractRepository : GenericRepository<SponsorshipContra
             .Include(c => c.Currency)
             .Include(c => c.AdAssignments)
                 .ThenInclude(a => a.Space)
-            .FirstOrDefaultAsync(c => c.TenantID == tenantId && c.ContractID == contractId);
+            .FirstOrDefaultAsync(c => c.TenantID == tenantId && c.ContractID == contractId, cancellationToken: _context.RequestCancellation);
     }
 
     public async Task<decimal> GetTotalSponsorshipRevenueAsync(int exhibitionId)
     {
         return await _dbSet
             .Where(c => c.ExhibitionID == exhibitionId && c.Status != SponsorshipStatus.Cancelled)
-            .SumAsync(c => c.TotalAmount);
+            .SumAsync(c => c.TotalAmount, cancellationToken: _context.RequestCancellation);
     }
 }

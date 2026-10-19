@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using AutoMapper;
 using ExhibitionManagementSystem.Models;
@@ -19,7 +20,7 @@ public class ExhibitorMappingProfile : Profile
         CreateMap<ExhibitorCreateDto, Models.Exhibitor>()
             .ForMember(dest => dest.ExhibitorID, opt => opt.Ignore())
             .ForMember(dest => dest.UserId, opt => opt.Ignore())
-            .ForMember(dest => dest.ExhibitorCategory, opt => opt.MapFrom(src => Enum.Parse<ExhibitorCategory>(src.ExhibitorCategory, true)))
+            .ForMember(dest => dest.ExhibitorCategory, opt => opt.MapFrom(src => EnumValues.Parse<ExhibitorCategory>(src.ExhibitorCategory, true)))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
@@ -34,7 +35,7 @@ public class ExhibitorMappingProfile : Profile
             .ForMember(dest => dest.ExhibitorID, opt => opt.Ignore())
             .ForMember(dest => dest.TenantID, opt => opt.Ignore())
             .ForMember(dest => dest.UserId, opt => opt.Ignore())
-            .ForMember(dest => dest.ExhibitorCategory, opt => opt.MapFrom(src => Enum.Parse<ExhibitorCategory>(src.ExhibitorCategory, true)))
+            .ForMember(dest => dest.ExhibitorCategory, opt => opt.MapFrom(src => EnumValues.Parse<ExhibitorCategory>(src.ExhibitorCategory, true)))
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())

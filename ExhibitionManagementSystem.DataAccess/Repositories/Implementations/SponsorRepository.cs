@@ -18,7 +18,7 @@ public class SponsorRepository : GenericRepository<Sponsor>, ISponsorRepository
         return await _dbSet
             .Where(s => s.TenantID == tenantId && s.IsActive)
             .OrderBy(s => s.CompanyName)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: _context.RequestCancellation);
     }
 
     public async Task<Sponsor?> GetSponsorWithContractsAsync(int tenantId, int sponsorId)
@@ -28,6 +28,6 @@ public class SponsorRepository : GenericRepository<Sponsor>, ISponsorRepository
                 .ThenInclude(c => c.Exhibition)
             .Include(s => s.Contracts)
                 .ThenInclude(c => c.Package)
-            .FirstOrDefaultAsync(s => s.TenantID == tenantId && s.SponsorID == sponsorId);
+            .FirstOrDefaultAsync(s => s.TenantID == tenantId && s.SponsorID == sponsorId, cancellationToken: _context.RequestCancellation);
     }
 }

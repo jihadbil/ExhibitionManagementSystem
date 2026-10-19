@@ -17,10 +17,101 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.HasSequence("InvoiceNumbers");
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.AdvertisingSpace", b =>
+                {
+                    b.Property<int>("SpaceID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SpaceID"));
+
+                    b.Property<decimal>("BasePrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedByUserId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DimensionsDescription")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("ExhibitionID")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("HallID")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LocationNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("PhotoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("SpaceCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("SpaceName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("SpaceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("TenantID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("VenueID")
+                        .HasColumnType("int");
+
+                    b.HasKey("SpaceID");
+
+                    b.HasIndex("CurrencyCode");
+
+                    b.HasIndex("HallID");
+
+                    b.HasIndex("TenantID");
+
+                    b.HasIndex("VenueID");
+
+                    b.HasIndex("ExhibitionID", "SpaceCode")
+                        .IsUnique();
+
+                    b.ToTable("AdvertisingSpaces");
+                });
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.ApplicationRole", b =>
                 {
@@ -203,6 +294,120 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.BadgeTemplate", b =>
+                {
+                    b.Property<int>("TemplateID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TemplateID"));
+
+                    b.Property<string>("AccentColor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("CategoryBadgeText")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CustomFooterText")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("CustomZplTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedByUserId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ExhibitionID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HeaderBgColor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("HeaderTextColor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("HeightMm")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Orientation")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("ShowBarcode")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ShowCompanyName")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ShowDates")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ShowHallName")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ShowJobTitle")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ShowLogo")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ShowQRCode")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TargetParticipantType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("TemplateName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("TenantID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WidthMm")
+                        .HasColumnType("int");
+
+                    b.HasKey("TemplateID");
+
+                    b.HasIndex("ExhibitionID");
+
+                    b.HasIndex("TenantID", "ExhibitionID", "TargetParticipantType");
+
+                    b.ToTable("BadgeTemplates");
+                });
+
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Booth", b =>
                 {
                     b.Property<int>("BoothID")
@@ -257,6 +462,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.Property<decimal?>("RotationAngle")
                         .HasColumnType("decimal(5,2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("ShapePolygonJSON")
                         .IsRequired()
@@ -497,18 +708,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<int>("ExhibitionID")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ExhibitionID1")
-                        .HasColumnType("int");
-
                     b.Property<string>("ExhibitorCategory")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<int>("ExhibitorID")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ExhibitorID1")
                         .HasColumnType("int");
 
                     b.Property<bool>("IsDeleted")
@@ -526,6 +731,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.Property<DateTime>("ReservationDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<decimal>("ServicesAmount")
                         .HasColumnType("decimal(18,2)");
@@ -549,13 +760,17 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.HasIndex("CurrencyCode");
 
-                    b.HasIndex("ExhibitionID1");
-
                     b.HasIndex("ExhibitorID");
 
-                    b.HasIndex("ExhibitorID1");
-
                     b.HasIndex("MergeID");
+
+                    b.HasIndex("ExhibitionID", "BoothID")
+                        .IsUnique()
+                        .HasFilter("[BoothID] IS NOT NULL AND [IsDeleted] = 0 AND [Status] <> N'Cancelled'");
+
+                    b.HasIndex("ExhibitionID", "MergeID")
+                        .IsUnique()
+                        .HasFilter("[MergeID] IS NOT NULL AND [IsDeleted] = 0 AND [Status] <> N'Cancelled'");
 
                     b.HasIndex("ExhibitionID", "IsDeleted", "Status");
 
@@ -807,9 +1022,6 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<int>("ExhibitionID")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ExhibitionID1")
-                        .HasColumnType("int");
-
                     b.Property<int?>("HallID")
                         .HasColumnType("int");
 
@@ -830,8 +1042,6 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.HasKey("ScheduleID");
 
                     b.HasIndex("ExhibitionID");
-
-                    b.HasIndex("ExhibitionID1");
 
                     b.HasIndex("HallID");
 
@@ -1163,6 +1373,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<int>("ReservationID")
                         .HasColumnType("int");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -1260,6 +1476,68 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.ToTable("PackageServices");
                 });
 
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.PasswordResetMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("LeasedUntil")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("NextAttemptAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProtectedPayload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletedAt", "NextAttemptAt");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("PasswordResetMessages");
+                });
+
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Payment", b =>
                 {
                     b.Property<int>("PaymentID")
@@ -1279,10 +1557,12 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
 
-                    b.Property<int>("InvoiceID")
-                        .HasColumnType("int");
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
-                    b.Property<int?>("InvoiceID1")
+                    b.Property<int>("InvoiceID")
                         .HasColumnType("int");
 
                     b.Property<string>("Method")
@@ -1322,9 +1602,11 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
 
                     b.HasIndex("InvoiceID");
 
-                    b.HasIndex("InvoiceID1");
-
                     b.HasIndex("ReceivedByUserId");
+
+                    b.HasIndex("InvoiceID", "IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKey] IS NOT NULL");
 
                     b.ToTable("Payments");
                 });
@@ -1650,6 +1932,279 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.ToTable("ServicePriceRules");
                 });
 
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.Sponsor", b =>
+                {
+                    b.Property<int>("SponsorID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SponsorID"));
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("CompanyProfile")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ContactPerson")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedByUserId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("TenantID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("WebsiteUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("SponsorID");
+
+                    b.HasIndex("TenantID", "IsDeleted");
+
+                    b.ToTable("Sponsors");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.SponsorAdAssignment", b =>
+                {
+                    b.Property<int>("AssignmentID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AssignmentID"));
+
+                    b.Property<string>("ArtworkFileUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("AssetStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("AssignedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ContractID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedByUserId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("SpaceID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("AssignmentID");
+
+                    b.HasIndex("SpaceID")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.HasIndex("ContractID", "SpaceID");
+
+                    b.ToTable("SponsorAdAssignments");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.SponsorshipContract", b =>
+                {
+                    b.Property<int>("ContractID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ContractID"));
+
+                    b.Property<string>("ContractNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedByUserId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ExhibitionID")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("PackageID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PaymentDueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("SignedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SpecialTerms")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SponsorID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("TenantID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ContractID");
+
+                    b.HasIndex("CurrencyCode");
+
+                    b.HasIndex("ExhibitionID");
+
+                    b.HasIndex("PackageID");
+
+                    b.HasIndex("SponsorID");
+
+                    b.HasIndex("TenantID", "ContractNumber")
+                        .IsUnique();
+
+                    b.ToTable("SponsorshipContracts");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.SponsorshipPackage", b =>
+                {
+                    b.Property<int>("PackageID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PackageID"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedByUserId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EntitlementsDescription")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ExhibitionID")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("MaxSponsorsCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PackageName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("TenantID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("PackageID");
+
+                    b.HasIndex("CurrencyCode");
+
+                    b.HasIndex("TenantID");
+
+                    b.HasIndex("ExhibitionID", "IsDeleted");
+
+                    b.ToTable("SponsorshipPackages");
+                });
+
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Tenant", b =>
                 {
                     b.Property<int>("TenantID")
@@ -1802,9 +2357,6 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Property<int>("VisitorID")
                         .HasColumnType("int");
 
-                    b.Property<int?>("VisitorID1")
-                        .HasColumnType("int");
-
                     b.HasKey("TicketID");
 
                     b.HasIndex("CurrencyCode");
@@ -1813,8 +2365,6 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .IsUnique();
 
                     b.HasIndex("VisitorID");
-
-                    b.HasIndex("VisitorID1");
 
                     b.HasIndex("ExhibitionID", "Status");
 
@@ -2138,6 +2688,47 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.AdvertisingSpace", b =>
+                {
+                    b.HasOne("ExhibitionManagementSystem.Models.Currency", "Currency")
+                        .WithMany()
+                        .HasForeignKey("CurrencyCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExhibitionManagementSystem.Models.Exhibition", "Exhibition")
+                        .WithMany()
+                        .HasForeignKey("ExhibitionID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExhibitionManagementSystem.Models.Hall", "Hall")
+                        .WithMany()
+                        .HasForeignKey("HallID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ExhibitionManagementSystem.Models.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExhibitionManagementSystem.Models.Venue", "Venue")
+                        .WithMany()
+                        .HasForeignKey("VenueID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Currency");
+
+                    b.Navigation("Exhibition");
+
+                    b.Navigation("Hall");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("Venue");
+                });
+
             modelBuilder.Entity("ExhibitionManagementSystem.Models.ApplicationRole", b =>
                 {
                     b.HasOne("ExhibitionManagementSystem.Models.Tenant", "Tenant")
@@ -2177,6 +2768,24 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Navigation("Tenant");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.BadgeTemplate", b =>
+                {
+                    b.HasOne("ExhibitionManagementSystem.Models.Exhibition", "Exhibition")
+                        .WithMany()
+                        .HasForeignKey("ExhibitionID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ExhibitionManagementSystem.Models.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Exhibition");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Booth", b =>
@@ -2292,24 +2901,16 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .IsRequired();
 
                     b.HasOne("ExhibitionManagementSystem.Models.Exhibition", "Exhibition")
-                        .WithMany()
+                        .WithMany("BoothReservations")
                         .HasForeignKey("ExhibitionID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ExhibitionManagementSystem.Models.Exhibition", null)
-                        .WithMany("BoothReservations")
-                        .HasForeignKey("ExhibitionID1");
-
                     b.HasOne("ExhibitionManagementSystem.Models.Exhibitor", "Exhibitor")
-                        .WithMany()
+                        .WithMany("BoothReservations")
                         .HasForeignKey("ExhibitorID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("ExhibitionManagementSystem.Models.Exhibitor", null)
-                        .WithMany("BoothReservations")
-                        .HasForeignKey("ExhibitorID1");
 
                     b.HasOne("ExhibitionManagementSystem.Models.BoothMerge", "BoothMerge")
                         .WithMany()
@@ -2397,14 +2998,10 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
             modelBuilder.Entity("ExhibitionManagementSystem.Models.ExhibitionSchedule", b =>
                 {
                     b.HasOne("ExhibitionManagementSystem.Models.Exhibition", "Exhibition")
-                        .WithMany()
+                        .WithMany("ExhibitionSchedules")
                         .HasForeignKey("ExhibitionID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("ExhibitionManagementSystem.Models.Exhibition", null)
-                        .WithMany("ExhibitionSchedules")
-                        .HasForeignKey("ExhibitionID1");
 
                     b.HasOne("ExhibitionManagementSystem.Models.Hall", "Hall")
                         .WithMany()
@@ -2579,14 +3176,10 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .IsRequired();
 
                     b.HasOne("ExhibitionManagementSystem.Models.Invoice", "Invoice")
-                        .WithMany()
+                        .WithMany("Payments")
                         .HasForeignKey("InvoiceID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("ExhibitionManagementSystem.Models.Invoice", null)
-                        .WithMany("Payments")
-                        .HasForeignKey("InvoiceID1");
 
                     b.HasOne("ExhibitionManagementSystem.Models.ApplicationUser", "ReceivedByUser")
                         .WithMany()
@@ -2729,6 +3322,105 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.Sponsor", b =>
+                {
+                    b.HasOne("ExhibitionManagementSystem.Models.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.SponsorAdAssignment", b =>
+                {
+                    b.HasOne("ExhibitionManagementSystem.Models.SponsorshipContract", "Contract")
+                        .WithMany("AdAssignments")
+                        .HasForeignKey("ContractID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExhibitionManagementSystem.Models.AdvertisingSpace", "Space")
+                        .WithMany("AdAssignments")
+                        .HasForeignKey("SpaceID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Contract");
+
+                    b.Navigation("Space");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.SponsorshipContract", b =>
+                {
+                    b.HasOne("ExhibitionManagementSystem.Models.Currency", "Currency")
+                        .WithMany()
+                        .HasForeignKey("CurrencyCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExhibitionManagementSystem.Models.Exhibition", "Exhibition")
+                        .WithMany()
+                        .HasForeignKey("ExhibitionID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExhibitionManagementSystem.Models.SponsorshipPackage", "Package")
+                        .WithMany("Contracts")
+                        .HasForeignKey("PackageID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ExhibitionManagementSystem.Models.Sponsor", "Sponsor")
+                        .WithMany("Contracts")
+                        .HasForeignKey("SponsorID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExhibitionManagementSystem.Models.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Currency");
+
+                    b.Navigation("Exhibition");
+
+                    b.Navigation("Package");
+
+                    b.Navigation("Sponsor");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.SponsorshipPackage", b =>
+                {
+                    b.HasOne("ExhibitionManagementSystem.Models.Currency", "Currency")
+                        .WithMany()
+                        .HasForeignKey("CurrencyCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExhibitionManagementSystem.Models.Exhibition", "Exhibition")
+                        .WithMany()
+                        .HasForeignKey("ExhibitionID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ExhibitionManagementSystem.Models.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Currency");
+
+                    b.Navigation("Exhibition");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Tenant", b =>
                 {
                     b.HasOne("ExhibitionManagementSystem.Models.Currency", "Currency")
@@ -2772,14 +3464,10 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .IsRequired();
 
                     b.HasOne("ExhibitionManagementSystem.Models.Visitor", "Visitor")
-                        .WithMany()
+                        .WithMany("Tickets")
                         .HasForeignKey("VisitorID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("ExhibitionManagementSystem.Models.Visitor", null)
-                        .WithMany("Tickets")
-                        .HasForeignKey("VisitorID1");
 
                     b.Navigation("Currency");
 
@@ -2913,6 +3601,11 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.AdvertisingSpace", b =>
+                {
+                    b.Navigation("AdAssignments");
+                });
+
             modelBuilder.Entity("ExhibitionManagementSystem.Models.BoothMerge", b =>
                 {
                     b.Navigation("MergeItems");
@@ -2953,6 +3646,21 @@ namespace ExhibitionManagementSystem.DataAccess.Migrations
             modelBuilder.Entity("ExhibitionManagementSystem.Models.PricingPackage", b =>
                 {
                     b.Navigation("PackageServices");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.Sponsor", b =>
+                {
+                    b.Navigation("Contracts");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.SponsorshipContract", b =>
+                {
+                    b.Navigation("AdAssignments");
+                });
+
+            modelBuilder.Entity("ExhibitionManagementSystem.Models.SponsorshipPackage", b =>
+                {
+                    b.Navigation("Contracts");
                 });
 
             modelBuilder.Entity("ExhibitionManagementSystem.Models.Tenant", b =>

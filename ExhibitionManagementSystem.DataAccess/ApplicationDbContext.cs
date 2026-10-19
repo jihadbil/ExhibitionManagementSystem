@@ -13,7 +13,11 @@ namespace ExhibitionManagementSystem.DataAccess
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+        private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor? _requestContext;
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options,
+            Microsoft.AspNetCore.Http.IHttpContextAccessor? requestContext = null) : base(options) => _requestContext = requestContext;
+
+        public CancellationToken RequestCancellation => _requestContext?.HttpContext?.RequestAborted ?? CancellationToken.None;
 
 
 
@@ -46,6 +50,7 @@ namespace ExhibitionManagementSystem.DataAccess
         public DbSet<Invoice> Invoices { get; set; }
         public DbSet<InvoiceItem> InvoiceItems { get; set; }
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<PasswordResetMessage> PasswordResetMessages { get; set; }
 
         public DbSet<FinancialReport> FinancialReports { get; set; }
         public DbSet<Visitor> Visitors { get; set; }
@@ -103,6 +108,13 @@ namespace ExhibitionManagementSystem.DataAccess
             builder.Entity<Invoice>().HasIndex(i => new { i.TenantID, i.InvoiceNumber }).IsUnique();
             builder.Entity<Ticket>().HasIndex(t => t.QRCode).IsUnique();
 
+            builder.Entity<BoothReservation>()
+                .HasIndex(r => new { r.ExhibitionID, r.BoothID }).IsUnique()
+                .HasFilter("[BoothID] IS NOT NULL AND [IsDeleted] = 0 AND [Status] <> N'Cancelled'");
+            builder.Entity<BoothReservation>()
+                .HasIndex(r => new { r.ExhibitionID, r.MergeID }).IsUnique()
+                .HasFilter("[MergeID] IS NOT NULL AND [IsDeleted] = 0 AND [Status] <> N'Cancelled'");
+
             // قيد التقييم من 1 إلى 5
             builder.Entity<VisitorRating>().ToTable(t => t.HasCheckConstraint("CK_VISITOR_RATINGS_Score", "Score >= 1 AND Score <= 5"));
 
@@ -134,7 +146,7 @@ namespace ExhibitionManagementSystem.DataAccess
 
             builder.Entity<Payment>()
                 .HasOne(p => p.Invoice)
-                .WithMany()
+                .WithMany(i => i.Payments)
                 .HasForeignKey(p => p.InvoiceID)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -182,7 +194,7 @@ namespace ExhibitionManagementSystem.DataAccess
 
             builder.Entity<ExhibitionSchedule>()
                 .HasOne(s => s.Exhibition)
-                .WithMany()
+                .WithMany(e => e.ExhibitionSchedules)
                 .HasForeignKey(s => s.ExhibitionID)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -194,13 +206,13 @@ namespace ExhibitionManagementSystem.DataAccess
 
             builder.Entity<BoothReservation>()
                 .HasOne(br => br.Exhibitor)
-                .WithMany()
+                .WithMany(e => e.BoothReservations)
                 .HasForeignKey(br => br.ExhibitorID)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<BoothReservation>()
                 .HasOne(br => br.Exhibition)
-                .WithMany()
+                .WithMany(e => e.BoothReservations)
                 .HasForeignKey(br => br.ExhibitionID)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -212,7 +224,7 @@ namespace ExhibitionManagementSystem.DataAccess
 
             builder.Entity<Ticket>()
                 .HasOne(t => t.Visitor)
-                .WithMany()
+                .WithMany(v => v.Tickets)
                 .HasForeignKey(t => t.VisitorID)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -277,6 +289,12 @@ namespace ExhibitionManagementSystem.DataAccess
             builder.Entity<AuditLog>().HasIndex(a => new { a.TenantID, a.ActionAt });
             builder.Entity<Invoice>().HasIndex(i => i.ReservationID);
             builder.Entity<Payment>().HasIndex(p => p.InvoiceID);
+            builder.Entity<PasswordResetMessage>().HasIndex(m => new { m.CompletedAt, m.NextAttemptAt });
+            builder.Entity<PasswordResetMessage>().HasIndex(m => new { m.UserId, m.CreatedAt });
+            builder.HasSequence<long>("InvoiceNumbers");
+            builder.Entity<Payment>().Property(p => p.IdempotencyKey).UseCollation("Latin1_General_100_BIN2");
+            builder.Entity<Payment>().HasIndex(p => new { p.InvoiceID, p.IdempotencyKey }).IsUnique()
+                .HasFilter("[IdempotencyKey] IS NOT NULL");
             builder.Entity<Exhibitor>().HasIndex(e => new { e.TenantID, e.IsDeleted });
             builder.Entity<Visitor>().HasIndex(v => new { v.TenantID, v.IsDeleted });
 
@@ -301,6 +319,7 @@ namespace ExhibitionManagementSystem.DataAccess
             builder.Entity<SponsorshipContract>().HasIndex(c => new { c.TenantID, c.ContractNumber }).IsUnique();
             builder.Entity<AdvertisingSpace>().HasIndex(a => new { a.ExhibitionID, a.SpaceCode }).IsUnique();
             builder.Entity<SponsorAdAssignment>().HasIndex(sa => new { sa.ContractID, sa.SpaceID });
+            builder.Entity<SponsorAdAssignment>().HasIndex(sa => sa.SpaceID).IsUnique().HasFilter("[IsDeleted] = 0");
 
             // Badge & Sponsorship FK Configurations
             builder.Entity<BadgeTemplate>()

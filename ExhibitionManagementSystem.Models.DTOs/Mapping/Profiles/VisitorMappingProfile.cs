@@ -11,7 +11,7 @@ public class VisitorMappingProfile : Profile
     public VisitorMappingProfile()
     {
         CreateMap<Models.Visitor, VisitorDto>()
-            .ForMember(dest => dest.TicketsCount, opt => opt.MapFrom(src => src.Tickets != null ? src.Tickets.Count : 0));
+            .ForMember(dest => dest.TicketsCount, opt => opt.MapFrom(src => src.Tickets.Count));
 
         CreateMap<VisitorCreateDto, Models.Visitor>()
             .ForMember(dest => dest.VisitorID, opt => opt.Ignore())

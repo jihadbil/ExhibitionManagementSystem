@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using System.Collections.Generic;
 using ExhibitionManagementSystem.Models.Enums;
@@ -34,8 +35,10 @@ public class SponsorshipContractCreateDto
     public int SponsorID { get; set; }
     public int? PackageID { get; set; }
     public string? ContractNumber { get; set; }
+    [DecimalValue("0", "9999999999999999.99")]
     public decimal TotalAmount { get; set; }
     public string CurrencyCode { get; set; } = "LYD";
+    [DefinedEnum(typeof(SponsorshipStatus))]
     public SponsorshipStatus Status { get; set; } = SponsorshipStatus.Confirmed;
     public DateTime? PaymentDueDate { get; set; }
     public string? SpecialTerms { get; set; }

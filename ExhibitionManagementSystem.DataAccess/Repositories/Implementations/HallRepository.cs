@@ -22,7 +22,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
         {
             return await _dbSet.AsNoTracking()
                 .Include(h => h.Booths)
-                .FirstOrDefaultAsync(h => h.HallID == hallId);
+                .FirstOrDefaultAsync(h => h.HallID == hallId, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<IReadOnlyList<Hall>> GetAvailableHallsAsync(int venueId)

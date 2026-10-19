@@ -36,6 +36,8 @@ public abstract class BaseApiController : ControllerBase
                 Conflict(new { result.ErrorMessage, result.ErrorCode }),
             "UNAUTHORIZED" =>
                 Unauthorized(new { result.ErrorMessage }),
+            "FORBIDDEN" => StatusCode(403, new { result.ErrorMessage, result.ErrorCode }),
+            "CONFLICT" or "IDEMPOTENCY_CONFLICT" => Conflict(new { result.ErrorMessage, result.ErrorCode }),
             _ =>
                 BadRequest(new { result.ErrorMessage, result.ErrorCode })
         };
@@ -52,6 +54,8 @@ public abstract class BaseApiController : ControllerBase
                 NotFound(new { result.ErrorMessage, result.ErrorCode }),
             "UNAUTHORIZED" =>
                 Unauthorized(new { result.ErrorMessage }),
+            "FORBIDDEN" => StatusCode(403, new { result.ErrorMessage, result.ErrorCode }),
+            "CONFLICT" or "IDEMPOTENCY_CONFLICT" => Conflict(new { result.ErrorMessage, result.ErrorCode }),
             _ =>
                 BadRequest(new { result.ErrorMessage, result.ErrorCode })
         };

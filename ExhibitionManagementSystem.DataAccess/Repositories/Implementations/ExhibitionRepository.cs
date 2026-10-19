@@ -30,7 +30,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return await _dbSet.AsNoTracking()
                 .Include(e => e.Venue)
                 .Include(e => e.ExhibitionSchedules)
-                .FirstOrDefaultAsync(e => e.ExhibitionID == exhibitionId);
+                .FirstOrDefaultAsync(e => e.ExhibitionID == exhibitionId, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<IReadOnlyList<Exhibition>> GetActiveExhibitionsAsync(int tenantId)
@@ -47,7 +47,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 .Where(e => e.TenantID == tenantId && e.StartDate > now)
                 .OrderBy(e => e.StartDate)
                 .Take(count)
-                .ToListAsync();
+                .ToListAsync(cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<Exhibition?> GetWithReservationsAndInvoicesAsync(int exhibitionId)
@@ -55,7 +55,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
             return await _dbSet.AsNoTracking()
                 .Include(e => e.BoothReservations)
                     .ThenInclude(r => r.Invoice)
-                .FirstOrDefaultAsync(e => e.ExhibitionID == exhibitionId);
+                .FirstOrDefaultAsync(e => e.ExhibitionID == exhibitionId, cancellationToken: _context.RequestCancellation);
         }
     }
 }

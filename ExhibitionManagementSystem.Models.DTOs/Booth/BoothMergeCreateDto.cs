@@ -5,7 +5,9 @@ namespace ExhibitionManagementSystem.Models.DTOs.Booth;
 
 public class BoothMergeCreateDto
 {
+    [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
     public int HallID { get; set; }
+    [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
     public int ExhibitionID { get; set; }
 
     [Required]

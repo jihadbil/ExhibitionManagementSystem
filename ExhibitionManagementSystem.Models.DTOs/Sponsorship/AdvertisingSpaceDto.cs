@@ -1,3 +1,4 @@
+using ExhibitionManagementSystem.Models.DTOs.Validation;
 using System;
 using ExhibitionManagementSystem.Models.Enums;
 
@@ -34,8 +35,10 @@ public class AdvertisingSpaceCreateDto
     public int? HallID { get; set; }
     public string SpaceCode { get; set; } = string.Empty;
     public string SpaceName { get; set; } = string.Empty;
+    [DefinedEnum(typeof(AdvertisingSpaceType))]
     public AdvertisingSpaceType SpaceType { get; set; } = AdvertisingSpaceType.DigitalScreen;
     public string? DimensionsDescription { get; set; }
+    [DecimalValue("0", "9999999999999999.99")]
     public decimal BasePrice { get; set; }
     public string CurrencyCode { get; set; } = "LYD";
     public bool IsAvailable { get; set; } = true;

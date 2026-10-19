@@ -22,7 +22,7 @@ namespace ExhibitionManagementSystem.DataAccess.Repositories.Implementations
                 .FirstOrDefaultAsync(s => s.TenantID == tenantId &&
                                           (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Trial) &&
                                           s.StartDate <= today &&
-                                          s.EndDate >= today);
+                                          s.EndDate >= today, cancellationToken: _context.RequestCancellation);
         }
 
         public async Task<IReadOnlyList<TenantSubscription>> GetByTenantAsync(int tenantId)
